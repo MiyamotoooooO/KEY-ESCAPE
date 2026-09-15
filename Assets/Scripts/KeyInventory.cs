@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Tracks which KeyDefinitions the player has actually picked up in the
-/// world so far (separate from which action a key is bound to - that's
-/// KeyBindingManager's job). Put this on a persistent bootstrap GameObject
-/// (DontDestroyOnLoad) alongside KeyBindingManager.
+/// プレイヤーがこれまでにワールド内で実際に拾ったKeyDefinitionを管理する
+/// （どのアクションにキーが割り当てられているかとは別の話 - そちらは
+/// KeyBindingManagerの担当）。KeyBindingManagerと同じ、常駐するBootstrap用の
+/// GameObject（DontDestroyOnLoad）に付けること。
 ///
-/// Drives the "NEW KEY!" pickup popup and the list of keys offered in the
-/// Key Config screen (spec Ver.0.1 §51, §49).
+/// 「NEW KEY！」のピックアップポップアップと、Key Config画面で選べるキーの
+/// 一覧を駆動する（仕様書Ver.0.1 §51、§49）。
 /// </summary>
 public class KeyInventory : MonoBehaviour
 {

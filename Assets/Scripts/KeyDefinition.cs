@@ -1,14 +1,13 @@
 using UnityEngine;
 
 /// <summary>
-/// Data describing one physical keyboard key the player can own and assign
-/// to an action - the "key" side of the spec's key/action split (Ver.0.1 §7,
-/// Ver.0.2 §33). Create one asset per key via
-/// Assets > Create > Key Escape > Key Definition.
+/// プレイヤーが所有し、アクションに割り当てられる、物理的なキーボードキー1つ分の
+/// データ。仕様上の key/action の分離（Ver.0.1 §7、Ver.0.2 §33）における「key」側。
+/// Assets > Create > Key Escape > Key Definition からキー1つにつき1アセット作成する。
 ///
-/// Rank and attribute only ever matter together (Ver.0.2 §9-1: a strong key
-/// is not strong at everything) - GetAttributeBonus() is the single place
-/// that rule lives, so gameplay code never has to re-implement it.
+/// ランクと属性は常にセットで意味を持つ（Ver.0.2 §9-1：強いキーが何でも強いわけ
+/// ではない）- GetAttributeBonus() がこのルールの唯一の実装箇所なので、
+/// ゲームプレイ側のコードで同じロジックを再実装する必要はない。
 /// </summary>
 [CreateAssetMenu(menuName = "Key Escape/Key Definition", fileName = "Key_")]
 public class KeyDefinition : ScriptableObject

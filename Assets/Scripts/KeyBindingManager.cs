@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Central place every gameplay script asks "is this action pressed right
-/// now?" instead of reading Input.GetKeyDown(KeyCode...) directly. This is
-/// the piece that makes keys re-assignable at all: change a binding here
-/// (e.g. from the Key Config screen, spec Ver.0.1 §49) and every script
-/// that reads through IsActionDown/Held/Up picks it up automatically.
+/// あらゆるゲームプレイ側のスクリプトが「このアクションは今押されているか？」を
+/// 尋ねるための中央窓口。Input.GetKeyDown(KeyCode...)を直接読む代わりに使う。
+/// これがあるからこそキーの再割り当てが成立する：ここで割り当てを変更すれば
+/// （例えばKey Config画面から、仕様書Ver.0.1 §49）、IsActionDown/Held/Upを
+/// 通じて読んでいるすべてのスクリプトに自動的に反映される。
 ///
-/// Put one of these on a persistent bootstrap GameObject (DontDestroyOnLoad),
-/// alongside KeyInventory. Wire up `defaultBindings` in the Inspector to
-/// match the Chapter 1 starting loadout (spec Ver.0.2 §26 example:
-/// MoveLeft->A, MoveRight->D, Jump->Space, Attack->F, all unlocked from the
-/// start; Dash and RangedAttack left unassigned and locked).
+/// KeyInventoryと同じ、常駐するBootstrap用のGameObject（DontDestroyOnLoad）に
+/// これを1つ付けること。InspectorのdefaultBindingsをChapter 1の初期装備に
+/// 合わせて設定する（仕様書Ver.0.2 §26の例：MoveLeft->A、MoveRight->D、
+/// Jump->Space、Attack->Fはすべて開始時点で解放済み。DashとRangedAttackは
+/// 未割り当て・ロック状態のままにしておく）。
 /// </summary>
 public class KeyBindingManager : MonoBehaviour
 {

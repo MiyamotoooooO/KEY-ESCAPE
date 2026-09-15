@@ -1,8 +1,8 @@
 /// <summary>
-/// KEY ESCAPE - Japanese display names for GameAction, shared by the Key
-/// Config UI scripts. Kept in one place so the wording only needs to change
-/// in one spot (仕様書 uses these exact terms: 左移動/右移動/ジャンプ/攻撃/
-/// ダッシュ/遠距離攻撃).
+/// KEY ESCAPE - GameActionの日本語表示名。Key Config UI系のスクリプトで共有する。
+/// 表記を直す箇所が1か所で済むようここにまとめてある
+/// （仕様書ではこの表記で統一：左移動/右移動/ジャンプ/攻撃/
+/// ダッシュ/遠距離攻撃）。
 /// </summary>
 public static class GameActionLabel
 {

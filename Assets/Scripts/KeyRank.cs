@@ -1,5 +1,5 @@
 /// <summary>
-/// Spec Ver.0.2 §8: more stars = higher rank. Three is the highest rank.
+/// 仕様書Ver.0.2 §8：星の数が多いほど高ランク。Threeが最高ランク。
 /// </summary>
 public enum KeyRank
 {

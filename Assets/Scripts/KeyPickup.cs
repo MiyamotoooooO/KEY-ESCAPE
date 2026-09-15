@@ -1,26 +1,26 @@
 using UnityEngine;
 
 /// <summary>
-/// KEY ESCAPE - a physical key sitting in a stage. Touch it as the Player
-/// and it's added to KeyInventory (spec Ver.0.1 section on key acquisition -
-/// "ステージでキーを拾う"). This is the missing link between the key-layer
-/// scripts (which already assumed AddKey() gets called from somewhere - see
-/// README.md "使い方") and an actual object you can place in a scene.
+/// KEY ESCAPE - ステージに置かれている物理的なキー。Playerとして触れると
+/// KeyInventoryに追加される（仕様書Ver.0.1のキー入手に関する節 -
+/// 「ステージでキーを拾う」）。key層のスクリプト群（どこかからAddKey()が
+/// 呼ばれることを既に前提にしている - README.md「使い方」参照）と、
+/// 実際にシーンに配置できるオブジェクトとの間を繋ぐ、欠けていたリンク。
 ///
-/// This script only adds the key to the player's inventory (ownership).
-/// It does NOT unlock the action that key might eventually be bound to -
-/// that's a separate, deliberate step (KeyBindingManager.UnlockAction),
-/// normally tied to story/stage-clear progress rather than a single pickup.
-/// A picked-up key you can't yet bind to anything just sits in the
-/// inventory, ready for the Key Config screen once an action unlocks.
+/// このスクリプトはプレイヤーのインベントリにキーを追加する（所有させる）だけ。
+/// そのキーがいずれ割り当てられるかもしれないアクション自体を解放することは
+/// しない - それは別の、意図的なステップ（KeyBindingManager.UnlockAction）で、
+/// 通常は単なる1回の入手ではなくストーリーやステージクリアの進行に紐づく。
+/// まだ何にも割り当てられないキーを拾っても、アクションが解放されて
+/// Key Config画面が使えるようになるまで、インベントリの中で待機するだけ。
 ///
-/// Setup:
-///  - Put this on a GameObject with a Collider2D set to "Is Trigger".
-///  - Assign a KeyDefinition asset to `keyDefinition` - this is which key
-///    the player receives (its sprite is NOT read from here automatically;
-///    put whatever visual you want on the same object's SpriteRenderer).
-///  - Tag doesn't matter for this object itself; it reacts to anything
-///    tagged "Player" that touches it.
+/// セットアップ:
+///  - Collider2Dを「Is Trigger」に設定したGameObjectに付けること。
+///  - `keyDefinition`にKeyDefinitionアセットを割り当てる - これがプレイヤーが
+///    受け取るキーになる（そのスプライトはここから自動で読み込まれるわけでは
+///    ないので、同じオブジェクトのSpriteRendererに好きな見た目を設定すること）。
+///  - このオブジェクト自体のタグは何でもよい。「Player」タグが付いたものが
+///    触れたときに反応する。
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class KeyPickup : MonoBehaviour

@@ -4,30 +4,30 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// KEY ESCAPE - the Key Config screen (spec Ver.0.1 §49, Ver.0.2 §20).
-/// Lets the player see which key is assigned to each action, and reassign
-/// it from the keys they currently own. This is the screen that makes the
-/// whole "1 key = 1 action, build your own controls" system (spec §7)
-/// actually usable by a player instead of only by code/debug scripts.
+/// KEY ESCAPE - Key Config画面（仕様書Ver.0.1 §49、Ver.0.2 §20）。
+/// プレイヤーが各アクションに割り当てられているキーを確認し、現在所有している
+/// キーの中から再割り当てできる画面。「1キー＝1アクション、操作は自分で
+/// 組み立てる」という仕組み（仕様書§7）を、コードやデバッグスクリプトだけで
+/// なく実際にプレイヤーが使えるようにする画面がこれ。
 ///
-/// This script is the controller; it doesn't draw anything itself. See
-/// シーン構築ガイド.md for the Canvas/Button/Text hierarchy this expects,
-/// and ActionBindingRow.cs / OwnedKeyButtonUI.cs for the two small pieces
-/// it drives.
+/// このスクリプトはコントローラーであり、それ自体は何も描画しない。
+/// このスクリプトが前提とするCanvas/Button/Textの階層構成についてはシーン
+/// 構築ガイド.mdを、これが動かす2つの小さな部品についてはActionBindingRow.cs
+/// / OwnedKeyButtonUI.csを参照。
 ///
-/// Flow:
-///   1. Player opens the screen (toggleKey, or wire Open()/Close() to a
-///      pause menu button instead once one exists).
-///   2. Each of the 6 ActionBindingRow entries shows its current key, or
-///      "ロック中" if the action itself isn't unlocked yet (see
-///      KeyBindingManager.IsActionUnlocked).
-///   3. Clicking "変更" on a row calls BeginRebind(action), which opens the
-///      key-picker list of everything currently owned (KeyInventory).
-///   4. Clicking a key in that list calls SelectKey(key): if a rebind is in
-///      progress, it attempts KeyBindingManager.TryBindKey(action, key);
-///      either way it also refreshes the key-info panel (rank/attribute/
-///      flavor text) for that key, so browsing keys without reassigning
-///      anything works too.
+/// 流れ:
+///   1. プレイヤーが画面を開く（toggleKey、またはポーズメニューができたら
+///      そのボタンにOpen()/Close()を繋ぐ）。
+///   2. 6つあるActionBindingRowそれぞれが、現在のキーを表示する。アクション
+///      自体がまだ解放されていなければ「ロック中」と表示する
+///      （KeyBindingManager.IsActionUnlocked参照）。
+///   3. ある行の「変更」をクリックするとBeginRebind(action)が呼ばれ、現在
+///      所有している全キーのピッカーリストが開く。
+///   4. そのリストのキーをクリックするとSelectKey(key)が呼ばれる：再割り当て
+///      が進行中ならKeyBindingManager.TryBindKey(action, key)を試みる。
+///      いずれの場合もそのキーのキー情報パネル（ランク／属性／フレーバー
+///      テキスト）を更新するので、再割り当てせずキーを眺めるだけの操作にも
+///      対応している。
 /// </summary>
 public class KeyConfigUI : MonoBehaviour
 {

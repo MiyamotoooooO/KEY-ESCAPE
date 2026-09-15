@@ -3,11 +3,11 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// KEY ESCAPE - one row of the Key Config screen, representing a single
-/// GameAction (spec Ver.0.1 §49 / Ver.0.2 §20). Chapter 1 has exactly 6
-/// bindable actions, so this is meant to be placed 6 times by hand in the
-/// scene (one per GameAction) rather than instantiated from a prefab - see
-/// シーン構築ガイド.md.
+/// KEY ESCAPE - Key Config画面の1行。単一のGameActionを表す
+/// （仕様書Ver.0.1 §49 / Ver.0.2 §20）。Chapter 1では割り当て可能な
+/// アクションがちょうど6つなので、プレハブからInstantiateするのではなく
+/// シーンに手作業で6個配置する想定（GameActionごとに1つ） -
+/// シーン構築ガイド.md参照。
 /// </summary>
 public class ActionBindingRow : MonoBehaviour
 {

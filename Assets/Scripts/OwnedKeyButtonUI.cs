@@ -3,10 +3,11 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// KEY ESCAPE - one button in the "pick a key" list on the Key Config
-/// screen. Instantiated once per key the player owns (KeyInventory.OwnedKeys)
-/// by KeyConfigUI.RefreshKeyList() - this one IS a prefab, unlike
-/// ActionBindingRow, because the number of owned keys grows as you play.
+/// KEY ESCAPE - Key Config画面の「キーを選ぶ」リストにあるボタン1つ分。
+/// プレイヤーが所有しているキー（KeyInventory.OwnedKeys）ごとに
+/// KeyConfigUI.RefreshKeyList()からInstantiateされる - ActionBindingRowとは
+/// 違い、こちらは本当にプレハブ化されている。所有するキーの数はプレイが
+/// 進むにつれて増えていくため。
 /// </summary>
 public class OwnedKeyButtonUI : MonoBehaviour
 {
