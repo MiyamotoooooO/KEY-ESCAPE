@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e2e8d284b72e2e740af2a4dc7a7cad0b, type: 3}
-  m_Name: Key_V
+  m_Name: Key_W
   m_EditorClassIdentifier: 
-  keyCode: 118
-  displayName: V
-  rank: 1
-  attribute: 0
+  keyCode: 119
+  displayName: W
+  rank: 3
+  attribute: 1
   isSpecialKey: 0
   flavorText: 

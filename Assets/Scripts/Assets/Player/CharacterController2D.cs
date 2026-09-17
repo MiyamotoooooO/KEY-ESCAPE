@@ -161,6 +161,17 @@ public class CharacterController2D : MonoBehaviour
     }
 
 
+    /// <summary>
+    /// PlayerMovement.SetInputLocked(true)から呼ばれる。会話中などに、慣性で
+    /// 動き続けたり滑ったりしないよう、水平方向の速度だけを即座に0にする。
+    /// 落下自体は自然に続けたいので、縦方向(y)の速度はそのまま残す。
+    /// </summary>
+    public void StopHorizontalMovement()
+    {
+        if (m_Rigidbody2D != null)
+            m_Rigidbody2D.velocity = new Vector2(0f, m_Rigidbody2D.velocity.y);
+    }
+
     public void Move(float move, bool jump, bool dash)
     {
         if (canMove)

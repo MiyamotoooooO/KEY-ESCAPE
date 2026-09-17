@@ -25,12 +25,44 @@ public class PlayerMovement : MonoBehaviour
     private bool jump = false;
     private bool dash = false;
 
+    [Tooltip("trueの間はキー入力を一切読み取らず、移動・ジャンプ・ダッシュができなくなる（会話中などに使う）。Time.timeScaleは変更しないので、アニメーションや他のオブジェクトは通常通り動き続ける。")]
+    public bool inputLocked = false;
+
     private KeyBindingManager Keys => KeyBindingManager.Instance;
+
+    /// <summary>
+    /// DialogueKeyRecruitなど、外部のイベントからプレイヤーの操作を止めたい
+    /// 時に呼ぶ。Time.timeScaleは触らないので、プレイヤー自身やまわりの
+    /// アイドルアニメーションはそのまま再生され続ける。
+    /// </summary>
+    public void SetInputLocked(bool locked)
+    {
+        inputLocked = locked;
+
+        if (locked)
+        {
+            // ロックした瞬間の入力・慣性を引きずらないよう、即座にリセットする。
+            horizontalMove = 0f;
+            jump = false;
+            dash = false;
+
+            if (animator != null)
+                animator.SetFloat("Speed", 0f);
+            if (controller != null)
+                controller.StopHorizontalMovement();
+        }
+    }
 
     private void Update()
     {
         if (Keys == null)
             return; // No KeyBindingManager in the scene yet - see README.
+
+        // ロック中は入力を読み取らない。horizontalMove/jump/dashはSetInputLocked(true)
+        // 側で既に0/falseにしてあるので、FixedUpdate()側は毎回「動かない」入力を
+        // 受け取り続けるだけになる。
+        if (inputLocked)
+            return;
 
         float move = 0f;
         if (Keys.IsActionHeld(GameAction.MoveLeft)) move -= 1f;
