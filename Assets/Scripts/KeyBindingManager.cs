@@ -2,24 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// あらゆるゲームプレイ側のスクリプトが「このアクションは今押されているか？」を
-/// 尋ねるための中央窓口。Input.GetKeyDown(KeyCode...)を直接読む代わりに使う。
-/// これがあるからこそキーの再割り当てが成立する：ここで割り当てを変更すれば
-/// （例えばKey Config画面から、仕様書Ver.0.1 §49）、IsActionDown/Held/Upを
-/// 通じて読んでいるすべてのスクリプトに自動的に反映される。
-///
-/// KeyInventoryと同じ、常駐するBootstrap用のGameObject（DontDestroyOnLoad）に
-/// これを1つ付けること。InspectorのdefaultBindingsをChapter 1の初期装備に
-/// 合わせて設定する（仕様書Ver.0.2 §26の例：MoveLeft->A、MoveRight->D、
-/// Jump->Space、Attack->Fはすべて開始時点で解放済み。DashとRangedAttackは
-/// 未割り当て・ロック状態のままにしておく）。
-/// </summary>
 public class KeyBindingManager : MonoBehaviour
 {
     public static KeyBindingManager Instance { get; private set; }
 
-    /// <summary>Fired whenever a binding, lock state, or the modifier key changes - refresh UI here.</summary>
     public event Action OnBindingsChanged;
 
     [Serializable]
@@ -27,7 +13,6 @@ public class KeyBindingManager : MonoBehaviour
     {
         public GameAction action;
         public KeyDefinition key;
-        [Tooltip("Chapter 1: true for MoveLeft/MoveRight/Jump/Attack, false for Dash/RangedAttack.")]
         public bool unlockedFromStart;
     }
 
@@ -38,9 +23,7 @@ public class KeyBindingManager : MonoBehaviour
     [SerializeField] private KeyDefinition modifierKeyDefinition;
     [SerializeField] private bool modifierUnlockedFromStart = false;
 
-    // action -> key currently assigned to it (missing entry = unassigned)
     private readonly Dictionary<GameAction, KeyDefinition> _bindings = new Dictionary<GameAction, KeyDefinition>();
-    // which actions the player is allowed to configure/use at all yet
     private readonly HashSet<GameAction> _unlockedActions = new HashSet<GameAction>();
     private bool _modifierUnlocked;
 
@@ -65,18 +48,14 @@ public class KeyBindingManager : MonoBehaviour
         _modifierUnlocked = modifierUnlockedFromStart;
     }
 
-    // ---- unlocking ----------------------------------------------------
-
     public bool IsActionUnlocked(GameAction action) => _unlockedActions.Contains(action);
 
-    /// <summary>Call on a stage-clear / boss-defeat reward (spec Ver.0.2 §12 roadmap).</summary>
     public void UnlockAction(GameAction action)
     {
         if (_unlockedActions.Add(action))
             OnBindingsChanged?.Invoke();
     }
 
-    /// <summary>Which key fills the Chapter 1 special-key slot (e.g. Ctrl). For UI display only - not rebindable at runtime in Chapter 1.</summary>
     public KeyDefinition ModifierKeyDefinition => modifierKeyDefinition;
 
     public bool IsModifierUnlocked => _modifierUnlocked;
@@ -88,17 +67,9 @@ public class KeyBindingManager : MonoBehaviour
         OnBindingsChanged?.Invoke();
     }
 
-    // ---- binding --------------------------------------------------------
-
     public KeyDefinition GetBinding(GameAction action) =>
         _bindings.TryGetValue(action, out var key) ? key : null;
 
-    /// <summary>
-    /// Spec Ver.0.1 §7-2: one key = one action. Binding a key that is
-    /// already used elsewhere unbinds it there first. Fails (returns false)
-    /// for a locked action or a key the player doesn't own, so the Key
-    /// Config UI can rely on the return value instead of re-checking both.
-    /// </summary>
     public bool TryBindKey(GameAction action, KeyDefinition key)
     {
         if (key == null || !IsActionUnlocked(action))
@@ -123,7 +94,18 @@ public class KeyBindingManager : MonoBehaviour
             OnBindingsChanged?.Invoke();
     }
 
-    /// <summary>For the Key Config screen: "this key is currently used by ○○" labels.</summary>
+    /// <summary>
+    /// Key Config画面の「配置をリセット」用：全アクションの割り当てを外し、
+    /// 何も設定されていない初期状態に戻す。解放状態（IsActionUnlocked）と
+    /// 特殊キー（Ctrl）の状態は変えない - リセットされるのはキー配置だけで、
+    /// 一度解放したアクションが再びロックされることはない。
+    /// </summary>
+    public void ResetAllBindings()
+    {
+        _bindings.Clear();
+        OnBindingsChanged?.Invoke();
+    }
+
     public bool TryGetActionForKey(KeyDefinition key, out GameAction action)
     {
         foreach (var kvp in _bindings)
@@ -138,13 +120,10 @@ public class KeyBindingManager : MonoBehaviour
         return false;
     }
 
-    // ---- runtime queries: drop-in replacement for Input.GetKey* ---------
-
     public bool IsActionDown(GameAction action) => TryGetKeyCode(action, out var kc) && Input.GetKeyDown(kc);
     public bool IsActionHeld(GameAction action) => TryGetKeyCode(action, out var kc) && Input.GetKey(kc);
     public bool IsActionUp(GameAction action) => TryGetKeyCode(action, out var kc) && Input.GetKeyUp(kc);
 
-    /// <summary>Special-key combo, e.g. Ctrl+Attack = strong attack (spec §15-16).</summary>
     public bool IsActionDownWithModifier(GameAction action)
     {
         if (!_modifierUnlocked || modifierKeyDefinition == null)
@@ -163,7 +142,6 @@ public class KeyBindingManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>Ver.0.2 §9: rank/attribute bonus for whatever key is currently bound to this action.</summary>
     public float GetBonusMultiplier(GameAction action, KeyAttribute requiredAttribute)
     {
         var key = GetBinding(action);
