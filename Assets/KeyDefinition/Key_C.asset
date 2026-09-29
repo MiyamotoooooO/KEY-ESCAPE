@@ -15,6 +15,6 @@ MonoBehaviour:
   keyCode: 99
   displayName: C
   rank: 2
-  attribute: 2
+  personality: 2
   isSpecialKey: 0
-  flavorText: 
+  flavorText: "\u30B3\u30D4\u30FC\u3070\u3063\u304B\u308A\u3067\u3046\u3093\u3056\u308A"

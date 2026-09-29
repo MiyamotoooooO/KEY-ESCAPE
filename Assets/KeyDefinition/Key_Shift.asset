@@ -15,6 +15,6 @@ MonoBehaviour:
   keyCode: 304
   displayName: Shift
   rank: 3
-  attribute: 1
+  personality: 0
   isSpecialKey: 1
-  flavorText: 
+  flavorText: "\u8D70\u308A\u75B2\u308C\u307E\u3057\u305F"

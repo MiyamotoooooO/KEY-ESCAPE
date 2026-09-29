@@ -15,6 +15,6 @@ MonoBehaviour:
   keyCode: 118
   displayName: V
   rank: 1
-  attribute: 0
+  personality: 5
   isSpecialKey: 0
-  flavorText: 
+  flavorText: "\u8CBC\u308A\u4ED8\u3051\u308B\u6642\u306F\u4E00\u58F0\u304B\u3051\u3066\u306D"

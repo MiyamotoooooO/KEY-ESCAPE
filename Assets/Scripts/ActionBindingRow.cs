@@ -15,8 +15,14 @@ using TMPro;
 /// OnDrop()が呼ばれ、owner.TryBindByDrag(action, key)を試みる。行のどこかに
 /// Raycast Target有効なImage（背景の枠など）が必要 - それが無いとUnityの
 /// EventSystemがこの行を「ドロップ先」として検出できない。
+///
+/// この行自体をクリックすると、右下の「キーのプレビュー」欄でそのアクションの
+/// 動作（ジャンプ・攻撃など）をアニメーションで再生する
+/// （owner.PlayActionPreview(action)経由。実体はKeyConfigPreviewPlayer）。
+/// ドロップ判定に使っているRaycast Target有効なImageがそのままクリック判定にも
+/// 使われるので、追加のUI設定は不要。
 /// </summary>
-public class ActionBindingRow : MonoBehaviour, IDropHandler
+public class ActionBindingRow : MonoBehaviour, IDropHandler, IPointerClickHandler
 {
     [Tooltip("Which action this row represents.")]
     public GameAction action;
@@ -52,6 +58,16 @@ public class ActionBindingRow : MonoBehaviour, IDropHandler
             return;
 
         owner.TryBindByDrag(action, dragged.Key);
+    }
+
+    /// <summary>
+    /// 行のどこかをクリックした時にUnityのEventSystemから自動的に呼ばれる。
+    /// 右下のプレビュー欄で、このアクションの動作を再生させる。
+    /// </summary>
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (owner != null)
+            owner.PlayActionPreview(action);
     }
 
     /// <summary>Called by KeyConfigUI.RefreshAll() whenever bindings/locks change.</summary>

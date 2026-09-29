@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -16,7 +17,7 @@ using TMPro;
 ///   1. プレイヤーが画面を開く（toggleKey、またはポーズメニューができたら
 ///      そのボタンにOpen()/Close()を繋ぐ）。
 ///   2. 左側に、ゲーム内の全キー（KeyInventory.AllKeyDefinitions）がタブ
-///      （すべて／移動／アクション／特殊／未入手）で絞り込まれて並ぶ
+///      （すべて／6性格／特殊／未入手）で絞り込まれて並ぶ
 ///      （KeyGridButtonUI）。所持済みは文字が見え、未入手は「？」＋ロック
 ///      表示になり、クリック・ドラッグどちらも無効。
 ///   3. 所持済みのキーをクリックすると右のキー情報パネル（ランク／系統／
@@ -38,6 +39,8 @@ public class KeyConfigUI : MonoBehaviour
     public KeyCode toggleKey = KeyCode.Tab;
     [Tooltip("この画面が開いている間、ゲームプレイを停止する（Time.timeScale = 0）。timeScaleが0でも、入力の読み取りとUIクリックはどちらも動作する。")]
     public bool pauseGameWhileOpen = true;
+    [Tooltip("任意。画面を開いた時の演出（看板が落ちてくる／線が左から表示される）を管理するスクリプト。割り当てておくと、Open()から自動で再生される。")]
+    public KeyConfigIntroAnimator introAnimator;
 
     [Header("アクション行（Chapter 1の各アクションにつき1つ、手動配置）")]
     public List<ActionBindingRow> rows = new List<ActionBindingRow>();
@@ -49,17 +52,30 @@ public class KeyConfigUI : MonoBehaviour
     public Transform keyGridContent;
     public GameObject keyGridButtonPrefab;
 
-    [Header("絞り込みタブ（すべて／移動／アクション／特殊／未入手）")]
+    [Header("絞り込みタブ（すべて／まじめ／ぶきよう／非情／らんぼう／おくびょう／きまぐれ／特殊／未入手）")]
     public KeyConfigFilter currentFilter = KeyConfigFilter.All;
+    [Tooltip("任意。タブボタンのハイライト表示を管理するスクリプト。割り当てておくと、フィルターが切り替わるたびに選択中のタブの色が自動で更新される。")]
+    public KeyConfigFilterTabs filterTabs;
 
     [Header("キー情報パネル（右：ランク／系統／説明文）")]
     public GameObject infoPanel;
     public TMP_Text infoNameText;
     public TMP_Text infoCategoryText;
+    [Tooltip("旧・文字（*と-）でランクを表示していた欄。星をスプライト化したので今は未使用 - 割り当てなくてよい（残してあるのは、まだInspector上で繋いだままでも壊れないようにするため）。")]
     public TMP_Text infoRankText;
+    [Tooltip("ランクの星をスプライトで表示するImageを、ランク1個目～3個目の順にInspector上で手動で並べる（KeyRankの最大値=3個でよい）。")]
+    public Image[] infoRankStars;
+    [Tooltip("ランクが埋まっている星のスプライト（★）。")]
+    public Sprite starFilledSprite;
+    [Tooltip("ランクが埋まっていない星のスプライト（☆）。")]
+    public Sprite starEmptySprite;
     public TMP_Text infoFlavorText;
     [Tooltip("任意。ランク・属性から自動計算した補正値（例：「移動+5%」）を表示したい場合に割り当てる。対象がなければ「ー」を表示する。")]
     public TMP_Text infoSpecialEffectText;
+
+    [Header("キーのプレビュー（右下：アクションをクリックすると対応する動作を再生）")]
+    [Tooltip("任意。ActionBindingRowをクリックした時に動作アニメーションを再生するスクリプト。")]
+    public KeyConfigPreviewPlayer previewPlayer;
 
     [Header("配置をリセット")]
     public GameObject resetConfirmPanel;
@@ -129,6 +145,8 @@ public class KeyConfigUI : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
 
         RefreshAll();
+        if (filterTabs != null)
+            filterTabs.Refresh(currentFilter);
 
         // panelRootは非アクティブな状態で開始し（Start()がSetActive(false)を
         // 呼んでいる）、Unityは非アクティブなオブジェクトに対してLayout Group /
@@ -144,6 +162,11 @@ public class KeyConfigUI : MonoBehaviour
             if (rt != null)
                 LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
         }
+
+        // レイアウト確定後に開始演出を再生する（看板の定位置や線の幅は
+        // レイアウト計算後の値を使うため、ここが一番安全なタイミング）。
+        if (introAnimator != null)
+            introAnimator.PlayIntro();
     }
 
     public void Close()
@@ -166,8 +189,12 @@ public class KeyConfigUI : MonoBehaviour
     // 個別のメソッドも用意している（SetFilter(KeyConfigFilter)はenum引数を
     // 持つため、UnityのOnClickの標準ドロップダウンからは選べないので）。
     public void SetFilterAll() => SetFilter(KeyConfigFilter.All);
-    public void SetFilterMovement() => SetFilter(KeyConfigFilter.Movement);
-    public void SetFilterAttack() => SetFilter(KeyConfigFilter.Attack);
+    public void SetFilterSerious() => SetFilter(KeyConfigFilter.Serious);
+    public void SetFilterClumsy() => SetFilter(KeyConfigFilter.Clumsy);
+    public void SetFilterRuthless() => SetFilter(KeyConfigFilter.Ruthless);
+    public void SetFilterRough() => SetFilter(KeyConfigFilter.Rough);
+    public void SetFilterCowardly() => SetFilter(KeyConfigFilter.Cowardly);
+    public void SetFilterFickle() => SetFilter(KeyConfigFilter.Fickle);
     public void SetFilterSpecial() => SetFilter(KeyConfigFilter.Special);
     public void SetFilterUnowned() => SetFilter(KeyConfigFilter.Unowned);
 
@@ -175,14 +202,20 @@ public class KeyConfigUI : MonoBehaviour
     {
         currentFilter = filter;
         RefreshKeyList();
+        if (filterTabs != null)
+            filterTabs.Refresh(currentFilter);
     }
 
     private bool PassesFilter(KeyDefinition key, bool owned)
     {
         switch (currentFilter)
         {
-            case KeyConfigFilter.Movement: return key.attribute == KeyAttribute.Movement;
-            case KeyConfigFilter.Attack: return key.attribute == KeyAttribute.Attack;
+            case KeyConfigFilter.Serious: return !key.isSpecialKey && key.personality == KeyPersonality.Serious;
+            case KeyConfigFilter.Clumsy: return !key.isSpecialKey && key.personality == KeyPersonality.Clumsy;
+            case KeyConfigFilter.Ruthless: return !key.isSpecialKey && key.personality == KeyPersonality.Ruthless;
+            case KeyConfigFilter.Rough: return !key.isSpecialKey && key.personality == KeyPersonality.Rough;
+            case KeyConfigFilter.Cowardly: return !key.isSpecialKey && key.personality == KeyPersonality.Cowardly;
+            case KeyConfigFilter.Fickle: return !key.isSpecialKey && key.personality == KeyPersonality.Fickle;
             case KeyConfigFilter.Special: return key.isSpecialKey;
             case KeyConfigFilter.Unowned: return !owned;
             default: return true; // All
@@ -198,6 +231,16 @@ public class KeyConfigUI : MonoBehaviour
             return;
 
         ShowKeyInfo(key);
+    }
+
+    /// <summary>
+    /// 「現在の設定」の行（ActionBindingRow）がクリックされた時に呼ばれる。
+    /// 右下のプレビュー欄で、そのアクションの動作をアニメーションで再生する。
+    /// </summary>
+    public void PlayActionPreview(GameAction action)
+    {
+        if (previewPlayer != null)
+            previewPlayer.PlayAction(action);
     }
 
     /// <summary>
@@ -302,11 +345,15 @@ public class KeyConfigUI : MonoBehaviour
         }
         _spawnedKeyButtons.Clear();
 
-        foreach (var key in KeyInventory.Instance.AllKeyDefinitions)
-        {
-            if (key == null)
-                continue;
+        // 所持しているキーを上に優先表示する（未入手は下に回す）。
+        // OrderByDescendingは安定ソートなので、所持/未所持それぞれのグループの
+        // 中でのキー同士の並び順は、AllKeyDefinitions本来の順序のまま保たれる。
+        var sortedKeys = KeyInventory.Instance.AllKeyDefinitions
+            .Where(key => key != null)
+            .OrderByDescending(key => KeyInventory.Instance.Owns(key));
 
+        foreach (var key in sortedKeys)
+        {
             bool owned = KeyInventory.Instance.Owns(key);
             if (!PassesFilter(key, owned))
                 continue;
@@ -327,26 +374,25 @@ public class KeyConfigUI : MonoBehaviour
         if (infoNameText != null)
             infoNameText.text = $"{key.displayName}キー";
 
-        if (infoRankText != null)
+        // ランクの★をスプライトで表示する（フォントに★☆の字形が無い問題を
+        // 回避するため、テキストではなくImageで表示する方式に変更した）。
+        if (infoRankStars != null)
         {
             int filled = (int)key.rank;
-            // ★☆は今使っているフォントに字形が無く表示されないため、
-            // 確実に表示できるASCII文字に差し替えている。星の字形を含む
-            // フォントに変えたら、'*'と'-'を'★'と'☆'に戻せばよい。
-            infoRankText.text = new string('*', filled) + new string('-', 3 - filled);
+            for (int i = 0; i < infoRankStars.Length; i++)
+            {
+                if (infoRankStars[i] == null)
+                    continue;
+                infoRankStars[i].sprite = (i < filled) ? starFilledSprite : starEmptySprite;
+            }
         }
 
         if (infoCategoryText != null)
         {
-            if (key.isSpecialKey)
-                infoCategoryText.text = "特殊系";
-            else
-                infoCategoryText.text = key.attribute switch
-                {
-                    KeyAttribute.Movement => "移動系",
-                    KeyAttribute.Attack => "攻撃系",
-                    _ => "系統：なし",
-                };
+            // 性格仕様書：特殊キーは常にまじめ扱い。それ以外は性格をそのまま表示する。
+            infoCategoryText.text = key.isSpecialKey
+                ? "特殊系（まじめ）"
+                : KeyPersonalityLabel.Get(key.personality);
         }
 
         if (infoFlavorText != null)
@@ -354,10 +400,25 @@ public class KeyConfigUI : MonoBehaviour
 
         if (infoSpecialEffectText != null)
         {
-            float bonus = key.isSpecialKey ? 0f : key.GetAttributeBonus(key.attribute);
-            infoSpecialEffectText.text = bonus > 0f
-                ? $"{(key.attribute == KeyAttribute.Movement ? "移動" : "攻撃")}+{bonus * 100f:0}%"
-                : "ー";
+            // 性格仕様書2章：性格の効果は「どのアクションに設定したか」で変わる。
+            // 現在アクションに割り当て済みなら、そのアクションでの効果を表示する。
+            // 未割り当てのキーは設定先が決まらないと効果が確定しない（非情の
+            // ように、設定先によって「恩恵なし」になる性格もあるため）。
+            if (key.isSpecialKey)
+            {
+                infoSpecialEffectText.text = "ー";
+            }
+            else if (KeyBindingManager.Instance != null && KeyBindingManager.Instance.TryGetActionForKey(key, out var boundAction))
+            {
+                var effect = key.GetPersonalityEffect(boundAction);
+                infoSpecialEffectText.text = KeyPersonalityData.Describe(key.personality, effect);
+            }
+            else
+            {
+                infoSpecialEffectText.text = key.personality == KeyPersonality.Serious
+                    ? "ー"
+                    : "設定先のアクションによって効果が変わります";
+            }
         }
     }
 }

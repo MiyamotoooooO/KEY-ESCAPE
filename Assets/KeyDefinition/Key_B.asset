@@ -15,6 +15,6 @@ MonoBehaviour:
   keyCode: 98
   displayName: B
   rank: 1
-  attribute: 2
+  personality: 4
   isSpecialKey: 0
-  flavorText: 
+  flavorText: "\u50D5\u306E\u51FA\u756A\u2026\uFF1F\n"

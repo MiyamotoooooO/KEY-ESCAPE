@@ -23,7 +23,7 @@ public class Attack : MonoBehaviour
 {
     public float dmgValue = 4;
 
-    [Tooltip("Multiplier applied on top of dmgValue (after the key attribute bonus) for a Ctrl+Attack strong hit.")]
+    [Tooltip("Multiplier applied on top of dmgValue (after the key personality bonus) for a Ctrl+Attack strong hit.")]
     public float strongAttackMultiplier = 1.5f;
 
     public GameObject throwableObject;
@@ -78,8 +78,23 @@ public class Attack : MonoBehaviour
     /// </summary>
     public void DoDashDamage()
     {
-        float attributeBonus = Keys != null ? Keys.GetBonusMultiplier(GameAction.Attack, KeyAttribute.Attack) : 0f;
-        float damage = Mathf.Abs(dmgValue) * (1f + attributeBonus);
+        var effect = Keys != null ? Keys.GetPersonalityEffect(GameAction.Attack) : PersonalityEffect.None;
+
+        // ぶきよう性格：一定確率で攻撃そのものが不発になる（性格仕様書6章）。
+        // モーション自体はAnimation Event経由でもう再生されているが、
+        // ここで何もせずreturnすることでダメージは発生しない。
+        if (effect.failureChance > 0f && Random.value < effect.failureChance)
+        {
+            _pendingStrongAttack = false;
+            return;
+        }
+
+        // TODO: 非情性格のmaxHpReduction（最大HP減少）はここでは未適用。
+        // このプロジェクトにはまだ最大HPを管理するスクリプトが存在しないため、
+        // HP管理側の実装が決まったら、キーが非情キーへ再バインドされた/外された
+        // タイミング（KeyBindingManager.OnBindingsChanged）でmaxHpを増減させる
+        // 形で別途つなぎ込む必要がある。
+        float damage = Mathf.Abs(dmgValue) * (1f + effect.statBonus);
         if (_pendingStrongAttack)
             damage *= strongAttackMultiplier;
 

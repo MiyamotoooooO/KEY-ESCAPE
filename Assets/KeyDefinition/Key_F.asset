@@ -15,6 +15,6 @@ MonoBehaviour:
   keyCode: 102
   displayName: F
   rank: 3
-  attribute: 2
+  personality: 0
   isSpecialKey: 0
-  flavorText: 
+  flavorText: "\u30A2\u30A4\u30C6\u30E0\u62FE\u3046\u306E\u306F\u3082\u3046\u52D8\u5F01"

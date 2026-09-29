@@ -1,13 +1,17 @@
 using UnityEngine;
 
 /// <summary>
-/// プレイヤーが所有し、アクションに割り当てられる、物理的なキーボードキー1つ分の
-/// データ。仕様上の key/action の分離（Ver.0.1 §7、Ver.0.2 §33）における「key」側。
-/// Assets > Create > Key Escape > Key Definition からキー1つにつき1アセット作成する。
+/// Data describing one physical keyboard key the player can own and assign
+/// to an action - the "key" side of the spec's key/action split (Ver.0.1 §7,
+/// Ver.0.2 §33). Create one asset per key via
+/// Assets > Create > Key Escape > Key Definition.
 ///
-/// ランクと属性は常にセットで意味を持つ（Ver.0.2 §9-1：強いキーが何でも強いわけ
-/// ではない）- GetAttributeBonus() がこのルールの唯一の実装箇所なので、
-/// ゲームプレイ側のコードで同じロジックを再実装する必要はない。
+/// 旧KeyAttribute（移動／攻撃の属性ボーナス）は廃止し、personality（性格）に
+/// 完全に置き換えた（性格仕様書.md）。ランクと性格は必ずセットで効果が決まる
+/// 点は旧システムと同じだが、GetPersonalityEffect()が返すのは単純な数値
+/// ボーナスだけではなく、入力失敗率・操作性低下・最大HP減少・条件付き強化・
+/// 確率発動なども含む一式（PersonalityEffect参照）- 実際の計算は
+/// KeyPersonalityDataに集約している。
 /// </summary>
 [CreateAssetMenu(menuName = "Key Escape/Key Definition", fileName = "Key_")]
 public class KeyDefinition : ScriptableObject
@@ -20,34 +24,39 @@ public class KeyDefinition : ScriptableObject
 
     public KeyRank rank = KeyRank.One;
 
-    [Tooltip("Chapter 1 only: Movement or Attack. Leave as None for a key with no attribute bonus.")]
-    public KeyAttribute attribute = KeyAttribute.None;
+    [Tooltip("このキーの性格（性格仕様書.md参照）。isSpecialKeyがtrueの場合は" +
+             "常にSerious（まじめ）として扱われる - OnValidate()がInspector上でも" +
+             "自動的にSeriousへ戻す。")]
+    public KeyPersonality personality = KeyPersonality.Serious;
 
-    [Tooltip("Special keys (Ctrl/Shift/Alt) are modifiers, not standalone actions, and never carry " +
-             "a rank/attribute bonus of their own (spec Ver.0.2 confirmed decision, §10).")]
+    [Tooltip("Special keys (Ctrl/Shift/Alt) are modifiers, not standalone actions. " +
+             "性格仕様書の方針により、特殊キーは常にまじめ（Serious）として扱い、" +
+             "性格による特殊効果は一切持たない。")]
     public bool isSpecialKey = false;
 
     [TextArea]
     public string flavorText;
 
-    /// <summary>
-    /// Ver.0.2 §9: rank/attribute bonus applied when this key is bound to an
-    /// action whose required attribute it matches. Returns 0 for a mismatch,
-    /// for a special key, or for a Rank One key (Rank One = usable, no bonus).
-    /// </summary>
-    public float GetAttributeBonus(KeyAttribute requiredAttribute)
+#if UNITY_EDITOR
+    private void OnValidate()
     {
-        if (isSpecialKey || attribute == KeyAttribute.None || attribute != requiredAttribute)
-            return 0f;
+        // 特殊キーは常にまじめ扱い（性格仕様書の方針）。Inspectorで誤って
+        // 別の性格を設定してしまっても、ここで自動的にSeriousへ戻す。
+        if (isSpecialKey)
+            personality = KeyPersonality.Serious;
+    }
+#endif
 
-        switch (rank)
-        {
-            case KeyRank.Two:
-                return 0.05f;
-            case KeyRank.Three:
-                return 0.10f;
-            default:
-                return 0f; // Rank One
-        }
+    /// <summary>
+    /// このキーを assignedAction に割り当てた場合の性格効果一式
+    /// （性格仕様書2章：性格はキーに付属するが、効果の出方は設定先アクション
+    /// によって変わる）。特殊キーは常にPersonalityEffect.None。
+    /// </summary>
+    public PersonalityEffect GetPersonalityEffect(GameAction assignedAction)
+    {
+        if (isSpecialKey)
+            return PersonalityEffect.None;
+
+        return KeyPersonalityData.GetEffect(personality, rank, assignedAction);
     }
 }

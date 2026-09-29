@@ -15,6 +15,6 @@ MonoBehaviour:
   keyCode: 119
   displayName: W
   rank: 3
-  attribute: 1
+  personality: 5
   isSpecialKey: 0
-  flavorText: 
+  flavorText: "\u3053\u306E\u30B2\u30FC\u30E0\u3058\u3083\u3042\u3093\u307E\u4F7F\u308F\u308C\u306A\u3044\u306E\u304B\u306A\uFF1F"
