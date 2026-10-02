@@ -257,6 +257,9 @@ public class KeyConfigUI : MonoBehaviour
         if (ok)
         {
             ShowKeyInfo(key);
+            // キーを実際に設定した瞬間にも、そのアクションのプレビューを再生する
+            // （クリックした時と同じ経路）。
+            PlayActionPreview(action);
             // 注意：ここでRefreshKeyList()を呼んではいけない（RefreshAll()も同様）。
             // この関数はActionBindingRow.OnDrop経由、つまりドラッグ中のタイル
             // （KeyGridButtonUI）のOnEndDragがまだ発火していない状態で呼ばれている。

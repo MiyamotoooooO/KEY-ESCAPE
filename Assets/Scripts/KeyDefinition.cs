@@ -22,6 +22,9 @@ public class KeyDefinition : ScriptableObject
     [Tooltip("Label shown in the Key Config UI, e.g. \"W\", \"Space\", \"Ctrl\".")]
     public string displayName = "A";
 
+    [Tooltip("「現在の設定」欄などで、文字の代わりにこのキーのキーキャップ風スプライトを表示したい場合に割り当てる。空の場合はdisplayNameの文字表示にフォールバックする（ActionBindingRow.Refresh()参照）。")]
+    public Sprite keySprite;
+
     public KeyRank rank = KeyRank.One;
 
     [Tooltip("このキーの性格（性格仕様書.md参照）。isSpecialKeyがtrueの場合は" +

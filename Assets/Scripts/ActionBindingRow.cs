@@ -29,7 +29,10 @@ public class ActionBindingRow : MonoBehaviour, IDropHandler, IPointerClickHandle
 
     [Header("UI references")]
     public TMP_Text actionLabel;
+    [Tooltip("現在のキーの文字（例：\"A\"、\"Space\"、「ロック中」「未設定」）。Current Key Backgroundの上に重ねて表示する。")]
     public TMP_Text currentKeyLabel;
+    [Tooltip("文字の後ろに敷く、キーキャップ風の背景Image。左一覧（KeyGridButton）のBackgroundと同じスプライトを使い回せばよい - キーごとに別々の画像を用意する必要はない。全てのActionBindingRowで共通の1枚でOK。")]
+    public Image currentKeyBackground;
     [Tooltip("Optional - shown while the action is still locked (e.g. a padlock icon).")]
     public GameObject lockedIndicator;
 
@@ -79,9 +82,16 @@ public class ActionBindingRow : MonoBehaviour, IDropHandler, IPointerClickHandle
 
         bool unlocked = mgr.IsActionUnlocked(action);
         var key = mgr.GetBinding(action);
+        bool hasKey = unlocked && key != null;
 
         if (currentKeyLabel != null)
             currentKeyLabel.text = !unlocked ? "ロック中" : (key != null ? key.displayName : "未設定");
+
+        // キーキャップの背景は、左一覧と同じ共通スプライト（Inspectorで固定済み）を
+        // そのまま使う - キーごとに差し替える必要はない。実際にキーが割り当たって
+        // いる時だけ表示し、「ロック中」「未設定」の時は今まで通り文字だけにする。
+        if (currentKeyBackground != null)
+            currentKeyBackground.enabled = hasKey;
 
         if (lockedIndicator != null)
             lockedIndicator.SetActive(!unlocked);
