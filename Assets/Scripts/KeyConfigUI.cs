@@ -171,6 +171,7 @@ public class KeyConfigUI : MonoBehaviour
 
     public void Close()
     {
+        Debug.Log("[DEBUG] KeyConfigUI.Close called");
         _isOpen = false;
         if (panelRoot != null)
             panelRoot.SetActive(false);
