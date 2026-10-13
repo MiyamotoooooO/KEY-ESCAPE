@@ -9,7 +9,9 @@ using TMPro;
 /// を対象にタブで絞り込んだ分だけ、これをInstantiateして並べる。
 ///
 /// 所持済みキー：文字を表示し、クリックで右のキー情報パネルを更新、
-///   ドラッグして中央のActionBindingRowにドロップすると割り当てられる。
+///   ドラッグして中央のActionBindingRowのキースロット（KeyDropSlot）にドロップ
+///   すると割り当てられる。ドラッグ中は、KeyDragStateを通じて、各行のドロップ先に
+///   黒い半透明の背景を出す。
 /// 未入手キー（Owned=false）：文字を「？」に隠し、lockedOverlay（鍵アイコンなど）
 ///   を表示する。クリックもドラッグも一切受け付けない - 何のキーかは
 ///   実際に入手するまでのお楽しみ。
@@ -71,10 +73,14 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
         if (!Owned || Key == null || _rootCanvas == null)
             return;
 
+        // キーをつかんだことを全体に知らせる。各ActionBindingRowが、これを受けて、
+        // ドロップ先（キースロット）の後ろに黒い半透明の背景を出す。
+        KeyDragState.Set(true);
+
         // ドラッグ中、指/マウスに追従する簡易アイコンをその場で生成する
         // （専用プレハブを用意しなくても動くように、コードでImage+TMP_Textを
         // 組み立てている）。eventData.pointerDragは自動的にこのボタン自身の
-        // GameObjectのままなので、ActionBindingRow.OnDrop()側でKeyGridButtonUIを
+        // GameObjectのままなので、ActionBindingRow.HandleDrop()側でKeyGridButtonUIを
         // 正しく取得できる。
         var go = new GameObject("DragKeyIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(_rootCanvas.transform, false);
@@ -121,8 +127,26 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
     public void OnEndDrag(PointerEventData eventData)
     {
         Debug.Log($"[DEBUG] OnEndDrag: gameObject={gameObject.name}, hadDragIcon={(_dragIcon != null)}");
+
+        // ドロップに成功した時も、ドロップせずに離した時も、ここが必ず呼ばれるので、
+        // ドロップ先の黒い半透明の背景は、ここで確実に消える。
+        KeyDragState.Set(false);
+
         if (_dragIcon != null)
             Destroy(_dragIcon.gameObject);
         _dragIcon = null;
+    }
+
+    private void OnDestroy()
+    {
+        // ドラッグ中にこのタイルが破棄された（キー一覧が作り直された、画面が閉じられた等）
+        // 場合は、OnEndDragが呼ばれないことがある。ドラッグアイコンが残らないように
+        // 消し、ドロップ先の背景も出たままにならないようにする。
+        if (_dragIcon != null)
+        {
+            Destroy(_dragIcon.gameObject);
+            _dragIcon = null;
+            KeyDragState.Set(false);
+        }
     }
 }

@@ -10,19 +10,23 @@ using TMPro;
 /// scene (one per GameAction) rather than instantiated from a prefab - see
 /// シーン構築ガイド.md.
 ///
-/// 新デザイン（Ver.0.3想定）ではドラッグ&ドロップで割り当てる：左のキー一覧
-/// （KeyGridButtonUI）からこの行のどこかにドラッグしたキーをドロップすると
-/// OnDrop()が呼ばれ、owner.TryBindByDrag(action, key)を試みる。行のどこかに
-/// Raycast Target有効なImage（背景の枠など）が必要 - それが無いとUnityの
-/// EventSystemがこの行を「ドロップ先」として検出できない。
+/// ドラッグ&ドロップで割り当てる：左のキー一覧（KeyGridButtonUI）からキーを
+/// ドラッグして、この行の「キースロット」（子のKeyDropSlot）にドロップすると、
+/// HandleDrop()が呼ばれ、owner.TryBindByDrag(action, key)を試みる。
+/// 行全体ではなく、キーのスプライトの位置（未設定の時はその同じ位置）だけが
+/// ドロップ先になる。
+///
+/// キーをつかんでいる間は、ロックされていない行のキースロットの後ろに、黒い半透明の
+/// 背景（dragBackdrop）を出して、ドロップ先を分かりやすくする
+/// （KeyDragStateの通知を受けて切り替える）。さらに、つかんだキーがキースロットの
+/// 上に重なっている間は、その背景の色をdragBackdropHoverColorに変えて、
+/// 「ここに置ける」ことを知らせる（KeyDropSlotからSetDropHover()が呼ばれる）。
 ///
 /// この行自体をクリックすると、右下の「キーのプレビュー」欄でそのアクションの
 /// 動作（ジャンプ・攻撃など）をアニメーションで再生する
 /// （owner.PlayActionPreview(action)経由。実体はKeyConfigPreviewPlayer）。
-/// ドロップ判定に使っているRaycast Target有効なImageがそのままクリック判定にも
-/// 使われるので、追加のUI設定は不要。
 /// </summary>
-public class ActionBindingRow : MonoBehaviour, IDropHandler, IPointerClickHandler
+public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
 {
     [Tooltip("Which action this row represents.")]
     public GameAction action;
@@ -38,20 +42,110 @@ public class ActionBindingRow : MonoBehaviour, IDropHandler, IPointerClickHandle
     [Tooltip("キーが未設定（アクションは解放済みだが、まだ何も割り当てていない）の時だけ表示するオブジェクト（「未設定」の文字を入れたUnsetLabelなど）。CurrentKeyLabelはAuto Sizeで縮むので、固定サイズの別TextMeshProにする。")]
     public GameObject unsetIndicator;
 
+    [Header("ドラッグ中の強調表示")]
+    [Tooltip("キーをつかんでいる間だけ表示する、黒い半透明の背景（DragBackdrop）。キーのスプライトより奥（Rowの子の中で一番最初）に置き、Raycast Targetはオフにする。ロック中の行には表示されない。このオブジェクトにImageが付いていること。")]
+    public GameObject dragBackdrop;
+    [Tooltip("つかんだキーがキースロットの上に重なっている間の、背景の色。普段の色は、DragBackdropのImageに設定した色がそのまま使われる。")]
+    public Color dragBackdropHoverColor = new Color(1f, 0.82f, 0.2f, 0.6f);
+    [Tooltip("ドラッグ中、「未設定」の文字が黒い背景の上で読めるように変える色。")]
+    public Color unsetTextDraggingColor = Color.white;
+
     [Tooltip("The Key Config screen this row belongs to.")]
     public KeyConfigUI owner;
+
+    private bool _dragging;
+    private bool _hover;
+    private Image _backdropImage;
+    private Color _backdropNormalColor;
+    private TMP_Text _unsetText;
+    private Color _unsetTextNormalColor;
+
+    /// <summary>
+    /// キーキャップ（現在のキーの背景）のRectTransform。キーを設定した時の
+    /// エフェクト（KeyConfigUI.PlayBindEffect）を出す位置の基準になる。
+    /// </summary>
+    public RectTransform EffectAnchor =>
+        currentKeyBackground != null ? currentKeyBackground.rectTransform : (RectTransform)transform;
 
     private void Awake()
     {
         if (actionLabel != null)
             actionLabel.text = GameActionLabel.Get(action);
+
+        if (dragBackdrop != null)
+        {
+            _backdropImage = dragBackdrop.GetComponent<Image>();
+            if (_backdropImage != null)
+                _backdropNormalColor = _backdropImage.color;
+        }
+
+        if (unsetIndicator != null)
+        {
+            _unsetText = unsetIndicator.GetComponentInChildren<TMP_Text>(true);
+            if (_unsetText != null)
+                _unsetTextNormalColor = _unsetText.color;
+        }
+    }
+
+    private void OnEnable()
+    {
+        KeyDragState.Changed += OnDragStateChanged;
+        _dragging = KeyDragState.IsDragging;
+        _hover = false;
+        UpdateDragHighlight();
+    }
+
+    private void OnDisable()
+    {
+        KeyDragState.Changed -= OnDragStateChanged;
+        _dragging = false;
+        _hover = false;
+    }
+
+    private void OnDragStateChanged(bool dragging)
+    {
+        _dragging = dragging;
+        // ドラッグが終わった時は、ポインターが重なっていた状態も必ずリセットする
+        // （キースロットの上で離すと、OnPointerExitが呼ばれないことがあるため）。
+        if (!dragging)
+            _hover = false;
+        UpdateDragHighlight();
     }
 
     /// <summary>
-    /// 左のキー一覧からドラッグしてきたKeyGridButtonUIがこの行にドロップされた
-    /// 時にUnityのEventSystemから自動的に呼ばれる。
+    /// KeyDropSlotから呼ばれる。つかんだキーがキースロットの上に重なった／離れた。
     /// </summary>
-    public void OnDrop(PointerEventData eventData)
+    public void SetDropHover(bool hover)
+    {
+        _hover = hover;
+        UpdateDragHighlight();
+    }
+
+    /// <summary>
+    /// キーをつかんでいて、かつこの行のアクションが解放済みの時だけ、
+    /// 黒い半透明の背景を出す（ロック中の行にはドロップできないので出さない）。
+    /// さらに、ポインターがキースロットの上に重なっている間は、背景の色を変える。
+    /// </summary>
+    private void UpdateDragHighlight()
+    {
+        var mgr = KeyBindingManager.Instance;
+        bool show = _dragging && mgr != null && mgr.IsActionUnlocked(action);
+
+        if (dragBackdrop != null)
+            dragBackdrop.SetActive(show);
+
+        if (_backdropImage != null)
+            _backdropImage.color = (show && _hover) ? dragBackdropHoverColor : _backdropNormalColor;
+
+        if (_unsetText != null)
+            _unsetText.color = show ? unsetTextDraggingColor : _unsetTextNormalColor;
+    }
+
+    /// <summary>
+    /// 左のキー一覧からドラッグしてきたKeyGridButtonUIが、この行のキースロット
+    /// （KeyDropSlot）にドロップされた時に、KeyDropSlotから呼ばれる。
+    /// </summary>
+    public void HandleDrop(PointerEventData eventData)
     {
         Debug.Log($"[DEBUG] OnDrop on row {action}: owner={(owner != null)}, pointerDrag={(eventData.pointerDrag != null ? eventData.pointerDrag.name : "null")}");
         if (owner == null || eventData.pointerDrag == null)
@@ -66,7 +160,7 @@ public class ActionBindingRow : MonoBehaviour, IDropHandler, IPointerClickHandle
     }
 
     /// <summary>
-    /// 行のどこかをクリックした時にUnityのEventSystemから自動的に呼ばれる。
+    /// 行のどこか（キースロットも含む）をクリックした時に呼ばれる。
     /// 右下のプレビュー欄で、このアクションの動作を再生させる。
     /// </summary>
     public void OnPointerClick(PointerEventData eventData)
@@ -101,5 +195,8 @@ public class ActionBindingRow : MonoBehaviour, IDropHandler, IPointerClickHandle
 
         if (unsetIndicator != null)
             unsetIndicator.SetActive(unlocked && key == null);
+
+        // ロックが解けた直後などにも、ドラッグ中の強調表示が正しくなるように更新する。
+        UpdateDragHighlight();
     }
 }
