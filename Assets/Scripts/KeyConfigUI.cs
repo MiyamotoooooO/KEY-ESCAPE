@@ -82,7 +82,8 @@ public class KeyConfigUI : MonoBehaviour
 
     private readonly List<GameObject> _spawnedKeyButtons = new List<GameObject>();
     private bool _isOpen;
-
+    /// <summary>キー設定画面が開いているか。設定画面（SettingsUI）が、Escを無視するかの判断に使う。</summary>
+    public bool IsOpen => _isOpen;
     // プロジェクト内の別のスクリプト（おそらく遠距離攻撃の照準ロジック）が、
     // 通常のゲームプレイ中にマウスカーソルを隠す/ロックしている。プレイ中は
     // それで問題ないが、そのままだとこの画面のボタンをクリックしようとしても
@@ -117,7 +118,7 @@ public class KeyConfigUI : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(toggleKey))
+        if (!SettingsUI.IsOpen && Input.GetKeyDown(toggleKey))
             Toggle();
     }
 
