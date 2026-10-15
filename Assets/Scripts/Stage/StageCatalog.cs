@@ -1,0 +1,61 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// KEY ESCAPE - ステージの一覧（順番、名前、シーン名）をまとめて持つ設定アセット。
+/// Resourcesフォルダに「StageCatalog」という名前で1つだけ置く。
+/// ステージは、リストの上から順番に解放されていく（1つクリアすると、次が解放される）。
+/// </summary>
+[CreateAssetMenu(fileName = "StageCatalog", menuName = "KEY ESCAPE/Stage Catalog")]
+public class StageCatalog : ScriptableObject
+{
+    [Serializable]
+    public class Entry
+    {
+        [Tooltip("ステージを区別するID。セーブデータにも使うので、後から変えないこと。例：stage1")]
+        public string id = "stage1";
+        [Tooltip("画面に表示する名前。例：ステージ1")]
+        public string displayName = "ステージ1";
+        [TextArea]
+        [Tooltip("ステージ選択画面に表示する説明。")]
+        public string description;
+        [Tooltip("このステージのシーン名。Build Settingsにも追加しておくこと。")]
+        public string sceneName;
+    }
+
+    [Tooltip("拠点（Defaultステージ）のシーン名。ステージをクリアした後に、ここへ戻る。")]
+    public string hubSceneName = "Default";
+
+    [Tooltip("ステージの一覧。上から順番に解放される。")]
+    public List<Entry> stages = new List<Entry>();
+
+    private static StageCatalog _instance;
+
+    /// <summary>Resourcesフォルダの「StageCatalog」を読み込んで返す。無ければnull。</summary>
+    public static StageCatalog Instance
+    {
+        get
+        {
+            if (_instance == null)
+                _instance = Resources.Load<StageCatalog>("StageCatalog");
+            return _instance;
+        }
+    }
+
+    public int IndexOf(string id)
+    {
+        for (int i = 0; i < stages.Count; i++)
+        {
+            if (stages[i].id == id)
+                return i;
+        }
+        return -1;
+    }
+
+    public Entry Find(string id)
+    {
+        int i = IndexOf(id);
+        return i >= 0 ? stages[i] : null;
+    }
+}

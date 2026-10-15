@@ -147,6 +147,7 @@ GameObject:
   - component: {fileID: 6054447535684105530}
   - component: {fileID: 1026409752031257618}
   - component: {fileID: 5625645795219683990}
+  - component: {fileID: 8568103868100846457}
   m_Layer: 5
   m_Name: OwnedKeyButton
   m_TagString: Untagged
@@ -272,6 +273,22 @@ MonoBehaviour:
   button: {fileID: 1026409752031257618}
   nameLabel: {fileID: 6487903061702291225}
   usedByLabel: {fileID: 5770129589556542524}
+--- !u!114 &8568103868100846457
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 970634104685459345}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63fc5f5dd596bd046bcc28bbef5d0007, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  clickKind: 0
+  playHover: 1
+  hoverOverride: {fileID: 0}
+  clickOverride: {fileID: 0}
 --- !u!1 &8196914560784616222
 GameObject:
   m_ObjectHideFlags: 0

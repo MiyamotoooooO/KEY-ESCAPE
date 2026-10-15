@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 7477949292659466981}
   - component: {fileID: 7083230872407509963}
   - component: {fileID: 3112909829666081718}
+  - component: {fileID: 4655815315098945991}
   m_Layer: 5
   m_Name: KeyGridButton
   m_TagString: Untagged
@@ -162,6 +163,22 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &4655815315098945991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 268545480929545936}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63fc5f5dd596bd046bcc28bbef5d0007, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  clickKind: 0
+  playHover: 1
+  hoverOverride: {fileID: 0}
+  clickOverride: {fileID: 0}
 --- !u!1 &340262553777860165
 GameObject:
   m_ObjectHideFlags: 0

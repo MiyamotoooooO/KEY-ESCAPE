@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75ac418a8e0f0534d8e4c9df61fd8f1f, type: 3}
+  m_Name: SoundEffects
+  m_EditorClassIdentifier: 
+  keyPickup:
+    clip: {fileID: 8300000, guid: 60cf4d2e3c8635c4e861cdef5357c32f, type: 3}
+    volume: 0.639
+  keyBind:
+    clip: {fileID: 8300000, guid: 500b60e6f2b2eb64484dd05d2e162a53, type: 3}
+    volume: 1
+  dialogueOpen:
+    clip: {fileID: 8300000, guid: 9927387139615ef4e9df09e3d6972d65, type: 3}
+    volume: 0.661
+  dialogueTalk:
+    clip: {fileID: 8300000, guid: 34b3a3b1d37a31248a84387b19e85440, type: 3}
+    volume: 0.414
+  dialogueAdvance:
+    clip: {fileID: 8300000, guid: 5eafb615543973c41a4a645d4bfc6265, type: 3}
+    volume: 0.639
+  dialogueClose:
+    clip: {fileID: 8300000, guid: 7a589eccf65f89c45be8eb106b18da11, type: 3}
+    volume: 0.648

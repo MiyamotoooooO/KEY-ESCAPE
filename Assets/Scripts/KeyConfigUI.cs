@@ -118,7 +118,7 @@ public class KeyConfigUI : MonoBehaviour
 
     private void Update()
     {
-        if (!SettingsUI.IsOpen && Input.GetKeyDown(toggleKey))
+        if (!SettingsUI.IsOpen && !StageSelectUI.IsOpen && Input.GetKeyDown(toggleKey))
             Toggle();
     }
 
@@ -262,6 +262,8 @@ public class KeyConfigUI : MonoBehaviour
             // キーを実際に設定した瞬間にも、そのアクションのプレビューを再生する
             // （クリックした時と同じ経路）。
             PlayActionPreview(action);
+            // キーの割り当てに成功した時の効果音（SoundEffectsアセットのKey Bindに割り当てた音）。
+            SoundEffects.Play(SEId.KeyBind);
             // 注意：ここでRefreshKeyList()を呼んではいけない（RefreshAll()も同様）。
             // この関数はActionBindingRow.OnDrop経由、つまりドラッグ中のタイル
             // （KeyGridButtonUI）のOnEndDragがまだ発火していない状態で呼ばれている。

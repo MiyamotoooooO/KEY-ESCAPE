@@ -98,6 +98,9 @@ public class SettingsUI : MonoBehaviour
         if (!Input.GetKeyDown(toggleKey))
             return;
 
+        if (StageSelectUI.IsOpen)
+            return;
+
         // キーコンフィグ画面が開いている間は、Escを無視する（何も起きない）。
         if (keyConfigUI != null && keyConfigUI.IsOpen)
             return;
