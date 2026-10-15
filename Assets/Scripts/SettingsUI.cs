@@ -97,6 +97,7 @@ public class SettingsUI : MonoBehaviour
     {
         if (!Input.GetKeyDown(toggleKey)) return;
         if (TitleMenu.CloseConfirmIfOpen()) return;
+        if (ReturnToTitleButton.CloseConfirmIfOpen()) return;
         if (StageSelectUI.IsOpen) { StageSelectUI.CloseIfOpen(); return; }
         if (keyConfigUI != null && keyConfigUI.IsOpen) return;
         Toggle();

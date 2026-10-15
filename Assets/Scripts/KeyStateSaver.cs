@@ -12,6 +12,7 @@ using UnityEngine.SceneManagement;
 ///   ・Bootstrapが最初に現れた時に、保存してあるキーの状態を復元する（1回だけ）。
 ///   ・その後、キーを拾ったり、割り当てが変わるたびに、自動で保存する。
 ///   ・シーンが変わっても、Bootstrapは残り続けるので、状態は引き継がれる。
+///   ・タイトルへ戻る時は、Detachで監視を外し、Bootstrapを作り直せる状態に戻す（GameSessionから）。
 /// </summary>
 public static class KeyStateSaver
 {
@@ -58,6 +59,22 @@ public static class KeyStateSaver
         inv.OnKeyAdded += OnKeyAdded;
         mgr.OnBindingsChanged += OnBindingsChanged;
         _attached = true;
+    }
+
+    /// <summary>
+    /// キーの変更の監視を外して、次にBootstrapが現れた時に、もう一度復元できる状態に戻す。
+    /// タイトルへ戻る時に、GameSessionから呼ばれる。
+    /// </summary>
+    public static void Detach()
+    {
+        if (!_attached)
+            return;
+
+        KeyInventory inv = KeyInventory.Instance;
+        KeyBindingManager mgr = KeyBindingManager.Instance;
+        if (inv != null) inv.OnKeyAdded -= OnKeyAdded;
+        if (mgr != null) mgr.OnBindingsChanged -= OnBindingsChanged;
+        _attached = false;
     }
 
     private static void OnKeyAdded(KeyDefinition key) => SaveManager.Save();
