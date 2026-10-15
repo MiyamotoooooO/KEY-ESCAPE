@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 
@@ -6,9 +7,10 @@ using TMPro;
 /// KEY ESCAPE - ステージ選択のマップ上に置く、ステージ1つ分のボタン。
 /// StageIdで、StageCatalogのどのステージかを決める。
 /// 表示（ロック・クリア済み・選択中）は、StageSelectUIが自動で更新する。
+/// ロック中（未解放）のステージを押すと、StageSelectUIがメッセージを表示する。
 /// </summary>
 [RequireComponent(typeof(Button))]
-public class StageNodeButton : MonoBehaviour
+public class StageNodeButton : MonoBehaviour, IPointerClickHandler
 {
     [Tooltip("StageCatalogのid（例：stage1）と同じにする。")]
     public string stageId = "stage1";
@@ -42,10 +44,21 @@ public class StageNodeButton : MonoBehaviour
         _button.onClick.AddListener(OnClicked);
     }
 
+    // 解放済みのステージが押された時（Buttonのクリック）。
     private void OnClicked()
     {
         if (_owner != null)
-            _owner.Select(this);
+            _owner.OnNodeClicked(this);
+    }
+
+    // ロック中のステージが押された時。押せない状態のButtonはonClickが呼ばれないので、
+    // こちらでクリックを受け取って、メッセージを表示させる。
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Left)
+            return;
+        if (!IsUnlocked && _owner != null)
+            _owner.OnLockedNodeClicked(this);
     }
 
     public void Setup(StageCatalog.Entry entry, bool unlocked, bool cleared, StageSelectUI owner)

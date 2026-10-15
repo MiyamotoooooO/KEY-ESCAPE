@@ -15,6 +15,6 @@ MonoBehaviour:
   hubSceneName: SelectScene
   stages:
   - id: stage1
-    displayName: SelectStage
+    displayName: Test
     description: 
-    sceneName: SelectScene
+    sceneName: Test

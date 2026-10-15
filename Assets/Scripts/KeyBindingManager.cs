@@ -44,6 +44,11 @@ public class KeyBindingManager : MonoBehaviour
     private readonly HashSet<GameAction> _unlockedActions = new HashSet<GameAction>();
     private bool _modifierUnlocked;
 
+    // ---- キーの一時的な予約 ----------------------------------------------
+    // 掲示板の前など、「このキーでインタラクトする」場所にいる間、そのキーに割り当てた
+    // 操作（攻撃など）を無効にする。複数の場所から同じキーを予約しても、すべて離れるまで続く。
+    private readonly Dictionary<KeyCode, int> _reservedKeys = new Dictionary<KeyCode, int>();
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -150,6 +155,23 @@ public class KeyBindingManager : MonoBehaviour
         return false;
     }
 
+    // ---- キーの予約（インタラクト用） -------------------------------------
+
+    /// <summary>このキーを、ゲームの操作に使わせない（インタラクト用に確保する）。離れる時は、ReleaseKeyを呼ぶ。</summary>
+    public void ReserveKey(KeyCode keyCode)
+    {
+        _reservedKeys.TryGetValue(keyCode, out int count);
+        _reservedKeys[keyCode] = count + 1;
+    }
+
+    public void ReleaseKey(KeyCode keyCode)
+    {
+        if (!_reservedKeys.TryGetValue(keyCode, out int count))
+            return;
+        if (count <= 1) _reservedKeys.Remove(keyCode);
+        else _reservedKeys[keyCode] = count - 1;
+    }
+
     // ---- runtime queries: drop-in replacement for Input.GetKey* ---------
 
     public bool IsActionDown(GameAction action) => TryGetKeyCode(action, out var kc) && Input.GetKeyDown(kc);
@@ -170,6 +192,9 @@ public class KeyBindingManager : MonoBehaviour
         if (!IsActionUnlocked(action))
             return false;
         if (!_bindings.TryGetValue(action, out var key) || key == null)
+            return false;
+        // 掲示板の前などで予約されているキーは、ゲームの操作に使わせない。
+        if (_reservedKeys.ContainsKey(key.keyCode))
             return false;
         keyCode = key.keyCode;
         return true;

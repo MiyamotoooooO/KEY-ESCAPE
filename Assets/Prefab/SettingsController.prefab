@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2363579911744257418
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8318900835625716676}
+  - component: {fileID: 5032107752576006603}
+  m_Layer: 0
+  m_Name: SettingsController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8318900835625716676
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2363579911744257418}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1128.4794, y: 455.07047, z: 14.043073}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5032107752576006603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2363579911744257418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c990d2fe42c56734c9f9931dac2966c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  panelRoot: {fileID: 0}
+  toggleKey: 27
+  pauseGameWhileOpen: 1
+  introAnimator: {fileID: 0}
+  keyConfigUI: {fileID: 0}
+  bgmSlider: {fileID: 0}
+  bgmValueText: {fileID: 0}
+  seSlider: {fileID: 0}
+  seValueText: {fileID: 0}
+  seTestClip: {fileID: 0}
+  fullscreenButton: {fileID: 0}
+  windowedButton: {fileID: 0}
+  guideOnButton: {fileID: 0}
+  guideOffButton: {fileID: 0}
+  backButton: {fileID: 0}
+  resetButton: {fileID: 0}
+  selectedColor: {r: 0.72, g: 0.72, b: 0.72, a: 1}
+  unselectedColor: {r: 1, g: 1, b: 1, a: 1}
