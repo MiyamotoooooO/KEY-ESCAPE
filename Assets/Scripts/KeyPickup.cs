@@ -14,6 +14,9 @@ using UnityEngine;
 /// まだ何にも割り当てられないキーを拾っても、アクションが解放されて
 /// Key Config画面が使えるようになるまで、インベントリの中で待機するだけ。
 ///
+/// すでに持っているキーは、シーンが始まる時に自動で消える
+/// （チェックポイントから再開した時などに、拾ったキーがまた置かれないように）。
+///
 /// セットアップ:
 ///  - Collider2Dを「Is Trigger」に設定したGameObjectに付けること。
 ///  - `keyDefinition`にKeyDefinitionアセットを割り当てる - これがプレイヤーが
@@ -50,6 +53,19 @@ public class KeyPickup : MonoBehaviour
             Debug.LogWarning($"[KeyPickup] {name}: Collider2D is not set to 'Is Trigger' - OnTriggerEnter2D won't fire.", this);
 
         _startPos = transform.position;
+    }
+
+    private void Start()
+    {
+        // すでに持っているキーなら、置かない。
+        // （StartはSceneのAwakeの後で、セーブの復元（KeyStateSaver）が終わった後に呼ばれる。）
+        if (keyDefinition != null
+            && KeyInventory.Instance != null
+            && KeyInventory.Instance.Owns(keyDefinition))
+        {
+            _collected = true;
+            Destroy(gameObject);
+        }
     }
 
     private void Update()
