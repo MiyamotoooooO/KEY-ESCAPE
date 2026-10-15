@@ -138,6 +138,19 @@ public class DialogueKeyRecruit : MonoBehaviour
             dialoguePanel.SetActive(false);
     }
 
+    private void Start()
+    {
+        // すでに持っているキーなら、この会話は起きない。
+        // （チェックポイントから再開してシーンが読み直された時などに、同じ会話がまた始まらないように。
+        //   StartはSceneのAwakeの後で、セーブの復元（KeyStateSaver）が終わった後に呼ばれる。）
+        if (keyDefinition != null
+            && KeyInventory.Instance != null
+            && KeyInventory.Instance.Owns(keyDefinition))
+        {
+            Destroy(gameObject);
+        }
+    }
+
     private void Update()
     {
         // 返事を表示している間だけSpaceキーを監視する。
