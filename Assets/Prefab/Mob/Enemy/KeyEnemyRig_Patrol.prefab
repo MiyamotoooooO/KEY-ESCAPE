@@ -538,7 +538,7 @@ MonoBehaviour:
   dialogueQuestionDuration: 1.5
   dialogueChoicePrefab: {fileID: 0}
   dialogueChoiceDuration: 1.5
-  offset: {x: 0, y: 0.9, z: 0}
+  offset: {x: -0.57, y: 1.4, z: 0}
   bubbleScale: 1
   sortingOrderBoost: 100
 --- !u!1 &7999422346433015880

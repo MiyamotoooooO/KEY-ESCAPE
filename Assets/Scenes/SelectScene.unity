@@ -668,6 +668,7 @@ GameObject:
   - component: {fileID: 51950002}
   - component: {fileID: 51950001}
   - component: {fileID: 51950000}
+  - component: {fileID: 51950004}
   m_Layer: 0
   m_Name: sssss
   m_TagString: Untagged
@@ -707,6 +708,7 @@ MonoBehaviour:
   hoverCursorOffset: {x: -500, y: 0}
   closeClickTarget: {fileID: 1072096029}
   choiceRevealInterval: 0.57
+  choiceRevealStartDelay: 0.4
   responseFadeDuration: 0.6
   dialogueFadeGroup: {fileID: 1677650203}
 --- !u!61 &51950001
@@ -822,6 +824,42 @@ Transform:
   - {fileID: 1383521527}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &51950004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 51949999}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2e2be7ec680c444ca2c8005b18c6895, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unawarePrefab: {fileID: 0}
+  unawarePrefab2: {fileID: 0}
+  unawareShowDuration: 1.5
+  unawareInterval: 4
+  unawareIntervalJitter: 1
+  noticePrefab: {fileID: 0}
+  noticeDuration: 1.2
+  rangedMissPrefab: {fileID: 0}
+  rangedMissDuration: 1.2
+  rangedHitPrefab: {fileID: 0}
+  rangedHitDuration: 1.2
+  halfHpPrefab: {fileID: 0}
+  halfHpDuration: 1.5
+  halfHpRatio: 0.5
+  damagedPrefab: {fileID: 0}
+  damagedDuration: 1.2
+  dialogueWaitingPrefab: {fileID: 7180903315588208450, guid: 285b0f0f579e7714dad36dfc183f8f5a, type: 3}
+  dialogueQuestionPrefab: {fileID: 5908497546615504164, guid: a6d0dad224d7fa24981dcb09cd43ca4a, type: 3}
+  dialogueQuestionDuration: 1.5
+  dialogueChoicePrefab: {fileID: 8846850294868723531, guid: 0c3da04113e2a704fb43572bba699abd, type: 3}
+  dialogueChoiceDuration: 1.5
+  offset: {x: -0.57, y: 1.4, z: 0}
+  bubbleScale: 1
+  sortingOrderBoost: 100
 --- !u!1 &63768627
 GameObject:
   m_ObjectHideFlags: 0
@@ -1865,7 +1903,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 39.000015, y: -145.45624}
+  m_AnchoredPosition: {x: 39.000015, y: -145.45636}
   m_SizeDelta: {x: -64.99997, y: 0}
   m_Pivot: {x: 0.4, y: 0.8}
 --- !u!114 &110308155
@@ -2971,8 +3009,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1294523385}
   m_HandleRect: {fileID: 1294523384}
   m_Direction: 2
-  m_Value: 0
-  m_Size: 0.9999294
+  m_Value: 1
+  m_Size: 0.99992776
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
