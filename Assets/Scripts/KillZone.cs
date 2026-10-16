@@ -9,7 +9,8 @@ public class KillZone : MonoBehaviour
     {
         if (col.gameObject.tag == "Player")
         {
-            SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex);
+            // 短く暗転してから、シーンを読み直す（死亡演出の最中なら、そちらに任せる）
+            HitFeedback.ReloadWithFade(0.35f);
         }
         else
         {

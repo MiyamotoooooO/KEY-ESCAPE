@@ -30,3 +30,12 @@ MonoBehaviour:
   dialogueClose:
     clip: {fileID: 8300000, guid: 7a589eccf65f89c45be8eb106b18da11, type: 3}
     volume: 0.648
+  playerDamage:
+    clip: {fileID: 8300000, guid: 60cf4d2e3c8635c4e861cdef5357c32f, type: 3}
+    volume: 1
+  playerDeath:
+    clip: {fileID: 8300000, guid: c2c3675789d376b479f58d622a146c94, type: 3}
+    volume: 0.551
+  deathFlash:
+    clip: {fileID: 8300000, guid: 2c8247283631bae4ca497b28f9b6cab7, type: 3}
+    volume: 0.744

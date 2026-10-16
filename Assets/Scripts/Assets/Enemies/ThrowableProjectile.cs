@@ -21,16 +21,39 @@ public class ThrowableProjectile : MonoBehaviour
 		if (collision.gameObject.tag == "Player")
 		{
 			collision.gameObject.GetComponent<CharacterController2D>().ApplyDamage(2f, transform.position);
+			NotifyHit(); // KEY ESCAPE: プレイヤーに当たった
 			Destroy(gameObject);
 		}
 		else if ( owner != null && collision.gameObject != owner && collision.gameObject.tag == "Enemy" )
 		{
 			collision.gameObject.SendMessage("ApplyDamage", Mathf.Sign(direction.x) * 2f);
+			NotifyMiss(); // KEY ESCAPE: プレイヤーには当たらなかった
 			Destroy(gameObject);
 		}
 		else if (collision.gameObject.tag != "Enemy" && collision.gameObject.tag != "Player")
 		{
+			NotifyMiss(); // KEY ESCAPE: 壁・地面などに当たった = プレイヤーには当たらなかった
 			Destroy(gameObject);
 		}
+	}
+
+	// KEY ESCAPE: 撃った敵に「当たった」と知らせる（EmoteBubble が吹き出しを出す）。
+	private void NotifyHit()
+	{
+		if (owner == null)
+			return;
+		EmoteBubble bubble = owner.GetComponent<EmoteBubble>();
+		if (bubble != null)
+			bubble.NotifyRangedHit();
+	}
+
+	// KEY ESCAPE: 撃った敵に「外した」と知らせる（EmoteBubble が吹き出しを出す）。
+	private void NotifyMiss()
+	{
+		if (owner == null)
+			return;
+		EmoteBubble bubble = owner.GetComponent<EmoteBubble>();
+		if (bubble != null)
+			bubble.NotifyRangedMiss();
 	}
 }

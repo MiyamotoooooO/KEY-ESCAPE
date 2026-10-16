@@ -302,6 +302,7 @@ GameObject:
   - component: {fileID: 8571710570425341017}
   - component: {fileID: 8553723392009734773}
   - component: {fileID: 3404394519367042149}
+  - component: {fileID: 6900058522549941403}
   m_Layer: 9
   m_Name: KeyEnemyRig_Chaser
   m_TagString: Enemy
@@ -445,6 +446,7 @@ MonoBehaviour:
   hitDuration: 0.35
   hitTint: {r: 1, g: 0.55, b: 0.55, a: 1}
   attackDuration: 0.4
+  throwDuration: 0.35
   deadTilt: 88
   deadLift: 0.47
   fadeDelay: 1.6
@@ -473,6 +475,47 @@ MonoBehaviour:
   dmgValue: 4
   throwableObject: {fileID: 5532974359214069763, guid: c928b20c45c6dcd458c1b9a8c6226d54, type: 3}
   keyDrop: {fileID: 11400000, guid: 8523badd6e7a3ea45a2a27776628cd78, type: 2}
+  detectRangeX: 6
+  detectRangeY: 7
+  loseRangeMultiplier: 1.25
+  idleWhenUnaware: 1
+  jumpOverObstacles: 1
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 0
+  obstacleJumpForce: 650
+  maxObstacleHeight: 1.3
+  obstacleFootRayHeight: 0.15
+  obstacleCheckDistance: 0.4
+  stuckTime: 0.35
+--- !u!114 &6900058522549941403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4645441644507337531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2e2be7ec680c444ca2c8005b18c6895, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unawarePrefab: {fileID: 5186375431679222622, guid: 7c7322edeef3f9b4cba30fa1c0c88dae, type: 3}
+  unawareShowDuration: 1.5
+  unawareInterval: 4
+  unawareIntervalJitter: 1
+  noticePrefab: {fileID: 7180903315588208450, guid: 285b0f0f579e7714dad36dfc183f8f5a, type: 3}
+  noticeDuration: 1.2
+  rangedMissPrefab: {fileID: 3156813770072011485, guid: 77cfabf6751e3fb44adf14efcafcf1bf, type: 3}
+  rangedMissDuration: 1.2
+  rangedHitPrefab: {fileID: 409522007765748548, guid: 7105a6cb6391cba44aa8c7af41183a8c, type: 3}
+  rangedHitDuration: 1.2
+  halfHpPrefab: {fileID: 2762115217008608689, guid: 33163fb9a3705db4d9f017c4c1b0546c, type: 3}
+  halfHpDuration: 1.5
+  halfHpRatio: 0.5
+  offset: {x: -0.57, y: 1.4, z: 0}
+  bubbleScale: 1
+  sortingOrderBoost: 100
 --- !u!1 &5896877666412314897
 GameObject:
   m_ObjectHideFlags: 0
@@ -531,7 +574,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  - {fileID: -6073307632360527223, guid: d0df37096b53bd14495a71f0bc6d44e2, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -575,15 +618,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: A
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: d0df37096b53bd14495a71f0bc6d44e2, type: 2}
+  m_sharedMaterial: {fileID: -6073307632360527223, guid: d0df37096b53bd14495a71f0bc6d44e2, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+    rgba: 4278519045
+  m_fontColor: {r: 0.019607844, g: 0.019607844, b: 0.019607844, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -600,7 +643,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 4.2
+  m_fontSize: 4.7
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1

@@ -9,7 +9,10 @@ public enum SEId
     DialogueOpen,    // 会話が始まった
     DialogueTalk,    // 会話の文字が出る（1文字ごとの音）
     DialogueAdvance, // 会話の次の文へ進んだ
-    DialogueClose    // 会話が終わった
+    DialogueClose,   // 会話が終わった
+    PlayerDamage,    // プレイヤーが攻撃を受けた
+    PlayerDeath,     // プレイヤーが死亡した
+    DeathFlash       // 死亡した瞬間のフラッシュ
 }
 
 /// <summary>
@@ -39,6 +42,11 @@ public class SoundEffects : ScriptableObject
     public Entry dialogueTalk = new Entry();
     public Entry dialogueAdvance = new Entry();
     public Entry dialogueClose = new Entry();
+
+    [Header("プレイヤー")]
+    public Entry playerDamage = new Entry();
+    public Entry playerDeath = new Entry();
+    public Entry deathFlash = new Entry();
 
     private static SoundEffects _instance;
     private static readonly float[] _lastPlayTime = new float[Enum.GetValues(typeof(SEId)).Length];
@@ -94,6 +102,9 @@ public class SoundEffects : ScriptableObject
             case SEId.DialogueTalk: return dialogueTalk;
             case SEId.DialogueAdvance: return dialogueAdvance;
             case SEId.DialogueClose: return dialogueClose;
+            case SEId.PlayerDamage: return playerDamage;
+            case SEId.PlayerDeath: return playerDeath;
+            case SEId.DeathFlash: return deathFlash;
             default: return null;
         }
     }

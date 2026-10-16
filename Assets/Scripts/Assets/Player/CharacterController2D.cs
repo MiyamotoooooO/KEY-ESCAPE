@@ -318,6 +318,7 @@ public class CharacterController2D : MonoBehaviour
             }
             else
             {
+                HitFeedback.PlayDamage();
                 StartCoroutine(Stun(0.25f));
                 StartCoroutine(MakeInvincible(1f));
             }
@@ -377,9 +378,12 @@ public class CharacterController2D : MonoBehaviour
         canMove = false;
         invincible = true;
         GetComponent<Attack>().enabled = false;
-        yield return new WaitForSeconds(0.4f);
+        // 死亡演出（スロー・フラッシュ・カメラのズーム・効果音）。
+        // スロー中でも待ち時間が伸びないよう、待つ時間は実時間で数える。
+        HitFeedback.PlayDeath();
+        yield return new WaitForSecondsRealtime(0.8f);
         m_Rigidbody2D.velocity = new Vector2(0, m_Rigidbody2D.velocity.y);
-        yield return new WaitForSeconds(1.1f);
+        yield return new WaitForSecondsRealtime(1.1f);
         SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex);
     }
 }

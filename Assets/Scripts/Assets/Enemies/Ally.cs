@@ -74,11 +74,49 @@ public class Ally : MonoBehaviour
     public KeyDefinition keyDrop;
     private bool _keyGranted;
 
+    [Header("KEY ESCAPE - 索敵")]
+    [Tooltip("プレイヤーを見つける範囲（横）。この範囲に入った瞬間に索敵状態になる（ワールド単位）")]
+    public float detectRangeX = 8f;
+    [Tooltip("プレイヤーを見つける範囲（縦）（ワールド単位）")]
+    public float detectRangeY = 3f;
+    [Tooltip("一度索敵したあと、範囲を何倍まで広げて判定するか。境目で索敵/未索敵が繰り返し切り替わらないようにする")]
+    public float loseRangeMultiplier = 1.25f;
+    [Tooltip("true: 索敵していない間は追いかけず待機する。false: 昔のとおり、離れていても追い続ける")]
+    public bool idleWhenUnaware = true;
+
+    /// <summary>プレイヤーを索敵している間 true。吹き出し（EmoteBubble）などが読む。</summary>
+    public bool IsAlerted { get; private set; }
+    private bool _provoked; // ダメージを受けたら、範囲の外でも以後ずっと索敵状態
+
+    [Header("KEY ESCAPE - 障害物を飛び越える")]
+    [Tooltip("true: 走っていて前に障害物があればジャンプして飛び越える。false: 昔のとおり、ぶつかったまま押し続ける")]
+    public bool jumpOverObstacles = true;
+    [Tooltip("障害物とみなすレイヤー。空欄（Nothing）のときは Default を使う")]
+    public LayerMask obstacleMask;
+    [Tooltip("ジャンプの強さ。大きいほど高く跳ぶ")]
+    public float obstacleJumpForce = 650f;
+    [Tooltip("足元からこの高さ（ワールド単位）にも壁があれば、高すぎて越えられないので跳ばない")]
+    public float maxObstacleHeight = 1.3f;
+    [Tooltip("足元からこの高さで、前に障害物があるかを見る（ワールド単位）")]
+    public float obstacleFootRayHeight = 0.15f;
+    [Tooltip("進む方向のどのくらい先まで、障害物を見るか（ワールド単位）")]
+    public float obstacleCheckDistance = 0.4f;
+    [Tooltip("走っているのに前に進めない状態がこの秒数続いたら、ジャンプを試す（斜面など、先読みで見つけにくい障害物の保険）")]
+    public float stuckTime = 0.35f;
+
+    private Collider2D _col;
+    private float _stuckTimer;
+    private float _lastCheckX;
+    private float _nextObstacleJumpTime;
+
     void Awake()
     {
         m_Rigidbody2D = GetComponent<Rigidbody2D>();
         attackCheck = transform.Find("AttackCheck").transform;
         anim = GetComponent<Animator>();
+        _col = GetComponent<Collider2D>();
+        if (obstacleMask.value == 0)
+            obstacleMask = LayerMask.GetMask("Default");
     }
 
     // Update is called once per frame
@@ -93,7 +131,15 @@ public class Ally : MonoBehaviour
 
         else if (enemy != null)
         {
-            if (isDashing)
+            UpdateAlert();
+
+            if (idleWhenUnaware && !IsAlerted && !isDashing && !isHitted)
+            {
+                // KEY ESCAPE: 索敵していない間は、その場で待機する。
+                m_Rigidbody2D.velocity = new Vector2(0f, m_Rigidbody2D.velocity.y);
+                anim.SetBool("IsWaiting", true);
+            }
+            else if (isDashing)
             {
                 m_Rigidbody2D.velocity = new Vector2(transform.localScale.x * m_DashForce, 0);
             }
@@ -121,6 +167,7 @@ public class Ally : MonoBehaviour
                 {
                     anim.SetBool("IsWaiting", false);
                     m_Rigidbody2D.velocity = new Vector2(distToPlayer / Mathf.Abs(distToPlayer) * speed, m_Rigidbody2D.velocity.y);
+                    TryJumpOverObstacle(Mathf.Sign(distToPlayer));
                 }
                 else
                 {
@@ -175,6 +222,85 @@ public class Ally : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// KEY ESCAPE: 走っていて前に障害物があれば、ジャンプして飛び越える。
+    ///   ・先読み: 進む方向の足元の高さに壁や箱があれば、ぶつかる前に跳ぶ。
+    ///   ・詰まり検出: 走っているのに前に進めない状態が stuckTime 続いたら跳ぶ。
+    /// 足元からmaxObstacleHeightの高さにも壁があるとき（高すぎて越えられない）、空中、プレイヤーや敵は、跳ばない。
+    /// 走る速度を入れた直後に呼ぶ（dirX は進む向き。+1か-1）。
+    /// </summary>
+    private void TryJumpOverObstacle(float dirX)
+    {
+        if (!jumpOverObstacles || life <= 0f || _col == null)
+            return;
+
+        bool grounded = Mathf.Abs(m_Rigidbody2D.velocity.y) < 0.1f;
+
+        // 前に進めていない時間を数える（呼ばれない間に位置がずれても、数え直すだけ）。
+        float moved = Mathf.Abs(transform.position.x - _lastCheckX);
+        _lastCheckX = transform.position.x;
+        if (grounded && moved < 0.01f)
+            _stuckTimer += Time.fixedDeltaTime;
+        else
+            _stuckTimer = 0f;
+
+        if (!grounded || Time.time < _nextObstacleJumpTime)
+            return;
+
+        bool blockedAtFoot = IsBlockedAhead(dirX, obstacleFootRayHeight);
+        if (!blockedAtFoot && _stuckTimer < stuckTime)
+            return;
+
+        // 高すぎる壁は、跳んでも越えられない。
+        if (IsBlockedAhead(dirX, maxObstacleHeight))
+            return;
+
+        m_Rigidbody2D.velocity = new Vector2(m_Rigidbody2D.velocity.x, 0f);
+        m_Rigidbody2D.AddForce(new Vector2(0f, obstacleJumpForce));
+        anim.SetBool("IsJumping", true);
+        _nextObstacleJumpTime = Time.time + 0.5f;
+        _stuckTimer = 0f;
+        StartCoroutine(ClearJumpFlag());
+    }
+
+    /// <summary>足元から height の高さで、進む方向の少し先に障害物があるか。</summary>
+    private bool IsBlockedAhead(float dirX, float height)
+    {
+        Bounds b = _col.bounds;
+        float sign = dirX >= 0f ? 1f : -1f;
+        Vector2 origin = new Vector2(b.center.x + sign * (b.extents.x + 0.02f), b.min.y + height);
+        RaycastHit2D[] hits = Physics2D.RaycastAll(origin, new Vector2(sign, 0f), obstacleCheckDistance, obstacleMask);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider2D c = hits[i].collider;
+            if (c == null || c.isTrigger || c.transform.IsChildOf(transform))
+                continue;
+            if (c.CompareTag("Player") || c.CompareTag("Enemy") || c.gameObject == enemy)
+                continue; // プレイヤーや他の敵は障害物にしない（その上を飛び越えようとしない）
+            return true;
+        }
+        return false;
+    }
+
+    private IEnumerator ClearJumpFlag()
+    {
+        yield return new WaitForSeconds(0.6f);
+        if (anim != null)
+            anim.SetBool("IsJumping", false);
+    }
+
+    /// <summary>プレイヤーが索敵範囲に入っているかを見て、IsAlerted を更新する。</summary>
+    private void UpdateAlert()
+    {
+        if (enemy == null)
+            return;
+
+        float dx = Mathf.Abs(enemy.transform.position.x - transform.position.x);
+        float dy = Mathf.Abs(enemy.transform.position.y - transform.position.y);
+        float mul = IsAlerted ? Mathf.Max(1f, loseRangeMultiplier) : 1f;
+        IsAlerted = _provoked || (dx <= detectRangeX * mul && dy <= detectRangeY * mul);
+    }
+
     void Flip()
     {
         // Switch the way the player is labelled as facing.
@@ -193,6 +319,7 @@ public class Ally : MonoBehaviour
             float direction = damage / Mathf.Abs(damage);
             damage = Mathf.Abs(damage);
             anim.SetBool("Hit", true);
+            _provoked = true; // KEY ESCAPE: 殴られたら、範囲の外からでも以後ずっと索敵状態
             life -= damage;
             transform.gameObject.GetComponent<Rigidbody2D>().velocity = new Vector2(0, 0);
             transform.gameObject.GetComponent<Rigidbody2D>().AddForce(new Vector2(direction * 300f, 100f));
@@ -252,6 +379,7 @@ public class Ally : MonoBehaviour
     {
         anim.SetBool("IsWaiting", false);
         m_Rigidbody2D.velocity = new Vector2(distToPlayer / Mathf.Abs(distToPlayer) * speed, m_Rigidbody2D.velocity.y);
+        TryJumpOverObstacle(Mathf.Sign(distToPlayer));
         if (doOnceDecision)
             StartCoroutine(NextDecision(0.5f));
     }
