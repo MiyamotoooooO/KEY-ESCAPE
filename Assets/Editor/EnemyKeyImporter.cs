@@ -22,7 +22,7 @@ public class EnemyKeyImporter : AssetPostprocessor
     // Pivot は画像の左下が(0,0)、右上が(1,1)
     private static readonly Vector2 BodyPivot = new Vector2(0.53f, 0.5f);   // 画像左の余白ぶん補正した、キーの見た目の中心
     private static readonly Vector2 ArmPivot = new Vector2(0.05f, 0.94f);   // 腕の付け根（左上の端）
-    private static readonly Vector2 LegPivot = new Vector2(0.84f, 0.985f);  // 脚の付け根（上の端）
+    private static readonly Vector2 LegPivot = new Vector2(0.88f, 0.98f);   // 脚の付け根（右上の端）
 
     private void OnPreprocessTexture()
     {

@@ -28,8 +28,12 @@ public class LimbRig : MonoBehaviour
     public Transform legR;
 
     [Header("向き")]
-    [Tooltip("スプライトの足先が右向きなら true（Allyタイプ）。左向きなら false（Enemyタイプ）")]
+    [Tooltip("キャラが右向きなら true（Allyタイプ）。左向きなら false（Enemyタイプ）。攻撃・倒れるときに傾く向きに使う")]
     public bool spriteFacesRight = false;
+
+    [Header("待機のみ（会話キーなどの動かないキャラ用）")]
+    [Tooltip("true: 速度・life・Animatorを一切見ず、待機の動き（呼吸と腕の揺れ）だけをする")]
+    public bool idleOnly = false;
 
     [Header("歩き")]
     [Tooltip("1歩ぶんの距離。小さいほど足の回転が速くなる")]
@@ -47,6 +51,8 @@ public class LimbRig : MonoBehaviour
     public float walkTilt = 3f;
 
     [Header("待機")]
+    [Tooltip("待機の動き全体の倍率。大きいほど呼吸・腕の揺れ・足踏み・傾き・上下が目立つ。0で完全に静止")]
+    public float idleStrength = 3f;
     public float breathAmount = 0.025f;
     public float breathSpeed = 2.2f;
     public float armSway = 4f;
@@ -122,6 +128,14 @@ public class LimbRig : MonoBehaviour
         _enemy = GetComponentInParent<Enemy>();
         _ally = GetComponentInParent<Ally>();
         _anim = GetComponentInParent<Animator>();
+
+        if (idleOnly)
+        {
+            _rb = null;
+            _enemy = null;
+            _ally = null;
+            _anim = null;
+        }
 
         _seed = Random.value * 10f;
 
@@ -277,16 +291,16 @@ public class LimbRig : MonoBehaviour
             }
             else
             {
-                float sway = (1f - w) * armSway;
-                float armRVal = armRest + w * armSwing * swing + sway * Mathf.Sin(time * 1.8f);
-                float armLVal = armRest - w * armSwing * swing + sway * Mathf.Sin(time * 1.8f + 1.3f);
+                float idle = (1f - w) * idleStrength;
+                float armRVal = armRest + w * armSwing * swing + idle * armSway * Mathf.Sin(time * 2.4f);
+                float armLVal = armRest - w * armSwing * swing + idle * armSway * Mathf.Sin(time * 2.4f + 1.3f);
                 tArmR = armRVal;
                 tArmL = -armLVal;
-                tLegR = w * legSwing * swing + (1f - w) * 1.2f * Mathf.Sin(time * 1.4f);
-                tLegL = -w * legSwing * swing - (1f - w) * 1.2f * Mathf.Sin(time * 1.4f);
-                tTilt = w * walkTilt * swing;
-                tLift = w * bobHeight * Mathf.Abs(swing);
-                tSquash = 1f + (1f - w) * breathAmount * Mathf.Sin(time * breathSpeed);
+                tLegR = w * legSwing * swing + idle * 1.5f * Mathf.Sin(time * 2.0f);
+                tLegL = -w * legSwing * swing - idle * 1.5f * Mathf.Sin(time * 2.0f);
+                tTilt = w * walkTilt * swing + idle * 0.8f * Mathf.Sin(time * 1.6f);
+                tLift = w * bobHeight * Mathf.Abs(swing) + idle * 0.02f * (0.5f + 0.5f * Mathf.Sin(time * (breathSpeed + 0.4f)));
+                tSquash = 1f + idle * breathAmount * Mathf.Sin(time * (breathSpeed + 0.4f));
             }
 
             // 攻撃は腕と傾きだけ上書きする（脚は歩き/待機のまま）

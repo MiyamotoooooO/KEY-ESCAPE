@@ -4,7 +4,8 @@ using TMPro;
 /// <summary>
 /// 敵キー（手足の生えたキー）のキートップに文字を出す。
 ///
-/// ・文字は「倒すと手に入るキー（Enemy.keyDrop / Ally.keyDrop）」の KeyDefinition.displayName から自動で入る。
+/// ・文字は「手に入るキー」の KeyDefinition.displayName から自動で入る。
+///   親にある Enemy.keyDrop / Ally.keyDrop / DialogueKeyRecruit.keyDefinition / KeyPickup.keyDefinition を順に探す。
 ///   → モデルは1つだけ作って、keyDrop を変えるだけで全キーの敵が作れる。
 /// ・keyOverride / textOverride で手動指定もできる。
 /// ・Enemy / Ally は向きが変わるとき transform.localScale.x を反転させるので、
@@ -26,12 +27,16 @@ public class KeyLabel : MonoBehaviour
     private TextMeshPro _tmp;
     private Enemy _enemy;
     private Ally _ally;
+    private DialogueKeyRecruit _dialogue;
+    private KeyPickup _pickup;
 
     private void Awake()
     {
         _tmp = GetComponent<TextMeshPro>();
         _enemy = GetComponentInParent<Enemy>();
         _ally = GetComponentInParent<Ally>();
+        _dialogue = GetComponentInParent<DialogueKeyRecruit>();
+        _pickup = GetComponentInParent<KeyPickup>();
     }
 
     private void Start()
@@ -70,6 +75,8 @@ public class KeyLabel : MonoBehaviour
             KeyDefinition key = keyOverride;
             if (key == null && _enemy != null) key = _enemy.keyDrop;
             if (key == null && _ally != null) key = _ally.keyDrop;
+            if (key == null && _dialogue != null) key = _dialogue.keyDefinition;
+            if (key == null && _pickup != null) key = _pickup.keyDefinition;
 
             if (key != null)
                 text = string.IsNullOrEmpty(key.displayName) ? key.keyCode.ToString() : key.displayName;
