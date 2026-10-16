@@ -4,9 +4,12 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// KEY ESCAPE - 設定画面の「タイトルへ戻る」ボタン。
-/// 押すと確認の画面が出て、「はい」でタイトル画面へ戻る。
-/// タイトル画面の設定画面では、ボタン自身が非表示になる。
+/// KEY ESCAPE - 設定画面の「タイトルへ戻る」「拠点へ戻る」ボタン。
+/// 押すと確認の画面が出て、「はい」で戻る。
+///   ・Destination = Title … タイトル画面へ戻る。タイトル画面の設定画面では、ボタン自身が非表示になる。
+///   ・Destination = Hub   … ステージの途中から、拠点（StageCatalog の Hub Scene Name）へ戻る。
+///                           StageCatalog に登録したステージのシーン以外（拠点・タイトル）では、ボタン自身が非表示になる。
+///                           クリア扱いにはならない（報酬は付かない）。
 ///
 /// 設定画面（SettingsPanelプレハブ）の中に作ること。
 /// 確認の画面などの参照が、プレハブの中で完結するので、どのシーンでも同じように動く。
@@ -14,7 +17,16 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Button))]
 public class ReturnToTitleButton : MonoBehaviour
 {
-    private static ReturnToTitleButton _active;
+    /// <summary>戻り先。</summary>
+    public enum Destination
+    {
+        Title,
+        Hub,
+    }
+
+    // 設定画面に、ボタン（タイトル用・拠点用）が複数あるので、いま開いているものをすべて覚えておく。
+    private static readonly System.Collections.Generic.List<ReturnToTitleButton> _actives =
+        new System.Collections.Generic.List<ReturnToTitleButton>();
 
     /// <summary>
     /// Escキーで呼ばれる（SettingsUIから）。確認の画面が出ていれば閉じて、trueを返す。
@@ -22,11 +34,15 @@ public class ReturnToTitleButton : MonoBehaviour
     /// </summary>
     public static bool CloseConfirmIfOpen()
     {
-        if (_active != null && _active.confirmPanel != null && _active.confirmPanel.activeSelf)
+        for (int i = 0; i < _actives.Count; i++)
         {
-            _active.confirmPanel.SetActive(false);
-            _active.SelectSelf();
-            return true;
+            ReturnToTitleButton b = _actives[i];
+            if (b != null && b.confirmPanel != null && b.confirmPanel.activeSelf)
+            {
+                b.confirmPanel.SetActive(false);
+                b.SelectSelf();
+                return true;
+            }
         }
         return false;
     }
@@ -36,6 +52,10 @@ public class ReturnToTitleButton : MonoBehaviour
     public GameObject confirmPanel;
     public Button confirmYesButton;
     public Button confirmNoButton;
+
+    [Header("戻り先")]
+    [Tooltip("Title＝タイトル画面へ戻る。Hub＝ステージの途中から拠点へ戻る（ステージのシーンでだけ表示される）。")]
+    public Destination destination = Destination.Title;
 
     [Header("そのほか")]
     [Tooltip("タイトル画面のシーン名。Build Settingsに登録した名前と同じにする。")]
@@ -48,8 +68,11 @@ public class ReturnToTitleButton : MonoBehaviour
 
     private void Awake()
     {
-        // タイトル画面の設定画面では、このボタンは要らない。
-        if (SceneManager.GetActiveScene().name == titleSceneName)
+        // タイトル用：タイトル画面の設定画面では、このボタンは要らない。
+        // 拠点用：ステージのシーン以外（拠点・タイトルなど）では、このボタンは要らない。
+        if (destination == Destination.Title
+            ? SceneManager.GetActiveScene().name == titleSceneName
+            : !IsStageScene(SceneManager.GetActiveScene().name))
         {
             gameObject.SetActive(false);
             return;
@@ -63,7 +86,8 @@ public class ReturnToTitleButton : MonoBehaviour
 
     private void OnEnable()
     {
-        _active = this;
+        if (!_actives.Contains(this))
+            _actives.Add(this);
         // 設定画面を開き直した時は、確認の画面を閉じた状態から始める。
         if (confirmPanel != null)
             confirmPanel.SetActive(false);
@@ -71,8 +95,21 @@ public class ReturnToTitleButton : MonoBehaviour
 
     private void OnDisable()
     {
-        if (_active == this)
-            _active = null;
+        _actives.Remove(this);
+    }
+
+    /// <summary>StageCatalog に登録されたステージのシーンか。</summary>
+    private static bool IsStageScene(string sceneName)
+    {
+        StageCatalog catalog = StageCatalog.Instance;
+        if (catalog == null || catalog.stages == null)
+            return false;
+        for (int i = 0; i < catalog.stages.Count; i++)
+        {
+            if (catalog.stages[i] != null && catalog.stages[i].sceneName == sceneName)
+                return true;
+        }
+        return false;
     }
 
     private void OnClicked()
@@ -111,9 +148,21 @@ public class ReturnToTitleButton : MonoBehaviour
         if (_leaving)
             return;
 
-        if (!Application.CanStreamedLevelBeLoaded(titleSceneName))
+        // 戻り先のシーン名を決める。
+        string targetScene;
+        if (destination == Destination.Hub)
         {
-            Debug.LogWarning("[ReturnToTitleButton] シーン「" + titleSceneName + "」を読み込めません。File > Build Settingsに、このシーンを追加してください。");
+            StageCatalog catalog = StageCatalog.Instance;
+            targetScene = catalog != null ? catalog.hubSceneName : null;
+        }
+        else
+        {
+            targetScene = titleSceneName;
+        }
+
+        if (string.IsNullOrEmpty(targetScene) || !Application.CanStreamedLevelBeLoaded(targetScene))
+        {
+            Debug.LogWarning("[ReturnToTitleButton] シーン「" + targetScene + "」を読み込めません。File > Build Settingsに、このシーンを追加してください（拠点の場合は、StageCatalogのHub Scene Nameも確認してください）。");
             return;
         }
         _leaving = true;
@@ -124,8 +173,17 @@ public class ReturnToTitleButton : MonoBehaviour
             settings.Toggle();
         Time.timeScale = 1f;
 
+        if (destination == Destination.Hub)
+        {
+            // 拠点へ。途中でやめるので、クリア扱いにはしない。再開位置の記録も消す。
+            // キーの仕組みは、ステージクリアで戻る時と同じく、リセットしない。
+            CheckpointManager.Clear();
+            SceneManager.LoadScene(targetScene);
+            return;
+        }
+
         // キーの仕組みをリセットして、タイトルへ。
         GameSession.ResetKeySystem();
-        SceneManager.LoadScene(titleSceneName);
+        SceneManager.LoadScene(targetScene);
     }
 }
