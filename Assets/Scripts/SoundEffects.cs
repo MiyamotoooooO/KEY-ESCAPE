@@ -12,7 +12,8 @@ public enum SEId
     DialogueClose,   // 会話が終わった
     PlayerDamage,    // プレイヤーが攻撃を受けた
     PlayerDeath,     // プレイヤーが死亡した
-    DeathFlash       // 死亡した瞬間のフラッシュ
+    DeathFlash,      // 死亡した瞬間のフラッシュ
+    DialogueChoiceShow // 会話の選択肢が1つ表示された（上から順に1つずつ鳴る）
 }
 
 /// <summary>
@@ -42,6 +43,7 @@ public class SoundEffects : ScriptableObject
     public Entry dialogueTalk = new Entry();
     public Entry dialogueAdvance = new Entry();
     public Entry dialogueClose = new Entry();
+    public Entry dialogueChoiceShow = new Entry();
 
     [Header("プレイヤー")]
     public Entry playerDamage = new Entry();
@@ -105,6 +107,7 @@ public class SoundEffects : ScriptableObject
             case SEId.PlayerDamage: return playerDamage;
             case SEId.PlayerDeath: return playerDeath;
             case SEId.DeathFlash: return deathFlash;
+            case SEId.DialogueChoiceShow: return dialogueChoiceShow;
             default: return null;
         }
     }

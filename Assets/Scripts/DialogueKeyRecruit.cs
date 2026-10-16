@@ -90,6 +90,9 @@ public class DialogueKeyRecruit : MonoBehaviour
     [Tooltip("選択肢ボタンを上から1つずつ表示していく間隔（秒）。0にすると全部同時に表示される。")]
     public float choiceRevealInterval = 0.15f;
 
+    [Tooltip("質問が出てから、最初の選択肢が出るまでの待ち時間（秒）。質問の効果音と、選択肢の効果音が重ならないようにする。0にすると質問と同時に出始める。")]
+    public float choiceRevealStartDelay = 0.4f;
+
     [Header("返答クローズ時のフェード（任意）")]
     [Tooltip("最後の返答が表示されている状態でSpaceキーを押した後、消えるまでの秒数。0にすると今まで通り即座に消える。")]
     public float responseFadeDuration = 0.6f;
@@ -103,6 +106,7 @@ public class DialogueKeyRecruit : MonoBehaviour
     private Vector3 _hoverCursorBasePosition;
     private bool _hoverCursorBaseCaptured;
     private PlayerMovement _playerMovement;
+    private EmoteBubble _emote;
 
     /// <summary>
     /// choiceButtons[i]にマウスが乗った/離れたことをDialogueKeyRecruit本体に
@@ -138,6 +142,8 @@ public class DialogueKeyRecruit : MonoBehaviour
 
     private void Awake()
     {
+        _emote = GetComponent<EmoteBubble>();
+
         var col = GetComponent<Collider2D>();
         if (!col.isTrigger)
             Debug.LogWarning($"[DialogueKeyRecruit] {name}: Collider2Dが 'Is Trigger' に設定されていません - 会話が始まりません。", this);
@@ -239,6 +245,11 @@ public class DialogueKeyRecruit : MonoBehaviour
         if (dialogueFadeGroup != null)
             dialogueFadeGroup.alpha = 1f;
 
+        // 質問が始まる：効果音と、頭の上のエモート（質問）。
+        SoundEffects.Play(SEId.DialogueOpen);
+        if (_emote != null)
+            _emote.NotifyDialogueStart();
+
         _hoveredChoiceIndex = -1;
         if (hoverCursor != null)
             hoverCursor.gameObject.SetActive(false);
@@ -288,12 +299,24 @@ public class DialogueKeyRecruit : MonoBehaviour
     /// </summary>
     private IEnumerator RevealChoicesSequentially()
     {
+        // 質問の効果音が先に聞こえるよう、最初の選択肢が出るまで少し待つ。
+        if (choiceRevealStartDelay > 0f)
+            yield return new WaitForSecondsRealtime(choiceRevealStartDelay);
+
+        bool popPlayed = false;
         for (int i = 0; i < choiceButtons.Length; i++)
         {
             if (choiceButtons[i] == null || i >= choices.Length)
                 continue;
 
             choiceButtons[i].gameObject.SetActive(true);
+
+            // 1つ表示されるたびに「ポン」。全部を同時に出す設定（間隔0）の時は、1回だけ鳴らす。
+            if (choiceRevealInterval > 0f || !popPlayed)
+            {
+                SoundEffects.Play(SEId.DialogueChoiceShow);
+                popPlayed = true;
+            }
 
             if (choiceRevealInterval > 0f)
                 yield return new WaitForSecondsRealtime(choiceRevealInterval);
@@ -386,6 +409,11 @@ public class DialogueKeyRecruit : MonoBehaviour
 
         if (dialogueText != null)
             dialogueText.text = choices[index].response;
+
+        // 選んだあと、キーが返事を話し始める：効果音と、頭の上のエモート（選択）。
+        SoundEffects.Play(SEId.DialogueAdvance);
+        if (_emote != null)
+            _emote.NotifyDialogueChoice();
 
         foreach (var btn in choiceButtons)
         {

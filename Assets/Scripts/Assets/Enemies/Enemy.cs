@@ -96,6 +96,10 @@ public class Enemy : MonoBehaviour
             damage = Mathf.Abs(damage);
             transform.GetComponent<Animator>().SetBool("Hit", true);
             life -= damage;
+            // ダメージを受けた時の吹き出し（EmoteBubbleが付いていれば）
+            EmoteBubble emote = GetComponent<EmoteBubble>();
+            if (emote != null)
+                emote.NotifyDamaged();
             rb.velocity = Vector2.zero;
             rb.AddForce(new Vector2(direction * 500f, 100f));
             StartCoroutine(HitTime());

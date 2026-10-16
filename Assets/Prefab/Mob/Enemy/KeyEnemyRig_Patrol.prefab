@@ -334,6 +334,7 @@ GameObject:
   - component: {fileID: 1159395802215368387}
   - component: {fileID: 8745038503993953471}
   - component: {fileID: 77120213235315923}
+  - component: {fileID: 5286770289921810370}
   m_Layer: 9
   m_Name: KeyEnemyRig_Patrol
   m_TagString: Enemy
@@ -504,6 +505,42 @@ MonoBehaviour:
   speed: 5
   isInvincible: 0
   keyDrop: {fileID: 0}
+--- !u!114 &5286770289921810370
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7647185708993469744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2e2be7ec680c444ca2c8005b18c6895, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unawarePrefab: {fileID: 5513734163778149615, guid: 875e8b9cec2c5424d9262b2d297b9b6b, type: 3}
+  unawarePrefab2: {fileID: 5186375431679222622, guid: 7c7322edeef3f9b4cba30fa1c0c88dae, type: 3}
+  unawareShowDuration: 1.5
+  unawareInterval: 4
+  unawareIntervalJitter: 1
+  noticePrefab: {fileID: 0}
+  noticeDuration: 1.2
+  rangedMissPrefab: {fileID: 0}
+  rangedMissDuration: 1.2
+  rangedHitPrefab: {fileID: 0}
+  rangedHitDuration: 1.2
+  halfHpPrefab: {fileID: 0}
+  halfHpDuration: 1.5
+  halfHpRatio: 0.5
+  damagedPrefab: {fileID: 7330789351768504273, guid: 51cf9f478b593d847a56746d31dc05f0, type: 3}
+  damagedDuration: 1.2
+  dialogueWaitingPrefab: {fileID: 0}
+  dialogueQuestionPrefab: {fileID: 0}
+  dialogueQuestionDuration: 1.5
+  dialogueChoicePrefab: {fileID: 0}
+  dialogueChoiceDuration: 1.5
+  offset: {x: 0, y: 0.9, z: 0}
+  bubbleScale: 1
+  sortingOrderBoost: 100
 --- !u!1 &7999422346433015880
 GameObject:
   m_ObjectHideFlags: 0
