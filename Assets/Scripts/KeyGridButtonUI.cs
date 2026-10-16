@@ -69,7 +69,6 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        Debug.Log($"[DEBUG] OnBeginDrag: gameObject={gameObject.name}, Owned={Owned}, Key={(Key != null ? Key.displayName : "null")}, rootCanvas={(_rootCanvas != null)}");
         if (!Owned || Key == null || _rootCanvas == null)
             return;
 
@@ -126,8 +125,6 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        Debug.Log($"[DEBUG] OnEndDrag: gameObject={gameObject.name}, hadDragIcon={(_dragIcon != null)}");
-
         // ドロップに成功した時も、ドロップせずに離した時も、ここが必ず呼ばれるので、
         // ドロップ先の黒い半透明の背景は、ここで確実に消える。
         KeyDragState.Set(false);
@@ -135,6 +132,18 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
         if (_dragIcon != null)
             Destroy(_dragIcon.gameObject);
         _dragIcon = null;
+    }
+
+    private void OnDisable()
+    {
+        // ドラッグ中に画面が閉じられて（非表示になって）も、OnEndDragは呼ばれない。
+        // ドラッグアイコンが残らないよう消し、ドロップ先の背景も出たままにならないようにする。
+        if (_dragIcon != null)
+        {
+            Destroy(_dragIcon.gameObject);
+            _dragIcon = null;
+            KeyDragState.Set(false);
+        }
     }
 
     private void OnDestroy()

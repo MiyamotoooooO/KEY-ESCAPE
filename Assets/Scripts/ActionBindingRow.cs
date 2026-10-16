@@ -147,12 +147,10 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
     /// </summary>
     public void HandleDrop(PointerEventData eventData)
     {
-        Debug.Log($"[DEBUG] OnDrop on row {action}: owner={(owner != null)}, pointerDrag={(eventData.pointerDrag != null ? eventData.pointerDrag.name : "null")}");
         if (owner == null || eventData.pointerDrag == null)
             return;
 
         var dragged = eventData.pointerDrag.GetComponent<KeyGridButtonUI>();
-        Debug.Log($"[DEBUG] OnDrop: dragged component found={(dragged != null)}, dragged.Key={(dragged != null && dragged.Key != null ? dragged.Key.displayName : "null")}");
         if (dragged == null || dragged.Key == null)
             return;
 

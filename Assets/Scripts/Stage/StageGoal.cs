@@ -110,12 +110,50 @@ public class StageGoal : MonoBehaviour
         _done = true;
 
         StageProgress.MarkCleared(stageId);
+        GrantRewards();
         CheckpointManager.Clear();
 
         if (clearMessage != null)
             clearMessage.SetActive(true);
 
         StartCoroutine(ReturnToHub());
+    }
+
+    /// <summary>
+    /// StageCatalog のこのステージの欄に設定した「クリア報酬」を解放する。
+    /// すでにクリア済みのステージをもう一度クリアしても、まだ解放していない報酬は解放される。
+    /// </summary>
+    private void GrantRewards()
+    {
+        StageCatalog catalog = StageCatalog.Instance;
+        StageCatalog.Entry entry = catalog != null ? catalog.Find(stageId) : null;
+        if (entry == null || entry.rewards == null || entry.rewards.Count == 0)
+            return;
+
+        KeyBindingManager keys = KeyBindingManager.Instance;
+        for (int i = 0; i < entry.rewards.Count; i++)
+        {
+            switch (entry.rewards[i])
+            {
+                case StageReward.Dash:
+                    if (keys != null) keys.UnlockAction(GameAction.Dash);
+                    break;
+                case StageReward.RangedAttack:
+                    if (keys != null) keys.UnlockAction(GameAction.RangedAttack);
+                    break;
+                case StageReward.ModifierKey:
+                    if (keys != null) keys.UnlockModifierKey();
+                    break;
+                case StageReward.DoubleJump:
+                    SaveManager.Data.doubleJumpUnlocked = true;
+                    break;
+            }
+        }
+
+        if (keys == null)
+            Debug.LogWarning("[StageGoal] KeyBindingManagerが見つからないため、キーに関する報酬（ダッシュ・遠距離攻撃・特殊キー）を解放できませんでした（Bootstrapが無い？）。");
+
+        SaveManager.Save();
     }
 
     private IEnumerator ReturnToHub()

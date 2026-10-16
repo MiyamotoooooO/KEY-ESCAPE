@@ -95,6 +95,10 @@ public class CharacterController2D : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // Rigidbody2Dが無いコピー（キーコンフィグのプレビュー用キャラなど）では、何もしない。
+        if (m_Rigidbody2D == null)
+            return;
+
         bool wasGrounded = m_Grounded;
         m_Grounded = false;
 

@@ -32,6 +32,8 @@ public class SaveData
     public List<BindingSave> bindings = new List<BindingSave>();
     /// <summary>特殊キー（Ctrl）を解放済みか。</summary>
     public bool modifierUnlocked;
+    /// <summary>二段ジャンプを解放済みか（ステージクリアの報酬）。</summary>
+    public bool doubleJumpUnlocked;
 }
 
 /// <summary>

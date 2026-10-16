@@ -35,7 +35,7 @@ public class HpGaugeUI : MonoBehaviour
     // 動き
     const float GaugeSpeed = 0.8f;         // 1秒あたりに動く割合（0.8 なら、1マス = 0.2 を約0.25秒で動かす）
 
-    const int SortingOrder = 100;          // 画面の手前に出す順（死亡の暗転・赤い縁より下）
+    const int SortingOrder = -100;         // 描く順。マイナスにして、設定画面・キーコンフィグ・会話などの画面の後ろに回す（死亡の暗転・赤い縁は、3000で一番手前）
 
     // 枠画像（HPGauge_Frame.png 2034×362）の「内側の透明な部分」の範囲。画像を差し替えたら合わせ直す。
     const float InnerLeft = 34f / 2034f;
@@ -208,7 +208,17 @@ public class HpGaugeUI : MonoBehaviour
 
     private void TryBind()
     {
-        CharacterController2D p = FindObjectOfType<CharacterController2D>();
+        // Rigidbody2Dを持つものが、本物のプレイヤー（キーコンフィグのプレビュー用キャラなどは除く）。
+        CharacterController2D p = null;
+        CharacterController2D[] all = FindObjectsOfType<CharacterController2D>();
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i].GetComponent<Rigidbody2D>() != null)
+            {
+                p = all[i];
+                break;
+            }
+        }
         if (p == null)
             return;
 

@@ -38,7 +38,7 @@ MonoBehaviour:
     volume: 1
   playerDeath:
     clip: {fileID: 8300000, guid: c2c3675789d376b479f58d622a146c94, type: 3}
-    volume: 0.551
+    volume: 0.441
   deathFlash:
     clip: {fileID: 8300000, guid: 2c8247283631bae4ca497b28f9b6cab7, type: 3}
     volume: 0.744

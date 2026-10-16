@@ -2,6 +2,15 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>ステージクリアで解放できる報酬の種類。</summary>
+public enum StageReward
+{
+    Dash,          // ダッシュ（アクションの解放。使うには、キーを割り当てる）
+    RangedAttack,  // 遠距離攻撃（アクションの解放。使うには、キーを割り当てる）
+    ModifierKey,   // 特殊キー（Ctrl）の解放。Ctrl+攻撃の強攻撃に使う
+    DoubleJump,    // 二段ジャンプ（Jumpのキーでそのまま使える）
+}
+
 /// <summary>
 /// KEY ESCAPE - ステージの一覧（順番、名前、シーン名）をまとめて持つ設定アセット。
 /// Resourcesフォルダに「StageCatalog」という名前で1つだけ置く。
@@ -22,6 +31,8 @@ public class StageCatalog : ScriptableObject
         public string description;
         [Tooltip("このステージのシーン名。Build Settingsにも追加しておくこと。")]
         public string sceneName;
+        [Tooltip("このステージをクリアした時に解放される報酬。空なら、何も解放しない。")]
+        public List<StageReward> rewards = new List<StageReward>();
     }
 
     [Tooltip("拠点（Defaultステージ）のシーン名。ステージをクリアした後に、ここへ戻る。")]

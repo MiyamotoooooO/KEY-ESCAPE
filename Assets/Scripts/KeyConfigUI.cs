@@ -172,7 +172,8 @@ public class KeyConfigUI : MonoBehaviour
 
     public void Close()
     {
-        Debug.Log("[DEBUG] KeyConfigUI.Close called");
+        // ドラッグ中に画面を閉じても、ドロップ先の背景が残らないように、ドラッグ状態を解除する。
+        KeyDragState.Set(false);
         _isOpen = false;
         if (panelRoot != null)
             panelRoot.SetActive(false);
@@ -255,7 +256,6 @@ public class KeyConfigUI : MonoBehaviour
             return;
 
         bool ok = KeyBindingManager.Instance.TryBindKey(action, key);
-        Debug.Log($"[DEBUG] TryBindByDrag: action={action}, key={key.displayName}, TryBindKey result={ok}");
         if (ok)
         {
             ShowKeyInfo(key);
