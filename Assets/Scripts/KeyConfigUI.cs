@@ -118,7 +118,7 @@ public class KeyConfigUI : MonoBehaviour
 
     private void Update()
     {
-        if (!SettingsUI.IsOpen && !StageSelectUI.IsOpen && Input.GetKeyDown(toggleKey))
+        if (!SettingsUI.IsOpen && !StageSelectUI.IsOpen && !GamePause.IsPaused && Input.GetKeyDown(toggleKey))
             Toggle();
     }
 

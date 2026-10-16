@@ -78,6 +78,10 @@ public class Attack : MonoBehaviour
     /// </summary>
     public void DoDashDamage()
     {
+        // GamePause 中は、アニメーションを流し続けても敵にダメージは入れない。
+        if (GamePause.IsPaused)
+            return;
+
         var effect = Keys != null ? Keys.GetPersonalityEffect(GameAction.Attack) : PersonalityEffect.None;
 
         // ぶきよう性格：一定確率で攻撃そのものが不発になる（性格仕様書6章）。

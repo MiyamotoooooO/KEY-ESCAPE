@@ -69,6 +69,8 @@ public class LimbRig : MonoBehaviour
 
     [Header("攻撃（Ally用）")]
     public float attackDuration = 0.4f;
+    [Tooltip("遠距離攻撃（弾を投げる）の腕振りにかける秒数")]
+    public float throwDuration = 0.35f;
 
     [Header("鎮静（倒れる）")]
     [Tooltip("倒れる角度（度）")]
@@ -109,6 +111,8 @@ public class LimbRig : MonoBehaviour
     private float _moveWeight;
     private float _hitTimer;
     private float _attackTimer;
+    private float _throwTimer;
+    private float _clock;
     private float _deadTime;
     private float _hitSign = 1f;
     private bool _tintActive;
@@ -182,6 +186,12 @@ public class LimbRig : MonoBehaviour
         _attackTimer = attackDuration;
     }
 
+    /// <summary>遠距離攻撃（弾を投げる）の腕振りを再生する。Ally.RangeAttack() から呼ばれる。</summary>
+    public void PlayThrow()
+    {
+        _throwTimer = throwDuration;
+    }
+
     /// <summary>外から被ダメージの動きを呼びたいとき用。</summary>
     public void PlayHit()
     {
@@ -191,9 +201,11 @@ public class LimbRig : MonoBehaviour
 
     private void Update()
     {
-        float dt = Time.deltaTime;
+        // ゲームが GamePause で止まっている間は、時間が止まっていても実時間でアニメーションだけ流す。
+        // （速度の値は止まる直前のまま残るので、走っていたらその場で走りのループになる）
+        float dt = GamePause.IsPaused ? Time.unscaledDeltaTime : Time.deltaTime;
         if (dt <= 0f)
-            return; // ポーズ中（timeScale 0）は止める
+            return;
 
         // ---------- 状態を読む ----------
         float vx = _rb != null ? _rb.velocity.x : 0f;
@@ -229,6 +241,7 @@ public class LimbRig : MonoBehaviour
 
         if (_hitTimer > 0f) _hitTimer = Mathf.Max(0f, _hitTimer - dt);
         if (_attackTimer > 0f) _attackTimer = Mathf.Max(0f, _attackTimer - dt);
+        if (_throwTimer > 0f) _throwTimer = Mathf.Max(0f, _throwTimer - dt);
 
         bool airborne = Mathf.Abs(vy) > airVelocity;
         bool moving = Mathf.Abs(vx) > moveThreshold;
@@ -242,7 +255,8 @@ public class LimbRig : MonoBehaviour
         _moveWeight = Mathf.MoveTowards(_moveWeight, (moving && !airborne && !dead) ? 1f : 0f, dt * 8f);
 
         float fwd = spriteFacesRight ? -1f : 1f; // 前へ傾ける回転の向き
-        float time = Time.time + _seed;
+        _clock += dt;
+        float time = _clock + _seed;
 
         // ---------- 目標ポーズを決める ----------
         float tArmR;
@@ -323,10 +337,46 @@ public class LimbRig : MonoBehaviour
                 tArmR = v;
                 tArmL = -v;
             }
+
+            // 弾を投げる: 向いている側の腕を頭の後ろへ構えてから、すばやく振り下ろす。反対の腕は軽くバランスを取る
+            if (_throwTimer > 0f)
+            {
+                float tp = 1f - _throwTimer / Mathf.Max(0.01f, throwDuration);
+                float fwdArm;
+                float backArm;
+                if (tp < 0.2f)
+                {
+                    float c = EaseOut(tp / 0.2f);
+                    fwdArm = Mathf.Lerp(armRest, 150f, c);
+                    backArm = Mathf.Lerp(armRest, armRest + 25f, c);
+                    tTilt = -fwd * 8f * c;
+                }
+                else
+                {
+                    float q = (tp - 0.2f) / 0.8f;
+                    float sm = q * q * (3f - 2f * q);
+                    fwdArm = Mathf.Lerp(150f, -15f, sm);
+                    backArm = Mathf.Lerp(armRest + 25f, armRest, sm);
+                    tTilt = Mathf.Lerp(-fwd * 8f, fwd * 12f, sm);
+                }
+
+                if (spriteFacesRight)
+                {
+                    tArmR = fwdArm;
+                    tArmL = -backArm;
+                }
+                else
+                {
+                    tArmL = -fwdArm;
+                    tArmR = backArm;
+                }
+            }
         }
 
         // ---------- なめらかに追従 ----------
-        float sharp = _hitTimer > 0f ? poseSharpness * 2f : poseSharpness;
+        float sharp = _hitTimer > 0f ? poseSharpness * 2f
+                    : (_throwTimer > 0f || _attackTimer > 0f) ? poseSharpness * 2.5f
+                    : poseSharpness;
         float f = 1f - Mathf.Exp(-sharp * dt);
         float bodyF = dead ? 1f - Mathf.Exp(-9f * dt) : f;
 

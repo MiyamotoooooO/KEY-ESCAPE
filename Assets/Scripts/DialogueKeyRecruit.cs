@@ -67,6 +67,9 @@ public class DialogueKeyRecruit : MonoBehaviour
     [Tooltip("会話の結果、プレイヤーに渡されるキー。")]
     public KeyDefinition keyDefinition;
 
+    [Tooltip("会話の開始から終了まで（選択肢を選ぶ間も）後ろのゲームを止める。敵もプレイヤーも動かない（アニメーションだけ流れる）。")]
+    public bool pauseGameWhileTalking = true;
+
     [Header("UI参照（シーンに用意した会話パネル一式）")]
     public GameObject dialoguePanel;
     [Tooltip("質問と返事を両方表示する、共通の1つのテキスト。選択後はここの中身を返事に書き換える。")]
@@ -126,6 +129,11 @@ public class DialogueKeyRecruit : MonoBehaviour
         public DialogueKeyRecruit owner;
 
         public void OnPointerClick(PointerEventData eventData) => owner.RequestClose();
+    }
+
+    private void OnDestroy()
+    {
+        GamePause.Release(this);
     }
 
     private void Awake()
@@ -198,6 +206,11 @@ public class DialogueKeyRecruit : MonoBehaviour
             _playerMovement.SetInputLocked(true);
         else
             Debug.LogWarning($"[DialogueKeyRecruit] {name}: PlayerにPlayerMovementが見つからず、移動を止められませんでした。", this);
+
+        // 会話中はゲームを止める（敵が後ろから攻撃してこないように）。
+        // パネルを出す前に止めるので、パネル内のAnimatorも実時間で動く。
+        if (pauseGameWhileTalking)
+            GamePause.Acquire(this);
 
         if (dialoguePanel != null)
             dialoguePanel.SetActive(true);
@@ -440,6 +453,9 @@ public class DialogueKeyRecruit : MonoBehaviour
             Debug.LogWarning($"[DialogueKeyRecruit] {name}: シーンにKeyInventoryがありません（Bootstrap未配置？） - キーを入手できませんでした。", this);
         else
             KeyInventory.Instance.AddKey(keyDefinition);
+
+        // キー入手ポップアップが出ていれば、そちらが止め続ける（ここで離しても途切れない）。
+        GamePause.Release(this);
 
         Destroy(gameObject);
     }

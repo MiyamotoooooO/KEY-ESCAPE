@@ -174,9 +174,10 @@ public class KeyBindingManager : MonoBehaviour
 
     // ---- runtime queries: drop-in replacement for Input.GetKey* ---------
 
-    public bool IsActionDown(GameAction action) => TryGetKeyCode(action, out var kc) && Input.GetKeyDown(kc);
-    public bool IsActionHeld(GameAction action) => TryGetKeyCode(action, out var kc) && Input.GetKey(kc);
-    public bool IsActionUp(GameAction action) => TryGetKeyCode(action, out var kc) && Input.GetKeyUp(kc);
+    // GamePause で止めている間（会話・キー入手ポップアップ中）は、操作入力をすべて無効にする。
+    public bool IsActionDown(GameAction action) => !GamePause.IsPaused && TryGetKeyCode(action, out var kc) && Input.GetKeyDown(kc);
+    public bool IsActionHeld(GameAction action) => !GamePause.IsPaused && TryGetKeyCode(action, out var kc) && Input.GetKey(kc);
+    public bool IsActionUp(GameAction action) => !GamePause.IsPaused && TryGetKeyCode(action, out var kc) && Input.GetKeyUp(kc);
 
     /// <summary>Special-key combo, e.g. Ctrl+Attack = strong attack (spec §15-16).</summary>
     public bool IsActionDownWithModifier(GameAction action)

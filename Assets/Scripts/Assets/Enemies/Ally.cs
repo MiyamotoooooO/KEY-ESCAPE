@@ -235,6 +235,11 @@ public class Ally : MonoBehaviour
     {
         if (doOnceDecision)
         {
+            // KEY ESCAPE addition: 手足の生えたキー（LimbRig）なら、弾を投げる腕振りを再生する。
+            LimbRig limbRig = GetComponentInChildren<LimbRig>();
+            if (limbRig != null)
+                limbRig.PlayThrow();
+
             GameObject throwableProj = Instantiate(throwableObject, transform.position + new Vector3(transform.localScale.x * 0.5f, -0.2f), Quaternion.identity) as GameObject;
             throwableProj.GetComponent<ThrowableProjectile>().owner = gameObject;
             Vector2 direction = new Vector2(transform.localScale.x, 0f);

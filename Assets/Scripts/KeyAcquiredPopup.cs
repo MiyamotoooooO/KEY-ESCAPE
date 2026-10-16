@@ -38,6 +38,9 @@ using TMPro;
 /// lockPlayerWhileShowingがtrueなら、表示中だけPlayerMovement.SetInputLocked()
 /// でプレイヤーの入力を個別にロックする。
 /// </summary>
+// 【更新】表示中は GamePause でゲームを止める（pauseGameWhileShowing）。上の説明の
+// 「Time.timeScaleは変更しない」は古い。止めても、このポップアップの演出は
+// 実時間（unscaled）で動くので影響を受けない。敵やプレイヤーのアニメは GamePause が流し続ける。
 public class KeyAcquiredPopup : MonoBehaviour
 {
     [Header("UI参照（パーツごとに別オブジェクト）")]
@@ -86,6 +89,9 @@ public class KeyAcquiredPopup : MonoBehaviour
     [Tooltip("ロック対象のPlayerMovement。未設定ならシーン内から自動で探す。")]
     public PlayerMovement playerMovement;
 
+    [Tooltip("ポップアップが出ている間、後ろのゲームを止める（敵もプレイヤーも動かない。アニメーションだけ流れる）。")]
+    public bool pauseGameWhileShowing = true;
+
     private bool _waitingForClose;
     private Coroutine _sequenceCoroutine;
     private Coroutine _sparkleBlinkCoroutine;
@@ -122,6 +128,8 @@ public class KeyAcquiredPopup : MonoBehaviour
     {
         if (KeyInventory.Instance != null)
             KeyInventory.Instance.OnKeyAdded -= OnKeyAdded;
+
+        GamePause.Release(this);
     }
 
     private void Update()
@@ -156,6 +164,9 @@ public class KeyAcquiredPopup : MonoBehaviour
             if (playerMovement != null)
                 playerMovement.SetInputLocked(true);
         }
+
+        if (pauseGameWhileShowing)
+            GamePause.Acquire(this);
 
         if (keyLetterText != null)
             keyLetterText.text = key != null ? key.displayName : "?";
@@ -243,6 +254,8 @@ public class KeyAcquiredPopup : MonoBehaviour
 
         if (lockPlayerWhileShowing && playerMovement != null)
             playerMovement.SetInputLocked(false);
+
+        GamePause.Release(this);
     }
 
     // ---- 演出の細かい部品 ----------------------------------------------
