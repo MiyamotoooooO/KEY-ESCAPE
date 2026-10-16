@@ -82,7 +82,18 @@ public static class CheckpointManager
 
     private static void MovePlayerToCheckpoint()
     {
-        GameObject player = GameObject.FindWithTag("Player");
+        // Playerタグが付いたもののうち、Rigidbody2Dを持つものが本物のプレイヤー
+        // （キーコンフィグのプレビュー用キャラなどを選ばないようにする）。
+        GameObject player = null;
+        GameObject[] candidates = GameObject.FindGameObjectsWithTag("Player");
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (candidates[i].GetComponent<Rigidbody2D>() != null)
+            {
+                player = candidates[i];
+                break;
+            }
+        }
         if (player == null)
             return;
 

@@ -53,7 +53,9 @@ public class KeyBindingManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            // 重複した時は、このオブジェクトごとではなく、この部品だけを消す。
+            // （同じオブジェクトにあるKeyConfigUIなど、そのシーンの画面の部品を巻き込まないため）
+            Destroy(this);
             return;
         }
         Instance = this;

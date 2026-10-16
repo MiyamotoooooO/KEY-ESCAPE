@@ -82,6 +82,7 @@ public class KeyConfigUI : MonoBehaviour
 
     private readonly List<GameObject> _spawnedKeyButtons = new List<GameObject>();
     private bool _isOpen;
+    private bool _hadPanel; // 開始時にpanelRootが割り当てられていたか（あとで消えたかを見分けるため）
     /// <summary>キー設定画面が開いているか。設定画面（SettingsUI）が、Escを無視するかの判断に使う。</summary>
     public bool IsOpen => _isOpen;
     // プロジェクト内の別のスクリプト（おそらく遠距離攻撃の照準ロジック）が、
@@ -95,6 +96,8 @@ public class KeyConfigUI : MonoBehaviour
 
     private void Start()
     {
+        _hadPanel = panelRoot != null;
+
         if (KeyBindingManager.Instance != null)
             KeyBindingManager.Instance.OnBindingsChanged += RefreshBindingsOnly;
         if (KeyInventory.Instance != null)
@@ -118,6 +121,14 @@ public class KeyConfigUI : MonoBehaviour
 
     private void Update()
     {
+        // 別のシーンに残った古いコピー（自分の画面がすでに消えている）は、何もせず自分を消す。
+        // （残したままにすると、Tabキーで時間だけ止まり、画面が出ない状態になるため）
+        if (_hadPanel && panelRoot == null)
+        {
+            Destroy(this);
+            return;
+        }
+
         if (!SettingsUI.IsOpen && !StageSelectUI.IsOpen && !GamePause.IsPaused && Input.GetKeyDown(toggleKey))
             Toggle();
     }
