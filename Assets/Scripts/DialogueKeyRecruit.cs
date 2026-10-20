@@ -106,6 +106,13 @@ public class DialogueKeyRecruit : MonoBehaviour
     private Vector3 _hoverCursorBasePosition;
     private bool _hoverCursorBaseCaptured;
     private PlayerMovement _playerMovement;
+
+    // 空中で会話が始まった時に、地面に降りるまで待つ間の状態
+    private const float LandWaitLimit = 1.5f;  // 降りるのを待つ最大の秒数
+    private const float LandStillTime = 0.1f;  // 縦の動きが止まったままの時間がこれ以上なら、降りたとみなす
+    private bool _waitActive;
+    private CharacterController2D _waitController;
+    private bool _waitWasInvincible;
     private EmoteBubble _emote;
 
     /// <summary>
@@ -137,6 +144,7 @@ public class DialogueKeyRecruit : MonoBehaviour
 
     private void OnDestroy()
     {
+        EndLandingWait();
         GamePause.Release(this);
     }
 
@@ -200,6 +208,52 @@ public class DialogueKeyRecruit : MonoBehaviour
         BeginDialogue();
     }
 
+    /// <summary>会話の画面を出したまま、プレイヤーが地面に降りるまで待ってから、ゲームを止める。降りるまでは無敵。</summary>
+    private IEnumerator PauseAfterLanding()
+    {
+        Rigidbody2D rb = _playerMovement != null ? _playerMovement.GetComponent<Rigidbody2D>() : null;
+        _waitController = _playerMovement != null ? _playerMovement.GetComponent<CharacterController2D>() : null;
+        _waitWasInvincible = _waitController != null && _waitController.invincible;
+        _waitActive = true;
+
+        float t = 0f;
+        float still = 0f;
+        while (_waitActive && rb != null && t < LandWaitLimit)
+        {
+            float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+            t += dt;
+
+            // 被弾後の無敵が途中で切れても、付け直す。
+            if (_waitController != null)
+                _waitController.invincible = true;
+
+            // ジャンプの頂点で、一瞬だけ速さが0になるので、止まったままの時間で見る。
+            if (Mathf.Abs(rb.velocity.y) < 0.05f)
+                still += dt;
+            else
+                still = 0f;
+
+            if (still >= LandStillTime)
+                break;
+            yield return null;
+        }
+
+        bool stillTalking = _waitActive; // 待っている間に、会話が終わっていたら、止めない
+        EndLandingWait();
+        if (stillTalking)
+            GamePause.Acquire(this);
+    }
+
+    /// <summary>降りるのを待つのを終えて、無敵を元に戻す。</summary>
+    private void EndLandingWait()
+    {
+        if (!_waitActive)
+            return;
+        _waitActive = false;
+        if (_waitController != null && !_waitWasInvincible)
+            _waitController.invincible = false;
+    }
+
     private void BeginDialogue()
     {
         _waitingForSpaceToClose = false;
@@ -215,8 +269,10 @@ public class DialogueKeyRecruit : MonoBehaviour
 
         // 会話中はゲームを止める（敵が後ろから攻撃してこないように）。
         // パネルを出す前に止めるので、パネル内のAnimatorも実時間で動く。
+        // ただし、プレイヤーが空中にいる時は、地面に降りるまで待ってから止める
+        // （止めてしまうと、空中の高さで固まるため）。降りるまでは無敵にする。
         if (pauseGameWhileTalking)
-            GamePause.Acquire(this);
+            StartCoroutine(PauseAfterLanding());
 
         if (dialoguePanel != null)
             dialoguePanel.SetActive(true);
@@ -483,6 +539,7 @@ public class DialogueKeyRecruit : MonoBehaviour
             KeyInventory.Instance.AddKey(keyDefinition);
 
         // キー入手ポップアップが出ていれば、そちらが止め続ける（ここで離しても途切れない）。
+        EndLandingWait();
         GamePause.Release(this);
 
         Destroy(gameObject);

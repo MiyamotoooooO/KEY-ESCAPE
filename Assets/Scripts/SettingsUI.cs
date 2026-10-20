@@ -97,6 +97,7 @@ public class SettingsUI : MonoBehaviour
     {
         if (!Input.GetKeyDown(toggleKey)) return;
         if (GamePause.IsPaused) return; // 会話・キー入手ポップアップ中は設定を開かない（開閉でtimeScaleが戻ってしまうため）
+        if (StageClearDirector.IsPlaying) return; // ステージクリアの演出中は、設定を開かない
         if (TitleMenu.CloseConfirmIfOpen()) return;
         if (ReturnToTitleButton.CloseConfirmIfOpen()) return;
         if (StageSelectUI.IsOpen) { StageSelectUI.CloseIfOpen(); return; }

@@ -11,7 +11,7 @@ using UnityEngine.UI;
 ///   1. ゴール：時間がスローになり、白いフラッシュが光り、カメラがプレイヤーに寄る。ステージのBGMは消えていく。
 ///   2. さらにスローになり（もう一度、弱めのフラッシュが光る）、カメラがもう少し寄る。
 ///   3. 紙吹雪が降り、「STAGE CLEAR!」の看板が出る。クリア用のBGMと効果音が鳴り、スローが解除される。
-///   4. このステージで入手したキーが、拾った順に、左から走ってきて、プレイヤーの左側に並び、手を上げて喜ぶ（声が鳴る）。
+///   4. このステージで入手したキーが、拾った順に、左から走ってきて、プレイヤーの左側に並び、手を上げて喜ぶ（声が鳴り、頭の上にエモートが出る）。
 ///   5. しばらく待ってから、StageGoalに戻る（StageGoalが拠点へ戻る）。
 /// 演出の間、プレイヤーは操作できず、ダメージも受けない（無敵）。
 ///
@@ -72,6 +72,8 @@ public class StageClearDirector : MonoBehaviour
     const int   KeyVoiceCount    = 3;     // 喜ぶ時の声の回数
     const float KeyVoiceInterval = 0.09f; // 声の間隔（秒）
     const float KeyWaitLimit     = 20f;   // キーがそろうのを待つ、最大の秒数（念のため）
+    const float LandWaitLimit    = 3f;    // プレイヤーが空中でゴールした時に、地面に降りるのを待つ最大の秒数
+    const float LandStillTime    = 0.15f; // 縦の動きが止まったままの時間がこれ以上なら、降りたとみなす
 
     // 読み込み直後などの長いフレームで演出が飛ばないよう、1フレームの最大時間を決めておく
     const float MaxDt = 0.05f;
@@ -103,6 +105,18 @@ public class StageClearDirector : MonoBehaviour
     [Tooltip("キーの大きさの倍率。")]
     public float keyScale = 1f;
 
+    [Header("キーのエモート（キーが手を上げた時に、頭の上に出す）")]
+    [Tooltip("エモートのプレハブ（Assets/Prefab/Emotes）。何個でも入れられる。キーごとに、ランダムで1つ出す（一巡するまで、同じものは出さない）。空なら、エモートは出さない。")]
+    public GameObject[] cheerEmotePrefabs;
+    [Tooltip("エモートを出す位置（キーの足元からのずれ）。頭の上に来るように調整する。")]
+    public Vector3 cheerEmoteOffset = new Vector3(0f, 1.6f, 0f);
+    [Tooltip("エモートの大きさの倍率。")]
+    public float cheerEmoteScale = 1f;
+    [Tooltip("エモートを出しておく秒数。0なら、シーンが変わるまで出し続ける。")]
+    public float cheerEmoteDuration = 0f;
+    [Tooltip("エモートの描く順番の底上げ。大きいほど手前に描く（キャラに隠れないように）。")]
+    public int cheerEmoteSortingBoost = 100;
+
     [Header("演出のあと")]
     [Tooltip("キーを1つも拾っていない時：看板が出てから、StageGoalに戻るまでの秒数（実時間）。")]
     public float holdAfterSign = 3f;
@@ -128,6 +142,7 @@ public class StageClearDirector : MonoBehaviour
     private readonly List<Piece> _pieces = new List<Piece>();
 
     private int _keysDone;
+    private readonly List<int> _emoteBag = new List<int>();
     private GameObject _player;
     private CharacterController2D _controller;
     private bool _slowActive;
@@ -263,6 +278,10 @@ public class StageClearDirector : MonoBehaviour
     {
         _keysDone = 0;
 
+        // プレイヤーが空中でゴールした時は、地面に降りて止まるまで待つ。
+        // （空中の高さで、キーの足元の高さと並べる位置を決めないため）
+        yield return StartCoroutine(WaitForPlayerLanding());
+
         // 足元の高さ：プレイヤーの当たり判定の、いちばん下
         float groundY = _player.transform.position.y - 1f;
         Collider2D col = _player.GetComponent<Collider2D>();
@@ -318,6 +337,33 @@ public class StageClearDirector : MonoBehaviour
         }
     }
 
+    /// <summary>プレイヤーの縦の動きが止まるまで待つ（落ちている間と、上っている間は待つ）。</summary>
+    private IEnumerator WaitForPlayerLanding()
+    {
+        Rigidbody2D rb = _player != null ? _player.GetComponent<Rigidbody2D>() : null;
+        if (rb == null)
+            yield break;
+
+        float t = 0f;
+        float still = 0f;
+        while (t < LandWaitLimit)
+        {
+            float dt = Dt();
+            t += dt;
+            KeepSafe();
+
+            // ジャンプの頂点で、一瞬だけ速さが0になるので、止まったままの時間で見る。
+            if (Mathf.Abs(rb.velocity.y) < 0.05f)
+                still += dt;
+            else
+                still = 0f;
+
+            if (still >= LandStillTime)
+                yield break;
+            yield return null;
+        }
+    }
+
     private IEnumerator KeyRoutine(KeyDefinition key, float stopX, float groundY, float z)
     {
         // 走り出す位置：いまの画面の左端の、少し外
@@ -327,14 +373,17 @@ public class StageClearDirector : MonoBehaviour
             startX = cam.transform.position.x - cam.orthographicSize * cam.aspect - KeyOffscreen;
         startX = Mathf.Min(startX, stopX - 1f);
 
+        // 親（root）は反転しない。反転するのは見た目（visual）だけ。
+        // → 親の子として出すエモートが、裏返らない。
         GameObject root = new GameObject("ClearKey_" + (key != null ? key.name : "?"));
         root.transform.position = new Vector3(startX, groundY, z);
-        float face = keyFacesRight ? 1f : -1f; // 右へ走るので、左向きの絵は反転する
-        root.transform.localScale = new Vector3(face * keyScale, keyScale, keyScale);
 
         GameObject visual = Instantiate(keyPrefab, root.transform);
         visual.transform.localPosition = Vector3.zero;
         visual.transform.localRotation = Quaternion.identity;
+        float face = keyFacesRight ? 1f : -1f; // 右へ走るので、左向きの絵は反転する
+        Vector3 s = visual.transform.localScale;
+        visual.transform.localScale = new Vector3(s.x * face * keyScale, s.y * keyScale, s.z * keyScale);
 
         // キートップの文字を、回収したキーにする
         KeyLabel[] labels = visual.GetComponentsInChildren<KeyLabel>(true);
@@ -365,7 +414,58 @@ public class StageClearDirector : MonoBehaviour
         if (rig != null)
             rig.SetCheer(true);
         StartCoroutine(VoiceRoutine());
+        SpawnCheerEmote(root.transform);
         _keysDone++;
+    }
+
+    /// <summary>キーの頭の上に、エモートを1つ出す（ランダム。一巡するまで同じものは出さない）。</summary>
+    private void SpawnCheerEmote(Transform parent)
+    {
+        GameObject prefab = NextEmotePrefab();
+        if (prefab == null)
+            return;
+
+        var anchor = new GameObject("EmoteAnchor");
+        anchor.transform.SetParent(parent, false);
+        anchor.transform.localPosition = cheerEmoteOffset * keyScale;
+        anchor.transform.localScale = Vector3.one * cheerEmoteScale;
+
+        GameObject go = Instantiate(prefab, anchor.transform);
+        go.transform.localPosition = Vector3.zero; // プレハブに残っている位置は使わない
+        go.transform.localRotation = Quaternion.identity;
+
+        if (cheerEmoteSortingBoost != 0)
+        {
+            SpriteRenderer[] renderers = go.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+                renderers[i].sortingOrder += cheerEmoteSortingBoost;
+        }
+
+        if (cheerEmoteDuration > 0f)
+            Destroy(anchor, cheerEmoteDuration);
+    }
+
+    /// <summary>入っているプレハブから、1つ選ぶ。全部を一巡するまでは、同じものを選ばない。</summary>
+    private GameObject NextEmotePrefab()
+    {
+        if (cheerEmotePrefabs == null || cheerEmotePrefabs.Length == 0)
+            return null;
+
+        if (_emoteBag.Count == 0)
+        {
+            for (int i = 0; i < cheerEmotePrefabs.Length; i++)
+            {
+                if (cheerEmotePrefabs[i] != null)
+                    _emoteBag.Add(i);
+            }
+            if (_emoteBag.Count == 0)
+                return null;
+        }
+
+        int pick = Random.Range(0, _emoteBag.Count);
+        int index = _emoteBag[pick];
+        _emoteBag.RemoveAt(pick);
+        return cheerEmotePrefabs[index];
     }
 
     /// <summary>喜びの声：短い音を、数回続けて鳴らす。</summary>

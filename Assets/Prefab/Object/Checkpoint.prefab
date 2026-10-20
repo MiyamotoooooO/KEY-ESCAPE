@@ -240,3 +240,13 @@ MonoBehaviour:
   emoteScale: 1
   emoteAfterDuration: 0
   emoteSortingBoost: 100
+  confettiSprites:
+  - {fileID: -624492666, guid: 8077c1299a2ae2e48917cd5b85c44b55, type: 3}
+  - {fileID: -927091990, guid: 8077c1299a2ae2e48917cd5b85c44b55, type: 3}
+  confettiOffset: {x: 0.6, y: 3.2, z: 0}
+  confettiArea: {x: 1.6, y: 0.6}
+  confettiCount: 28
+  confettiSize: 0.25
+  confettiFallSpeed: 2.2
+  confettiDuration: 2.2
+  confettiSortingBoost: 100
