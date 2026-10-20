@@ -68,6 +68,8 @@ public class StageResultPanel : MonoBehaviour
     };
     [Tooltip("動きと動きの間の待ち時間（秒）。この範囲で、ランダムに決まる。")]
     public Vector2 playerActionInterval = new Vector2(0.8f, 1.8f);
+    [Tooltip("オンなら、ジャンプや攻撃の動きに付いている音（Animator Controller に仕込まれた音）を鳴らす。オフなら、鳴らさない。")]
+    public bool playerPlaysSounds = false;
 
     [Header("クリアタイム")]
     public RectTransform timePanel;
@@ -334,6 +336,16 @@ public class StageResultPanel : MonoBehaviour
 
         GameObject go = new GameObject("ResultPlayer");
         go.AddComponent<SpriteRenderer>(); // 絵は、Animatorが入れる
+
+        // プレイヤーのAnimator Controllerは、動きに入ると、同じオブジェクトのAudioSourceで音を鳴らし
+        // （PlaySoundBehaviour／JumpStateBehaviour）、攻撃の動きからDoDashDamageを呼ぶ。
+        // 受け取り先が無いとエラーになるので、付けておく（音は、Player Plays Soundsがオフなら鳴らさない）。
+        AudioSource source = go.AddComponent<AudioSource>();
+        source.playOnAwake = false;
+        source.spatialBlend = 0f;
+        source.mute = !playerPlaysSounds;
+        go.AddComponent<PreviewAnimationEventSink>();
+
         Animator anim = go.AddComponent<Animator>();
         anim.runtimeAnimatorController = playerController;
         anim.updateMode = AnimatorUpdateMode.UnscaledTime;
