@@ -78,6 +78,9 @@ MonoBehaviour:
   stageClearKeyVoice:
     clip: {fileID: 8300000, guid: 5eafb615543973c41a4a645d4bfc6265, type: 3}
     volume: 1
+  stageResultShow:
+    clip: {fileID: 8300000, guid: dabc2bb54685ac546973de21c22a2329, type: 3}
+    volume: 1
   checkpointConfetti:
     clip: {fileID: 8300000, guid: 662e6566b6dbb744d8454816e880e602, type: 3}
     volume: 0.874

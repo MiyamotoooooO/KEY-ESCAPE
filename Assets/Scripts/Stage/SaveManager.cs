@@ -11,6 +11,14 @@ public class BindingSave
     public string key;
 }
 
+/// <summary>ステージごとのベストタイム1件分（ステージIDと秒数）。</summary>
+[Serializable]
+public class StageTimeSave
+{
+    public string stageId;
+    public float seconds;
+}
+
 /// <summary>セーブデータの中身。JSONで保存される。</summary>
 [Serializable]
 public class SaveData
@@ -44,6 +52,9 @@ public class SaveData
     public string runStageId = "";
     /// <summary>挑戦中に入手したキー（KeyDefinitionのアセット名）。拠点に帰ると、手持ちから外される。</summary>
     public List<string> runKeys = new List<string>();
+
+    /// <summary>ステージごとのベストタイム（クリアにかかった秒数）。</summary>
+    public List<StageTimeSave> bestTimes = new List<StageTimeSave>();
 }
 
 /// <summary>
@@ -101,6 +112,7 @@ public static class SaveManager
         if (Data.seenStages == null) Data.seenStages = new List<string>();
         if (Data.runKeys == null) Data.runKeys = new List<string>();
         if (Data.runStageId == null) Data.runStageId = "";
+        if (Data.bestTimes == null) Data.bestTimes = new List<StageTimeSave>();
     }
 
     public static void Save()

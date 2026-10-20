@@ -26,7 +26,8 @@ public enum SEId
     StageClearJingle,   // 「STAGE CLEAR!」の看板が出る
     StageClearGoal2,    // 2回目のフラッシュ（さらにスローになる瞬間）
     StageClearKeyVoice, // クリア演出で、キーが喜ぶ声（1回の喜びで、短く数回鳴る）
-    CheckpointConfetti  // 中間地点を初めて通って、旗の上に紙吹雪が出た
+    CheckpointConfetti, // 中間地点を初めて通って、旗の上に紙吹雪が出た
+    StageResultShow     // クリア後、結果画面が出る
 }
 
 /// <summary>
@@ -80,6 +81,7 @@ public class SoundEffects : ScriptableObject
     public Entry stageClearConfetti = new Entry();
     public Entry stageClearJingle = new Entry();
     public Entry stageClearKeyVoice = new Entry();
+    public Entry stageResultShow = new Entry();
 
     [Header("中間地点")]
     public Entry checkpointConfetti = new Entry();
@@ -155,6 +157,7 @@ public class SoundEffects : ScriptableObject
             case SEId.StageClearJingle: return stageClearJingle;
             case SEId.StageClearKeyVoice: return stageClearKeyVoice;
             case SEId.CheckpointConfetti: return checkpointConfetti;
+            case SEId.StageResultShow: return stageResultShow;
             default: return null;
         }
     }

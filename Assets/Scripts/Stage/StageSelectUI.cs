@@ -58,6 +58,8 @@ public class StageSelectUI : MonoBehaviour
     public TMP_Text stageStateText;
     [Tooltip("任意。ステージの説明。")]
     public TMP_Text stageDescriptionText;
+    [Tooltip("任意。ベストタイム（例：「ベストタイム 01:23.45」）。空なら、状態の文字の横に出す。")]
+    public TMP_Text stageBestTimeText;
 
     [Header("ボタン")]
     public Button backButton;
@@ -438,6 +440,24 @@ public class StageSelectUI : MonoBehaviour
             else if (locked) stageStateText.text = "挑戦できない";
             else if (node.IsCleared) stageStateText.text = "クリア済み";
             else stageStateText.text = "挑戦できる";
+        }
+
+        // ベストタイム：クリア済みで、ロックされていないステージだけ出す。
+        string bestLabel = "";
+        if (node != null && !locked && node.IsCleared)
+        {
+            float best;
+            bestLabel = "ベストタイム " + (StageProgress.TryGetBestTime(node.stageId, out best)
+                ? StageProgress.FormatTime(best)
+                : "--:--.--");
+        }
+        if (stageBestTimeText != null)
+        {
+            stageBestTimeText.text = bestLabel;
+        }
+        else if (stageStateText != null && bestLabel.Length > 0)
+        {
+            stageStateText.text += "　" + bestLabel;
         }
 
         // カード式の表示：選んだカードのあるページを出して、印（▽）を移す。

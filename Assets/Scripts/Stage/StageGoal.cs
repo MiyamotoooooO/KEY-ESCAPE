@@ -116,6 +116,12 @@ public class StageGoal : MonoBehaviour
         // このステージで入手したキーを、先に取っておく（確定すると、記録が消えるため）。演出で走らせる。
         List<KeyDefinition> gainedKeys = StageRun.GetRunKeys();
 
+        // クリアタイムを止めて、ベストタイムなら更新する（結果画面のNEW RECORD用）。
+        StageStats.Stop();
+        bool newRecord = false;
+        if (StageStats.IsTracking && StageStats.StageId == stageId)
+            newRecord = StageProgress.TrySetBestTime(stageId, StageStats.ElapsedTime);
+
         StageRun.Complete(stageId); // このステージで入手したキーを、確定する（拠点に帰っても外されない）
         StageProgress.MarkCleared(stageId);
         GrantRewards();
@@ -124,8 +130,8 @@ public class StageGoal : MonoBehaviour
         StageClearDirector dir = director != null ? director : FindObjectOfType<StageClearDirector>();
         if (dir != null)
         {
-            // 演出が終わったら、拠点に戻る。
-            dir.Play(gainedKeys, () => StartCoroutine(ReturnToHub(0f)));
+            // 演出と結果画面が終わったら（「拠点に戻る」を押したら）、拠点に戻る。
+            dir.Play(gainedKeys, newRecord, () => StartCoroutine(ReturnToHub(0f)));
         }
         else
         {

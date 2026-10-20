@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -12,7 +13,8 @@ using UnityEngine.UI;
 ///   2. さらにスローになり（もう一度、弱めのフラッシュが光る）、カメラがもう少し寄る。
 ///   3. 紙吹雪が降り、「STAGE CLEAR!」の看板が出る。クリア用のBGMと効果音が鳴り、スローが解除される。
 ///   4. このステージで入手したキーが、拾った順に、左から走ってきて、プレイヤーの左側に並び、手を上げて喜ぶ（声が鳴り、頭の上にエモートが出る）。
-///   5. しばらく待ってから、StageGoalに戻る（StageGoalが拠点へ戻る）。
+///   5. 結果画面が出る（看板が左上へ移り、クリアタイム・死亡シーン・回収したキーが出る）。「拠点に戻る」を押すと、StageGoalに戻る（StageGoalが拠点へ戻る）。
+///      結果画面のプレハブ（Result Panel Prefab）が空のときは、しばらく待ってから戻る。
 /// 演出の間、プレイヤーは操作できず、ダメージも受けない（無敵）。
 ///
 /// 時間はすべて「実時間」で数えるので、スロー中でも演出がずれない。
@@ -51,6 +53,16 @@ public class StageClearDirector : MonoBehaviour
     const float SignY          = 246f;  // 看板の高さ（画面の中心から上へ）
     const float SignTilt       = 2f;    // 看板の傾き（度）
     const float SignPopTime    = 0.45f; // ぽんと出る秒数
+    const float SignMoveTime   = 0.6f;  // 結果画面が出る時に、看板が左上へ移る秒数
+    // 結果画面のプレハブに Sign Anchor が無い時の、看板の移り先
+    static readonly Vector2 SignFallbackPos = new Vector2(-420f, 350f);
+    const float SignFallbackScale = 0.86f;
+    const float SignFallbackTilt  = 4f;
+
+    // --- 結果画面 ---
+    const float ResultDelayNoKeys = 0.8f; // キーが無い時：スロー解除のあと、結果が出るまでの秒数
+    const int   ResultConfettiBurst = 60;   // クリアタイムの集計が終わった時に出る紙吹雪の数
+    const float ResultConfettiRain  = 1.8f; // そのあと降らせ続ける秒数（1秒あたりの数は、ConfettiPerSec）
 
     // --- 紙吹雪 ---
     const int   ConfettiBurst  = 70;    // 最初に出る数
@@ -117,10 +129,16 @@ public class StageClearDirector : MonoBehaviour
     [Tooltip("エモートの描く順番の底上げ。大きいほど手前に描く（キャラに隠れないように）。")]
     public int cheerEmoteSortingBoost = 100;
 
-    [Header("演出のあと")]
+    [Header("結果画面")]
+    [Tooltip("結果画面のプレハブ（Assets/Prefab/UI/StageResultPanel）。Editorのメニュー「Tools > KEY ESCAPE > リザルト > 結果画面のプレハブを作る」で作れる。空なら、結果画面は出さず、下の秒数だけ待って戻る。")]
+    public StageResultPanel resultPanelPrefab;
+    [Tooltip("キーが出た時：最後のキーが手を上げてから、結果画面が出るまでの秒数（実時間）。キーとプレイヤーが、踊って喜ぶ時間。")]
+    public float resultDelayAfterCheer = 2.5f;
+
+    [Header("演出のあと（結果画面が無い時だけ使う）")]
     [Tooltip("キーを1つも拾っていない時：看板が出てから、StageGoalに戻るまでの秒数（実時間）。")]
     public float holdAfterSign = 3f;
-    [Tooltip("キーが出た時：最後のキーが手を上げてから、StageGoalに戻るまでの秒数（実時間）。結果画面ができるまでの、つなぎ。")]
+    [Tooltip("キーが出た時：最後のキーが手を上げてから、StageGoalに戻るまでの秒数（実時間）。")]
     public float holdAfterCheer = 3f;
 
     /// <summary>演出の最中か。</summary>
@@ -139,6 +157,10 @@ public class StageClearDirector : MonoBehaviour
     private Image _flash;
     private RectTransform _confettiRoot;
     private RectTransform _signRect;
+    private RectTransform _resultHost;
+    private Coroutine _confettiMover;
+    private float _rainLeft;
+    private float _rainRate;
     private readonly List<Piece> _pieces = new List<Piece>();
 
     private int _keysDone;
@@ -163,15 +185,24 @@ public class StageClearDirector : MonoBehaviour
     /// <summary>演出を始める。keysは、このステージで入手したキー（走ってきて喜ぶ）。終わったら、onFinishedが呼ばれる。</summary>
     public void Play(List<KeyDefinition> keys, System.Action onFinished)
     {
+        Play(keys, false, onFinished);
+    }
+
+    /// <summary>
+    /// 演出を始める。newRecordは、ベストタイムを更新したか（結果画面のNEW RECORD!）。
+    /// 結果画面が出る場合は、「拠点に戻る」が押されたあとに、onFinishedが呼ばれる。
+    /// </summary>
+    public void Play(List<KeyDefinition> keys, bool newRecord, System.Action onFinished)
+    {
         if (IsPlaying)
             return;
         IsPlaying = true;
-        StartCoroutine(Run(keys, onFinished));
+        StartCoroutine(Run(keys, newRecord, onFinished));
     }
 
     // ================= 演出の流れ =================
 
-    private IEnumerator Run(List<KeyDefinition> keys, System.Action onFinished)
+    private IEnumerator Run(List<KeyDefinition> keys, bool newRecord, System.Action onFinished)
     {
         _baseFixedDelta = Time.fixedDeltaTime;
         LockPlayer();
@@ -227,7 +258,7 @@ public class StageClearDirector : MonoBehaviour
         if (clearBgm != null)
             AudioManager.PlayBGM(clearBgm, 0.3f, clearBgmLoop);
 
-        StartCoroutine(ConfettiRoutine());
+        StartConfetti(ConfettiBurst, ConfettiRain, ConfettiPerSec);
         StartCoroutine(PopSignRoutine());
 
         float r = 0f;
@@ -252,18 +283,111 @@ public class StageClearDirector : MonoBehaviour
         else
             hasKeys = false;
 
-        // --- しばらく待つ ---
-        float h = 0f;
-        float wait = hasKeys ? holdAfterCheer : holdAfterSign;
-        while (h < wait)
+        if (resultPanelPrefab != null)
         {
-            h += Dt();
-            KeepSafe();
-            yield return null;
+            // --- 結果画面：「拠点に戻る」が押されるまで待つ ---
+            float d = 0f;
+            float delay = hasKeys ? resultDelayAfterCheer : ResultDelayNoKeys;
+            while (d < delay)
+            {
+                d += Dt();
+                KeepSafe();
+                yield return null;
+            }
+            yield return StartCoroutine(ShowResult(keys, newRecord));
+        }
+        else
+        {
+            // --- 結果画面が無い時：しばらく待つ ---
+            float h = 0f;
+            float wait = hasKeys ? holdAfterCheer : holdAfterSign;
+            while (h < wait)
+            {
+                h += Dt();
+                KeepSafe();
+                yield return null;
+            }
         }
 
         if (onFinished != null)
             onFinished();
+    }
+
+    // ================= 結果画面 =================
+
+    private IEnumerator ShowResult(List<KeyDefinition> keys, bool newRecord)
+    {
+        EnsureEventSystem(); // ボタンをクリックできるように
+
+        StageResultPanel panel = Instantiate(resultPanelPrefab, _resultHost, false);
+        panel.SetKeyCharacter(keyPrefab, keyFacesRight, keyScale); // キーの見た目は、走ってきたキーと同じものを使う
+        panel.TimeCounted += OnResultTimeCounted;
+        Canvas.ForceUpdateCanvases();
+        StartCoroutine(MoveSignToResult(panel));
+
+        yield return StartCoroutine(panel.Play(keys, newRecord));
+
+        // 「拠点に戻る」が押されるまで待つ（クリックか、Enter）
+        while (panel != null && !panel.Confirmed)
+        {
+            KeepSafe();
+            yield return null;
+        }
+    }
+
+    /// <summary>クリアタイムの集計が終わった時：紙吹雪を出す。</summary>
+    private void OnResultTimeCounted()
+    {
+        SoundEffects.Play(SEId.StageClearConfetti);
+        StartConfetti(ResultConfettiBurst, ResultConfettiRain, ConfettiPerSec);
+    }
+
+    /// <summary>画面にEventSystemが無いと、ボタンをクリックできないので、無ければ作る。</summary>
+    private static void EnsureEventSystem()
+    {
+        if (EventSystem.current != null || FindObjectOfType<EventSystem>() != null)
+            return;
+        new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+    }
+
+    /// <summary>看板を、画面の中央から、結果画面の左上（Sign Anchor の位置）へ移す。</summary>
+    private IEnumerator MoveSignToResult(StageResultPanel panel)
+    {
+        if (_signRect == null)
+            yield break;
+
+        Vector2 toPos = SignFallbackPos;
+        float toScale = SignFallbackScale;
+        float toTilt = SignFallbackTilt;
+
+        RectTransform anchor = panel != null ? panel.signAnchor : null;
+        RectTransform parent = _signRect.parent as RectTransform;
+        if (anchor != null && parent != null)
+        {
+            Vector3 local = parent.InverseTransformPoint(anchor.position);
+            toPos = new Vector2(local.x, local.y);
+            float signWidth = Mathf.Max(1f, _signRect.rect.width * parent.lossyScale.x);
+            toScale = anchor.rect.width * anchor.lossyScale.x / signWidth;
+            toTilt = anchor.eulerAngles.z;
+            if (toTilt > 180f)
+                toTilt -= 360f;
+        }
+
+        Vector2 fromPos = _signRect.anchoredPosition;
+        float fromScale = _signRect.localScale.x;
+        float t = 0f;
+        while (t < SignMoveTime)
+        {
+            t += Dt();
+            if (_signRect == null)
+                yield break;
+            float k = Mathf.Clamp01(t / SignMoveTime);
+            k = k * k * (3f - 2f * k);
+            _signRect.anchoredPosition = Vector2.Lerp(fromPos, toPos, k);
+            _signRect.localScale = Vector3.one * Mathf.Lerp(fromScale, toScale, k);
+            _signRect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(SignTilt, toTilt, k));
+            yield return null;
+        }
     }
 
     private static float Dt()
@@ -541,6 +665,7 @@ public class StageClearDirector : MonoBehaviour
 
     private void BuildOverlay()
     {
+
         GameObject canvasObj = new GameObject("StageClearCanvas");
         canvasObj.transform.SetParent(transform, false);
 
@@ -553,7 +678,13 @@ public class StageClearDirector : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.matchWidthOrHeight = 0.5f;
 
-        // 奥から：紙吹雪、看板、フラッシュ
+        // 結果画面の「拠点に戻る」ボタンを、クリックできるようにする（これが無いと、マウスが届かない）。
+        canvasObj.AddComponent<GraphicRaycaster>();
+
+        // 奥から：結果画面、紙吹雪、看板、フラッシュ
+        _resultHost = MakeRect("Result", canvasObj.transform);
+        Stretch(_resultHost);
+
         _confettiRoot = MakeRect("Confetti", canvasObj.transform);
         Stretch(_confettiRoot);
 
@@ -668,23 +799,34 @@ public class StageClearDirector : MonoBehaviour
 
     // ================= 紙吹雪 =================
 
-    private IEnumerator ConfettiRoutine()
+    /// <summary>
+    /// 紙吹雪を出す。最初にburst枚をまとめて出し、そのあとrainTime秒のあいだ、1秒にperSec枚ずつ降らせる。
+    /// 降っている最中にもう一度呼んでも、動かすのは1つの処理だけ（動きが二重にならない）。
+    /// </summary>
+    private void StartConfetti(int burst, float rainTime, float perSec)
     {
         // 最初に、まとめて出す（画面の上に、ばらばらの高さで並べて、順に降ってくるようにする）
-        for (int i = 0; i < ConfettiBurst; i++)
+        for (int i = 0; i < burst; i++)
             SpawnPiece(Random.Range(560f, 1250f));
 
-        float t = 0f;
+        _rainLeft = Mathf.Max(_rainLeft, rainTime);
+        _rainRate = perSec;
+        if (_confettiMover == null)
+            _confettiMover = StartCoroutine(ConfettiRoutine());
+    }
+
+    private IEnumerator ConfettiRoutine()
+    {
         float spawnDebt = 0f;
         while (true)
         {
             float dt = Dt();
-            t += dt;
 
             // そのあとも、しばらく降らせ続ける
-            if (t < ConfettiRain)
+            if (_rainLeft > 0f)
             {
-                spawnDebt += ConfettiPerSec * dt;
+                _rainLeft -= dt;
+                spawnDebt += _rainRate * dt;
                 while (spawnDebt >= 1f)
                 {
                     spawnDebt -= 1f;
@@ -715,8 +857,11 @@ public class StageClearDirector : MonoBehaviour
                 }
             }
 
-            if (t >= ConfettiRain && _pieces.Count == 0)
+            if (_rainLeft <= 0f && _pieces.Count == 0)
+            {
+                _confettiMover = null;
                 yield break;
+            }
             yield return null;
         }
     }

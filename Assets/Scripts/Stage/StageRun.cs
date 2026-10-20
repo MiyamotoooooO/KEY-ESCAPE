@@ -26,6 +26,7 @@ public static class StageRun
 
         if (scene.name == catalog.hubSceneName)
         {
+            StageStats.Clear(); // 結果画面用の記録（タイム・死亡・写真）を消す
             Rollback();
             return;
         }
@@ -45,13 +46,17 @@ public static class StageRun
     {
         SaveData d = SaveManager.Data;
         if (d.runStageId == stageId)
-            return; // やられて、同じステージが読み直された。挑戦を続ける。
+        {
+            StageStats.EnsureRun(stageId); // やられて、同じステージが読み直された。挑戦を続ける（タイムや死亡の記録もそのまま）。
+            return;
+        }
 
         // 別のステージの記録が残っていれば、先に取り消す。
         if (!string.IsNullOrEmpty(d.runStageId))
             Rollback();
 
         d.runStageId = stageId;
+        StageStats.Begin(stageId); // タイム・死亡・写真の記録を、新しく始める
         SaveManager.Save();
     }
 

@@ -97,11 +97,14 @@ public class HitFeedback : MonoBehaviour
     }
 
     /// <summary>死亡した瞬間の演出。呼んだあとのシーン読み直しは、呼び出し側で行う。</summary>
-    public static void PlayDeath()
+    /// <param name="cause">死因（結果画面の一言コメントを選ぶのに使う）。</param>
+    public static void PlayDeath(DeathCause cause = DeathCause.Enemy)
     {
         if (IsDying)
             return;
         IsDying = true;
+
+        StageStats.RecordDeath(cause); // 結果画面用：死んだ回数と、その瞬間の写真
 
         SoundEffects.Play(SEId.PlayerDeath);
         SoundEffects.Play(SEId.DeathFlash);
@@ -109,11 +112,13 @@ public class HitFeedback : MonoBehaviour
     }
 
     /// <summary>落下死など：短く暗転してから、今のシーンを読み直す。</summary>
-    public static void ReloadWithFade(float fadeTime = 0.35f)
+    public static void ReloadWithFade(float fadeTime = 0.35f, DeathCause cause = DeathCause.Fall)
     {
         if (IsDying || _reloading)
             return;
         _reloading = true;
+
+        StageStats.RecordDeath(cause); // 結果画面用：死んだ回数と、その瞬間の写真
         HitFeedback fb = Instance;
         fb.StartCoroutine(fb.ReloadRoutine(fadeTime));
     }

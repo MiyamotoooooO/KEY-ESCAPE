@@ -2905,7 +2905,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 39.000015, y: -145.45625}
+  m_AnchoredPosition: {x: 39.000015, y: -145.45535}
   m_SizeDelta: {x: -64.99997, y: 0}
   m_Pivot: {x: 0.4, y: 0.8}
 --- !u!114 &292901696
@@ -15023,6 +15023,7 @@ MonoBehaviour:
   cheerEmoteScale: 1
   cheerEmoteDuration: 0
   cheerEmoteSortingBoost: 100
+  resultPanelPrefab: {fileID: 7980970445891569885, guid: d7cfd8e625c0b104ea7a4dbbdb11d925, type: 3}
   holdAfterSign: 2
   holdAfterCheer: 3
 --- !u!4 &1569165532
@@ -15988,7 +15989,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 225764473}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.98704135
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
