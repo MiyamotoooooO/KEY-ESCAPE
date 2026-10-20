@@ -307,10 +307,23 @@ public class CharacterController2D : MonoBehaviour
         transform.localScale = theScale;
     }
 
+    // 直近に受けたダメージの死因（HPが0になった時に、結果画面の一言コメントを選ぶのに使う）
+    private DeathCause _lastDamageCause = DeathCause.Enemy;
+
     public void ApplyDamage(float damage, Vector3 position)
+    {
+        ApplyDamage(damage, position, DeathCause.Enemy, -1f);
+    }
+
+    /// <summary>
+    /// 死因と、被弾後の無敵の秒数を指定できる。トゲなど（Hazard）が使う。
+    /// invincibleTimeが0以下なら、いつもの1秒。
+    /// </summary>
+    public void ApplyDamage(float damage, Vector3 position, DeathCause cause, float invincibleTime)
     {
         if (!invincible)
         {
+            _lastDamageCause = cause;
             animator.SetBool("Hit", true);
             life -= damage;
             Vector2 damageDir = Vector3.Normalize(transform.position - position) * 40f;
@@ -324,7 +337,7 @@ public class CharacterController2D : MonoBehaviour
             {
                 HitFeedback.PlayDamage();
                 StartCoroutine(Stun(0.25f));
-                StartCoroutine(MakeInvincible(1f));
+                StartCoroutine(MakeInvincible(invincibleTime > 0f ? invincibleTime : 1f));
             }
         }
     }
@@ -384,7 +397,7 @@ public class CharacterController2D : MonoBehaviour
         GetComponent<Attack>().enabled = false;
         // 死亡演出（スロー・フラッシュ・カメラのズーム・効果音）。
         // スロー中でも待ち時間が伸びないよう、待つ時間は実時間で数える。
-        HitFeedback.PlayDeath();
+        HitFeedback.PlayDeath(_lastDamageCause);
         yield return new WaitForSecondsRealtime(0.8f);
         m_Rigidbody2D.velocity = new Vector2(0, m_Rigidbody2D.velocity.y);
         yield return new WaitForSecondsRealtime(1.1f);
