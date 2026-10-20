@@ -35,11 +35,16 @@ public static class KeyStateSaver
         SceneManager.sceneLoaded += OnSceneLoaded;
 
         TryAttach();
+        StageRun.OnSceneLoaded(SceneManager.GetActiveScene());
     }
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         TryAttach();
+
+        // ステージに入った／拠点に帰った時の処理（キーの復元が終わった後に行う）。
+        if (mode == LoadSceneMode.Single)
+            StageRun.OnSceneLoaded(scene);
     }
 
     // Bootstrapが現れるまで（最初のシーンにBootstrapが無い場合など）、シーンが読み込まれるたびに試す。
@@ -77,7 +82,11 @@ public static class KeyStateSaver
         _attached = false;
     }
 
-    private static void OnKeyAdded(KeyDefinition key) => SaveManager.Save();
+    private static void OnKeyAdded(KeyDefinition key)
+    {
+        StageRun.RecordKey(key); // ステージの挑戦中に入手したキーを記録する（拠点に帰ると外すため）
+        SaveManager.Save();
+    }
     private static void OnBindingsChanged() => SaveManager.Save();
 
     // ---- 保存：現在の状態をSaveManager.Dataに書き込む ----------------------

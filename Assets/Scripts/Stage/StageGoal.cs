@@ -109,6 +109,7 @@ public class StageGoal : MonoBehaviour
             return;
         _done = true;
 
+        StageRun.Complete(stageId); // このステージで入手したキーを、確定する（拠点に帰っても外されない）
         StageProgress.MarkCleared(stageId);
         GrantRewards();
         CheckpointManager.Clear();

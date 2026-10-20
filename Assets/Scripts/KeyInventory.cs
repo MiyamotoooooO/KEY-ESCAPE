@@ -7,6 +7,7 @@ public class KeyInventory : MonoBehaviour
     public static KeyInventory Instance { get; private set; }
 
     public event Action<KeyDefinition> OnKeyAdded;
+    public event Action<KeyDefinition> OnKeyRemoved;
 
     [SerializeField] private List<KeyDefinition> startingKeys = new List<KeyDefinition>();
 
@@ -44,6 +45,18 @@ public class KeyInventory : MonoBehaviour
 
         _ownedKeys.Add(key);
         OnKeyAdded?.Invoke(key);
+    }
+
+    /// <summary>
+    /// キーを手持ちから外す（ステージの途中で拠点に帰った時に、そのステージで入手したキーを取り消すために使う）。
+    /// 割り当ては外さないので、呼ぶ側で、先に外しておくこと。
+    /// </summary>
+    public void RemoveKey(KeyDefinition key)
+    {
+        if (key == null || !_ownedKeys.Remove(key))
+            return;
+
+        OnKeyRemoved?.Invoke(key);
     }
 
     public void ResetForNewGame()

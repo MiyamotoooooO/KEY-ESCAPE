@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -15,6 +16,13 @@ using TMPro;
 ///   2. 「はい」を押すと、そのステージのシーンへ移る。
 ///      「もどる」を押す（またはEscキー）と、確認の画面を閉じて、ステージ選択の画面に戻る。
 /// 開いている間は、ゲームを止める（Time.timeScale = 0）。
+///
+/// カード式（ページめくり）の表示：
+///   「Card Template」を割り当てると、StageCatalogのステージの数だけカードを自動で作って並べる。
+///   1ページに並べる数は「Cards Per Page」。矢印ボタンか、←→キーでページをめくる。
+///   カードは、マウスを乗せるか、←→キーで選ぶ。クリックか、Enterキーで決定する（Zキーでは決定しない）。
+///   「戻る」はEscキー（SettingsUIが CloseIfOpen を呼ぶ）。
+///   「Card Template」が空なら、これまでの、マップ上のボタン（StageNodeButton）を使う表示になる。
 ///
 /// 注意：このスクリプトは、panelRootの外（常に有効なオブジェクト）に付けること。
 /// （SettingsUIと同じ理由：panelRootに付けると、無効の間はUpdateなどが動かない。）
@@ -72,8 +80,43 @@ public class StageSelectUI : MonoBehaviour
     [Tooltip("メッセージを表示しておく秒数。")]
     public float lockedMessageSeconds = 2f;
 
+    [Header("カード式（ページめくり）の表示 ― 使わないなら、ここはすべて空のままにする")]
+    [Tooltip("カード1枚分の見本（StageNodeButton）。割り当てると、StageCatalogのステージの数だけカードを自動で作って並べる。見本自身は、自動で非表示になる。")]
+    public StageNodeButton cardTemplate;
+    [Tooltip("カードを並べる入れ物（HorizontalLayoutGroupを付けておく）。空なら、見本と同じ親に並べる。")]
+    public RectTransform cardContainer;
+    [Tooltip("1ページに並べるカードの数。")]
+    public int cardsPerPage = 4;
+    [Tooltip("任意。選んでいるカードの上に出す印（▽）。ピボットは「下の真ん中」にして、カードを並べる入れ物の外に置く。")]
+    public RectTransform cursor;
+    [Tooltip("カードの上端から、印を浮かせる距離（基準解像度でのピクセル）。")]
+    public float cursorOffsetY = 12f;
+    [Tooltip("任意。前のページへ戻る矢印ボタン（左の矢印）。")]
+    public Button previousPageButton;
+    [Tooltip("任意。次のページへ進む矢印ボタン（右の矢印）。")]
+    public Button nextPageButton;
+    [Tooltip("任意。ページの点を並べる入れ物（HorizontalLayoutGroupを付けておく）。")]
+    public RectTransform dotContainer;
+    [Tooltip("点1つ分の見本（Image）。見本自身は、自動で非表示になる。")]
+    public Image dotTemplate;
+    [Tooltip("いまのページの点の絵。")]
+    public Sprite dotOnSprite;
+    [Tooltip("ほかのページの点の絵。")]
+    public Sprite dotOffSprite;
+    [Tooltip("ページが1つだけの時は、矢印と点を隠す。")]
+    public bool hideNavigationIfSinglePage = true;
+
     private StageNodeButton[] _nodes = new StageNodeButton[0];
+    private readonly List<StageNodeButton> _cardClones = new List<StageNodeButton>();
+    private readonly List<Image> _dots = new List<Image>();
+    private int _page;
+    private int _openFrame = -1;
+    private int _confirmOpenFrame = -1;
+    private Vector3 _lastMousePosition;
+    private float _lastMouseMoveTime = -10f;
     private StageNodeButton _selected;
+    private bool _silentSelect; // ページをめくる時の選び直しで、カードを動かした音を鳴らさないため
+    private StageNodeButton _autoNode; // 画面を開いた時に、自動で選んだカード（「新しい」の吹き出しの判定に使う）
     private Coroutine _lockedMessageRoutine;
 
     private float _prevTimeScale = 1f;
@@ -103,6 +146,14 @@ public class StageSelectUI : MonoBehaviour
         if (backButton != null) backButton.onClick.AddListener(Close);
         if (confirmYesButton != null) confirmYesButton.onClick.AddListener(Depart);
         if (confirmNoButton != null) confirmNoButton.onClick.AddListener(CloseConfirm);
+
+        // カード式の表示の準備。
+        if (cardTemplate != null)
+            cardTemplate.gameObject.SetActive(false);
+        if (dotTemplate != null)
+            dotTemplate.gameObject.SetActive(false);
+        if (previousPageButton != null) previousPageButton.onClick.AddListener(PreviousPage);
+        if (nextPageButton != null) nextPageButton.onClick.AddListener(NextPage);
     }
 
     private void OnDestroy()
@@ -133,6 +184,7 @@ public class StageSelectUI : MonoBehaviour
         }
 
         IsOpen = true;
+        _openFrame = Time.frameCount;
         if (panelRoot != null)
             panelRoot.SetActive(true);
         if (confirmPanel != null)
@@ -154,7 +206,20 @@ public class StageSelectUI : MonoBehaviour
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(null);
 
+        if (CardMode)
+        {
+            BuildCards(catalog);
+            _page = 0;
+        }
+
+        // 前に選んでいたカードは、覚えておかない（「新しい」の吹き出しの判定が、狂わないように）。
+        _selected = null;
+        _autoNode = null;
+
         RefreshNodes(catalog);
+
+        if (CardMode)
+            SetPage(_selected != null ? PageOf(_selected) : 0);
 
         if (panelRoot != null)
         {
@@ -163,8 +228,13 @@ public class StageSelectUI : MonoBehaviour
                 LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
         }
 
+        if (CardMode)
+            PositionCursor();
+
         if (introAnimator != null)
             introAnimator.PlayIntro();
+
+        SoundEffects.Play(SEId.StageSelectOpen);
     }
 
     public void Close()
@@ -206,6 +276,8 @@ public class StageSelectUI : MonoBehaviour
         if (node == null || !node.IsUnlocked)
             return;
 
+        SoundEffects.Play(SEId.StageSelectDecide);
+
         if (confirmPanel == null)
         {
             // 確認の画面を作っていない場合は、確認なしですぐに出発する。
@@ -218,6 +290,8 @@ public class StageSelectUI : MonoBehaviour
     /// <summary>ロック中（未解放）のステージのボタンが押された時に、StageNodeButtonから呼ばれる。</summary>
     public void OnLockedNodeClicked(StageNodeButton node)
     {
+        SoundEffects.Play(SEId.StageSelectLocked);
+
         if (lockedMessage == null)
             return;
 
@@ -235,6 +309,7 @@ public class StageSelectUI : MonoBehaviour
         }
 
         lockedMessage.SetActive(true);
+        lockedMessage.transform.SetAsLastSibling(); // カードなどより、手前に出す
 
         if (_lockedMessageRoutine != null)
             StopCoroutine(_lockedMessageRoutine);
@@ -276,6 +351,8 @@ public class StageSelectUI : MonoBehaviour
         }
 
         confirmPanel.SetActive(true);
+        confirmPanel.transform.SetAsLastSibling(); // カードなどより、一番手前に出す
+        _confirmOpenFrame = Time.frameCount;
 
         // Enterキーで、裏のボタンが押されてしまわないように、選択を外す。
         if (EventSystem.current != null)
@@ -308,6 +385,7 @@ public class StageSelectUI : MonoBehaviour
             bool unlocked = entry != null && StageProgress.IsUnlocked(node.stageId);
             bool cleared = entry != null && StageProgress.IsCleared(node.stageId);
             node.Setup(entry, unlocked, cleared, this);
+            node.SetNew(unlocked && !StageProgress.IsSeen(node.stageId));
 
             if (unlocked)
             {
@@ -319,13 +397,25 @@ public class StageSelectUI : MonoBehaviour
         }
 
         // 全部クリア済みなら、最後に解放されたステージを選んでおく。
-        Select(defaultNode != null ? defaultNode : lastUnlocked);
+        _autoNode = defaultNode != null ? defaultNode : lastUnlocked;
+        Select(_autoNode);
     }
 
     /// <summary>ステージを選んで、情報欄を更新する（確認の画面は出さない）。</summary>
     public void Select(StageNodeButton node)
     {
+        StageNodeButton previous = _selected;
         _selected = node;
+
+        if (!_silentSelect && previous != null && node != null && previous != node)
+            SoundEffects.Play(SEId.StageSelectMove);
+
+        // 「新しい」の吹き出し：カーソルを当てたステージは、見たことにして、吹き出しを消す。
+        // 画面を開いた時に、最初から選ばれているカードは、そこからカーソルが離れるまでは数えない。
+        if (previous != null && previous != node)
+            MarkSeen(previous);
+        if (node != null && node != _autoNode)
+            MarkSeen(node);
 
         foreach (StageNodeButton n in _nodes)
         {
@@ -336,16 +426,283 @@ public class StageSelectUI : MonoBehaviour
         StageCatalog catalog = StageCatalog.Instance;
         StageCatalog.Entry entry = (node != null && catalog != null) ? catalog.Find(node.stageId) : null;
 
+        // ロック中のステージは、名前も説明も隠す（カードの表示と合わせる）。
+        bool locked = node != null && !node.IsUnlocked;
         if (stageNameText != null)
-            stageNameText.text = entry != null ? entry.displayName : "";
+            stageNameText.text = entry == null ? "" : (locked ? node.lockedLabel : entry.displayName);
         if (stageDescriptionText != null)
-            stageDescriptionText.text = entry != null ? entry.description : "";
+            stageDescriptionText.text = (entry == null || locked) ? "" : entry.description;
         if (stageStateText != null)
         {
             if (node == null) stageStateText.text = "";
+            else if (locked) stageStateText.text = "挑戦できない";
             else if (node.IsCleared) stageStateText.text = "クリア済み";
             else stageStateText.text = "挑戦できる";
         }
+
+        // カード式の表示：選んだカードのあるページを出して、印（▽）を移す。
+        if (CardMode)
+        {
+            if (node != null && PageOf(node) != _page)
+                SetPage(PageOf(node));
+            else
+                PositionCursor();
+        }
+    }
+
+    // ---- カード式（ページめくり）の表示 --------------------------------------
+
+    private bool CardMode => cardTemplate != null;
+
+    private int CardsPerPageSafe => Mathf.Max(1, cardsPerPage);
+
+    private int PageCount => Mathf.Max(1, (_nodes.Length + CardsPerPageSafe - 1) / CardsPerPageSafe);
+
+    private int PageOf(StageNodeButton node)
+    {
+        int index = System.Array.IndexOf(_nodes, node);
+        return index < 0 ? 0 : index / CardsPerPageSafe;
+    }
+
+    /// <summary>StageCatalogのステージの数だけ、カードを作って並べる（数が同じ間は、作り直さない）。</summary>
+    private void BuildCards(StageCatalog catalog)
+    {
+        Transform parent = cardContainer != null ? (Transform)cardContainer : cardTemplate.transform.parent;
+        int count = catalog.stages.Count;
+
+        if (_cardClones.Count != count)
+        {
+            for (int i = 0; i < _cardClones.Count; i++)
+            {
+                if (_cardClones[i] != null)
+                {
+                    _cardClones[i].gameObject.SetActive(false);
+                    Destroy(_cardClones[i].gameObject);
+                }
+            }
+            _cardClones.Clear();
+
+            for (int i = 0; i < count; i++)
+            {
+                GameObject go = Instantiate(cardTemplate.gameObject, parent);
+                go.SetActive(false); // 表示は、ページごとに決める
+                _cardClones.Add(go.GetComponent<StageNodeButton>());
+            }
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            StageNodeButton card = _cardClones[i];
+            StageCatalog.Entry entry = catalog.stages[i];
+            card.stageId = entry != null ? entry.id : "";
+            card.gameObject.name = "Card_" + card.stageId;
+        }
+        _nodes = _cardClones.ToArray();
+    }
+
+    /// <summary>指定したページのカードだけを表示して、矢印・点・印を更新する。</summary>
+    private void SetPage(int page)
+    {
+        _page = Mathf.Clamp(page, 0, PageCount - 1);
+
+        int per = CardsPerPageSafe;
+        for (int i = 0; i < _nodes.Length; i++)
+        {
+            if (_nodes[i] != null)
+                _nodes[i].gameObject.SetActive(i / per == _page);
+        }
+
+        RefreshNavigation();
+
+        if (cardContainer != null)
+        {
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(cardContainer);
+        }
+        PositionCursor();
+    }
+
+    private void PreviousPage()
+    {
+        ChangePage(-1);
+    }
+
+    private void NextPage()
+    {
+        ChangePage(1);
+    }
+
+    /// <summary>ページをめくる。選んでいるカードは、新しいページの同じ位置のカードに移す。</summary>
+    private void ChangePage(int delta)
+    {
+        if (!IsOpen || IsConfirmOpen || !CardMode)
+            return;
+
+        int newPage = Mathf.Clamp(_page + delta, 0, PageCount - 1);
+        if (newPage == _page)
+            return;
+
+        HideLockedMessage();
+
+        int per = CardsPerPageSafe;
+        int slot = 0;
+        if (_selected != null)
+        {
+            int current = System.Array.IndexOf(_nodes, _selected);
+            if (current >= 0)
+                slot = current % per;
+        }
+        int index = Mathf.Min(newPage * per + slot, _nodes.Length - 1);
+
+        SetPage(newPage);
+        SoundEffects.Play(SEId.StageSelectPage);
+        if (index >= 0 && index < _nodes.Length)
+        {
+            _silentSelect = true; // ページをめくる音だけ鳴らす
+            Select(_nodes[index]);
+            _silentSelect = false;
+        }
+    }
+
+    private void RefreshNavigation()
+    {
+        int pages = PageCount;
+        bool show = !(hideNavigationIfSinglePage && pages <= 1);
+
+        if (previousPageButton != null)
+        {
+            previousPageButton.gameObject.SetActive(show);
+            previousPageButton.interactable = _page > 0;
+        }
+        if (nextPageButton != null)
+        {
+            nextPageButton.gameObject.SetActive(show);
+            nextPageButton.interactable = _page < pages - 1;
+        }
+
+        if (dotContainer != null && dotTemplate != null)
+        {
+            dotContainer.gameObject.SetActive(show);
+
+            while (_dots.Count < pages)
+            {
+                Image dot = Instantiate(dotTemplate, dotContainer);
+                dot.gameObject.SetActive(true);
+                _dots.Add(dot);
+            }
+            while (_dots.Count > pages)
+            {
+                int last = _dots.Count - 1;
+                if (_dots[last] != null)
+                {
+                    _dots[last].gameObject.SetActive(false);
+                    Destroy(_dots[last].gameObject);
+                }
+                _dots.RemoveAt(last);
+            }
+
+            for (int i = 0; i < _dots.Count; i++)
+            {
+                Sprite s = (i == _page) ? dotOnSprite : dotOffSprite;
+                if (s != null)
+                    _dots[i].sprite = s;
+            }
+        }
+    }
+
+    /// <summary>印（▽）を、選んでいるカードの上に移す。</summary>
+    private void PositionCursor()
+    {
+        if (cursor == null)
+            return;
+
+        if (_selected == null || !_selected.gameObject.activeInHierarchy)
+        {
+            cursor.gameObject.SetActive(false);
+            return;
+        }
+
+        cursor.gameObject.SetActive(true);
+        RectTransform card = (RectTransform)_selected.transform;
+        Vector3 top = card.TransformPoint(new Vector3(card.rect.center.x, card.rect.yMax, 0f));
+        cursor.position = top + new Vector3(0f, cursorOffsetY * cursor.lossyScale.y, 0f);
+    }
+
+    /// <summary>マウスを乗せたカードを選ぶ（StageNodeButtonから）。ページをめくった時に、止まっているマウスの下のカードを選んでしまわないよう、マウスが動いた時だけ受け付ける。</summary>
+    public void OnNodeHovered(StageNodeButton node)
+    {
+        if (!IsOpen || IsConfirmOpen || !CardMode || node == null || node == _selected)
+            return;
+        if (Time.unscaledTime - _lastMouseMoveTime > 0.15f)
+            return;
+        Select(node);
+    }
+
+    private void Update()
+    {
+        if (!IsOpen || !CardMode)
+            return;
+
+        // マウスが動いたかを覚えておく（ホバーの判定に使う）。
+        if ((Input.mousePosition - _lastMousePosition).sqrMagnitude > 0.25f)
+            _lastMouseMoveTime = Time.unscaledTime;
+        _lastMousePosition = Input.mousePosition;
+
+        // 開いたのと同じフレームの入力は、無視する。
+        if (Time.frameCount == _openFrame)
+            return;
+
+        bool enter = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+
+        if (IsConfirmOpen)
+        {
+            // 確認の画面：Enterで「はい」。開いたのと同じフレームのEnterは無視する。
+            if (enter && Time.frameCount != _confirmOpenFrame)
+                Depart();
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.LeftArrow))
+            MoveSelection(-1);
+        else if (Input.GetKeyDown(KeyCode.RightArrow))
+            MoveSelection(1);
+        else if (enter)
+            ActivateSelected();
+    }
+
+    /// <summary>←→キー：選ぶカードを1つ動かす（ページの端を越えたら、ページもめくる）。</summary>
+    private void MoveSelection(int delta)
+    {
+        if (_nodes.Length == 0)
+            return;
+
+        int current = _selected != null ? System.Array.IndexOf(_nodes, _selected) : 0;
+        int index = Mathf.Clamp(current + delta, 0, _nodes.Length - 1);
+        if (index == current && _selected != null)
+            return;
+
+        HideLockedMessage();
+        Select(_nodes[index]);
+    }
+
+    /// <summary>Enterキー：選んでいるカードを、クリックした時と同じに扱う。</summary>
+    private void ActivateSelected()
+    {
+        if (_selected == null)
+            return;
+        if (_selected.IsUnlocked)
+            OnNodeClicked(_selected);
+        else
+            OnLockedNodeClicked(_selected);
+    }
+
+    /// <summary>ステージを「見た」ことにして、「新しい」の吹き出しを消す（解放済みのステージだけ）。</summary>
+    private void MarkSeen(StageNodeButton node)
+    {
+        if (node == null || !node.IsUnlocked)
+            return;
+        StageProgress.MarkSeen(node.stageId);
+        node.SetNew(false);
     }
 
     // ---- 出発 ---------------------------------------------------
@@ -367,6 +724,8 @@ public class StageSelectUI : MonoBehaviour
             Debug.LogWarning("[StageSelectUI] シーン「" + entry.sceneName + "」を読み込めません。File > Build Settingsに、このシーンを追加してください。");
             return;
         }
+
+        MarkSeen(_selected); // 決定したステージは、見たことにする。
 
         // 止めていた時間とカーソルの状態を戻してから、シーンを切り替える。
         Close();

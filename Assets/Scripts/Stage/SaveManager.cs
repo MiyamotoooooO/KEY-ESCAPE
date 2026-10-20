@@ -34,6 +34,16 @@ public class SaveData
     public bool modifierUnlocked;
     /// <summary>二段ジャンプを解放済みか（ステージクリアの報酬）。</summary>
     public bool doubleJumpUnlocked;
+
+    /// <summary>ステージ選択画面で、一度カーソルを当てたステージのID（「新しい」の吹き出しを消すために使う）。</summary>
+    public List<string> seenStages = new List<string>();
+
+    // ---- ステージの挑戦中の記録（StageRunが書き込む） ----
+
+    /// <summary>いま挑戦中（クリアも帰還もしていない）のステージのID。空なら、挑戦中ではない。</summary>
+    public string runStageId = "";
+    /// <summary>挑戦中に入手したキー（KeyDefinitionのアセット名）。拠点に帰ると、手持ちから外される。</summary>
+    public List<string> runKeys = new List<string>();
 }
 
 /// <summary>
@@ -88,6 +98,9 @@ public static class SaveManager
         if (Data.ownedKeys == null) Data.ownedKeys = new List<string>();
         if (Data.unlockedActions == null) Data.unlockedActions = new List<string>();
         if (Data.bindings == null) Data.bindings = new List<BindingSave>();
+        if (Data.seenStages == null) Data.seenStages = new List<string>();
+        if (Data.runKeys == null) Data.runKeys = new List<string>();
+        if (Data.runStageId == null) Data.runStageId = "";
     }
 
     public static void Save()

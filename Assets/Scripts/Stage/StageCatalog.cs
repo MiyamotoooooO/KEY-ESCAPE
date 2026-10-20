@@ -26,6 +26,10 @@ public class StageCatalog : ScriptableObject
         public string id = "stage1";
         [Tooltip("画面に表示する名前。例：ステージ1")]
         public string displayName = "ステージ1";
+        [Tooltip("ステージ選択画面のカードに表示する番号。例：1-1")]
+        public string stageNumber = "1-1";
+        [Tooltip("ステージ選択画面のカードに表示する、ステージの小さな絵。空なら、絵は出さない。")]
+        public Sprite thumbnail;
         [TextArea]
         [Tooltip("ステージ選択画面に表示する説明。")]
         public string description;

@@ -145,7 +145,10 @@ public class KeyConfigUI : MonoBehaviour
 
     public void Open()
     {
+        bool wasOpen = _isOpen;
         _isOpen = true;
+        if (!wasOpen)
+            SoundEffects.Play(SEId.KeyConfigOpen);
         if (panelRoot != null)
             panelRoot.SetActive(true);
         if (pauseGameWhileOpen)

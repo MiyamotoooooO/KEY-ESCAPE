@@ -117,6 +117,7 @@ public class SettingsUI : MonoBehaviour
         if (IsOpen)
             return;
         IsOpen = true;
+        SoundEffects.Play(SEId.SettingsOpen);
 
         if (panelRoot != null)
             panelRoot.SetActive(true);

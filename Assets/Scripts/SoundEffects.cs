@@ -13,7 +13,14 @@ public enum SEId
     PlayerDamage,    // プレイヤーが攻撃を受けた
     PlayerDeath,     // プレイヤーが死亡した
     DeathFlash,      // 死亡した瞬間のフラッシュ
-    DialogueChoiceShow // 会話の選択肢が1つ表示された（上から順に1つずつ鳴る）
+    DialogueChoiceShow, // 会話の選択肢が1つ表示された（上から順に1つずつ鳴る）
+    StageSelectOpen,    // ステージ選択を開いた
+    StageSelectMove,    // ステージ選択で、選んでいるカードが動いた
+    StageSelectDecide,  // ステージ選択で、解放済みのステージを決定した
+    StageSelectLocked,  // ステージ選択で、ロック中のステージを押した
+    StageSelectPage,    // ステージ選択で、ページをめくった
+    SettingsOpen,       // 設定画面を開いた
+    KeyConfigOpen       // キーコンフィグ画面を開いた
 }
 
 /// <summary>
@@ -49,6 +56,17 @@ public class SoundEffects : ScriptableObject
     public Entry playerDamage = new Entry();
     public Entry playerDeath = new Entry();
     public Entry deathFlash = new Entry();
+
+    [Header("ステージ選択")]
+    public Entry stageSelectOpen = new Entry();
+    public Entry stageSelectMove = new Entry();
+    public Entry stageSelectDecide = new Entry();
+    public Entry stageSelectLocked = new Entry();
+    public Entry stageSelectPage = new Entry();
+
+    [Header("画面を開く")]
+    public Entry settingsOpen = new Entry();
+    public Entry keyConfigOpen = new Entry();
 
     private static SoundEffects _instance;
     private static readonly float[] _lastPlayTime = new float[Enum.GetValues(typeof(SEId)).Length];
@@ -108,6 +126,13 @@ public class SoundEffects : ScriptableObject
             case SEId.PlayerDeath: return playerDeath;
             case SEId.DeathFlash: return deathFlash;
             case SEId.DialogueChoiceShow: return dialogueChoiceShow;
+            case SEId.StageSelectOpen: return stageSelectOpen;
+            case SEId.StageSelectMove: return stageSelectMove;
+            case SEId.StageSelectDecide: return stageSelectDecide;
+            case SEId.StageSelectLocked: return stageSelectLocked;
+            case SEId.StageSelectPage: return stageSelectPage;
+            case SEId.SettingsOpen: return settingsOpen;
+            case SEId.KeyConfigOpen: return keyConfigOpen;
             default: return null;
         }
     }
