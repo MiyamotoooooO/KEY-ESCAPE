@@ -11,12 +11,13 @@ using UnityEngine.UI;
 ///   1. ゴール：時間がスローになり、白いフラッシュが光り、カメラがプレイヤーに寄る。ステージのBGMは消えていく。
 ///   2. さらにスローになり（もう一度、弱めのフラッシュが光る）、カメラがもう少し寄る。
 ///   3. 紙吹雪が降り、「STAGE CLEAR!」の看板が出る。クリア用のBGMと効果音が鳴り、スローが解除される。
-///   4. しばらく待ってから、StageGoalに戻る（StageGoalが拠点へ戻る）。
+///   4. このステージで入手したキーが、拾った順に、左から走ってきて、プレイヤーの左側に並び、手を上げて喜ぶ（声が鳴る）。
+///   5. しばらく待ってから、StageGoalに戻る（StageGoalが拠点へ戻る）。
 /// 演出の間、プレイヤーは操作できず、ダメージも受けない（無敵）。
 ///
 /// 時間はすべて「実時間」で数えるので、スロー中でも演出がずれない。
 /// 数値は、下の「調整用の数値」を変えると、演出が変わる。
-/// 効果音は SoundEffects の StageClearGoal / StageClearGoal2 / StageClearConfetti / StageClearJingle に clip を入れると鳴る。
+/// 効果音は SoundEffects の StageClearGoal / StageClearGoal2 / StageClearConfetti / StageClearJingle / StageClearKeyVoice に clip を入れると鳴る。
 ///
 /// セットアップ：ステージのシーンに空のオブジェクトを作り、このスクリプトを付ける。
 ///   Clear Sprite（看板の画像）、Confetti Sprites（紙吹雪の画像）、Clear Bgm は、空でも動く。
@@ -59,6 +60,19 @@ public class StageClearDirector : MonoBehaviour
     const float FallSpeedMin   = 380f;  // 落ちる速さ（ピクセル/秒）
     const float FallSpeedMax   = 760f;
 
+    // --- キー（回収したキーが走ってきて、喜ぶ） ---
+    const float KeyFirstDelay    = 0.6f;  // 看板が出てから、最初のキーが出てくるまでの秒数
+    const float KeyStartInterval = 0.45f; // 次のキーが出てくるまでの間隔（秒）
+    const float KeyRunSpeed      = 7f;    // 走る速さ（ワールドの単位/秒）
+    const float KeyNearGap       = 1.4f;  // プレイヤーと、いちばん近いキーの間の距離
+    const float KeySpacing       = 1.3f;  // キー同士の間隔（数が多い時は、自動で詰める）
+    const float KeyMinSpacing    = 0.5f;  // 詰める時の、最小の間隔
+    const float KeyOffscreen     = 3f;    // 画面の左端から、この距離だけ外で走り出す
+    const float KeyCheerDelay    = 0.15f; // 止まってから、手を上げるまでの秒数
+    const int   KeyVoiceCount    = 3;     // 喜ぶ時の声の回数
+    const float KeyVoiceInterval = 0.09f; // 声の間隔（秒）
+    const float KeyWaitLimit     = 20f;   // キーがそろうのを待つ、最大の秒数（念のため）
+
     // 読み込み直後などの長いフレームで演出が飛ばないよう、1フレームの最大時間を決めておく
     const float MaxDt = 0.05f;
 
@@ -81,9 +95,19 @@ public class StageClearDirector : MonoBehaviour
     public AudioClip clearBgm;
     public bool clearBgmLoop = true;
 
+    [Header("キー（回収したキーが走ってきて、喜ぶ）")]
+    [Tooltip("走ってくるキーの見た目。Assets/Prefab/Mob/Enemy/KeyNPC_Visual を入れる。空なら、キーは出ない。")]
+    public GameObject keyPrefab;
+    [Tooltip("キーの見た目が、右向きの絵ならオン。（KeyNPC_Visualは左向きなので、オフのままでよい。後ろ向きに走って見えたら、切り替える）")]
+    public bool keyFacesRight = false;
+    [Tooltip("キーの大きさの倍率。")]
+    public float keyScale = 1f;
+
     [Header("演出のあと")]
-    [Tooltip("看板が出てから、StageGoalに戻るまでの秒数（実時間）。結果画面ができるまでの、つなぎ。")]
+    [Tooltip("キーを1つも拾っていない時：看板が出てから、StageGoalに戻るまでの秒数（実時間）。")]
     public float holdAfterSign = 3f;
+    [Tooltip("キーが出た時：最後のキーが手を上げてから、StageGoalに戻るまでの秒数（実時間）。結果画面ができるまでの、つなぎ。")]
+    public float holdAfterCheer = 3f;
 
     /// <summary>演出の最中か。</summary>
     public static bool IsPlaying { get; private set; }
@@ -103,6 +127,7 @@ public class StageClearDirector : MonoBehaviour
     private RectTransform _signRect;
     private readonly List<Piece> _pieces = new List<Piece>();
 
+    private int _keysDone;
     private GameObject _player;
     private CharacterController2D _controller;
     private bool _slowActive;
@@ -120,18 +145,18 @@ public class StageClearDirector : MonoBehaviour
         IsPlaying = false;
     }
 
-    /// <summary>演出を始める。終わったら、onFinishedが呼ばれる。</summary>
-    public void Play(System.Action onFinished)
+    /// <summary>演出を始める。keysは、このステージで入手したキー（走ってきて喜ぶ）。終わったら、onFinishedが呼ばれる。</summary>
+    public void Play(List<KeyDefinition> keys, System.Action onFinished)
     {
         if (IsPlaying)
             return;
         IsPlaying = true;
-        StartCoroutine(Run(onFinished));
+        StartCoroutine(Run(keys, onFinished));
     }
 
     // ================= 演出の流れ =================
 
-    private IEnumerator Run(System.Action onFinished)
+    private IEnumerator Run(List<KeyDefinition> keys, System.Action onFinished)
     {
         _baseFixedDelta = Time.fixedDeltaTime;
         LockPlayer();
@@ -200,9 +225,22 @@ public class StageClearDirector : MonoBehaviour
         }
         RestoreTime();
 
+        // --- キーが走ってきて、喜ぶ ---
+        bool hasKeys = keys != null && keys.Count > 0;
+        if (hasKeys && keyPrefab == null)
+        {
+            Debug.LogWarning("[StageClearDirector] Key Prefabが空のため、回収したキーを走らせられません。Assets/Prefab/Mob/Enemy/KeyNPC_Visual を入れてください。");
+            hasKeys = false;
+        }
+        if (hasKeys && _player != null)
+            yield return StartCoroutine(RunKeys(keys));
+        else
+            hasKeys = false;
+
         // --- しばらく待つ ---
         float h = 0f;
-        while (h < holdAfterSign)
+        float wait = hasKeys ? holdAfterCheer : holdAfterSign;
+        while (h < wait)
         {
             h += Dt();
             KeepSafe();
@@ -216,6 +254,128 @@ public class StageClearDirector : MonoBehaviour
     private static float Dt()
     {
         return Mathf.Min(Time.unscaledDeltaTime, MaxDt);
+    }
+
+    // ================= キー（走ってきて、喜ぶ） =================
+
+    /// <summary>回収したキーを、左から順に走らせて、プレイヤーの左側に並べる。全員が手を上げるまで待つ。</summary>
+    private IEnumerator RunKeys(List<KeyDefinition> keys)
+    {
+        _keysDone = 0;
+
+        // 足元の高さ：プレイヤーの当たり判定の、いちばん下
+        float groundY = _player.transform.position.y - 1f;
+        Collider2D col = _player.GetComponent<Collider2D>();
+        if (col != null)
+            groundY = col.bounds.min.y;
+        float z = _player.transform.position.z;
+        float playerX = _player.transform.position.x;
+
+        Camera cam = Camera.main;
+        float leftEdge = playerX - 12f;
+        if (cam != null && cam.orthographic)
+            leftEdge = cam.transform.position.x - cam.orthographicSize * cam.aspect;
+
+        // 並べる間隔：画面の左端に収まるように、数が多ければ詰める
+        int n = keys.Count;
+        float spacing = KeySpacing;
+        if (n > 1)
+        {
+            float available = (playerX - KeyNearGap) - (leftEdge + 1f);
+            spacing = Mathf.Clamp(available / (n - 1), KeyMinSpacing, KeySpacing);
+        }
+
+        float wait = 0f;
+        while (wait < KeyFirstDelay)
+        {
+            wait += Dt();
+            KeepSafe();
+            yield return null;
+        }
+
+        // 最初に拾ったキーが、プレイヤーにいちばん近く（走る距離はいちばん長い）。
+        for (int i = 0; i < n; i++)
+        {
+            float stopX = playerX - KeyNearGap - i * spacing;
+            StartCoroutine(KeyRoutine(keys[i], stopX, groundY, z));
+
+            float d = 0f;
+            while (d < KeyStartInterval)
+            {
+                d += Dt();
+                KeepSafe();
+                yield return null;
+            }
+        }
+
+        // 全員が手を上げるまで待つ
+        float limit = 0f;
+        while (_keysDone < n && limit < KeyWaitLimit)
+        {
+            limit += Dt();
+            KeepSafe();
+            yield return null;
+        }
+    }
+
+    private IEnumerator KeyRoutine(KeyDefinition key, float stopX, float groundY, float z)
+    {
+        // 走り出す位置：いまの画面の左端の、少し外
+        Camera cam = Camera.main;
+        float startX = stopX - 12f;
+        if (cam != null && cam.orthographic)
+            startX = cam.transform.position.x - cam.orthographicSize * cam.aspect - KeyOffscreen;
+        startX = Mathf.Min(startX, stopX - 1f);
+
+        GameObject root = new GameObject("ClearKey_" + (key != null ? key.name : "?"));
+        root.transform.position = new Vector3(startX, groundY, z);
+        float face = keyFacesRight ? 1f : -1f; // 右へ走るので、左向きの絵は反転する
+        root.transform.localScale = new Vector3(face * keyScale, keyScale, keyScale);
+
+        GameObject visual = Instantiate(keyPrefab, root.transform);
+        visual.transform.localPosition = Vector3.zero;
+        visual.transform.localRotation = Quaternion.identity;
+
+        // キートップの文字を、回収したキーにする
+        KeyLabel[] labels = visual.GetComponentsInChildren<KeyLabel>(true);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            labels[i].keyOverride = key;
+            labels[i].Refresh();
+        }
+
+        LimbRig rig = visual.GetComponentInChildren<LimbRig>(true);
+
+        // 走る
+        float x = startX;
+        while (x < stopX)
+        {
+            x = Mathf.Min(stopX, x + KeyRunSpeed * Time.deltaTime);
+            root.transform.position = new Vector3(x, groundY, z);
+            if (rig != null)
+                rig.SetManualVelocity(KeyRunSpeed);
+            yield return null;
+        }
+
+        // 止まって、手を上げて喜ぶ
+        if (rig != null)
+            rig.SetManualVelocity(0f);
+        yield return new WaitForSeconds(KeyCheerDelay);
+
+        if (rig != null)
+            rig.SetCheer(true);
+        StartCoroutine(VoiceRoutine());
+        _keysDone++;
+    }
+
+    /// <summary>喜びの声：短い音を、数回続けて鳴らす。</summary>
+    private IEnumerator VoiceRoutine()
+    {
+        for (int i = 0; i < KeyVoiceCount; i++)
+        {
+            SoundEffects.Play(SEId.StageClearKeyVoice);
+            yield return new WaitForSecondsRealtime(KeyVoiceInterval);
+        }
     }
 
     // ================= プレイヤー =================

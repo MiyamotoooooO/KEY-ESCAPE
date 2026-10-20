@@ -35,6 +35,12 @@ public class LimbRig : MonoBehaviour
     [Tooltip("true: 速度・life・Animatorを一切見ず、待機の動き（呼吸と腕の揺れ）だけをする")]
     public bool idleOnly = false;
 
+    [Header("喜び（ステージクリアの演出用）")]
+    [Tooltip("喜ぶ時に、両腕を上げる角度。大きいほど真上に近づく")]
+    public float cheerArmAngle = 160f;
+    [Tooltip("喜ぶ時に、跳ねる高さ（ローカル単位）")]
+    public float cheerHop = 0.12f;
+
     [Header("歩き")]
     [Tooltip("1歩ぶんの距離。小さいほど足の回転が速くなる")]
     public float strideLength = 1.0f;
@@ -180,6 +186,33 @@ public class LimbRig : MonoBehaviour
         _aArmL = -armRest;
     }
 
+    // ---- 外から動かす（ステージクリアの演出用） ----
+    private bool _manual;
+    private float _manualVx;
+    private bool _cheer;
+
+    /// <summary>
+    /// 速度を外から指定して、歩く・走る動きをさせる（待機専用のキーでも使える）。
+    /// 0を渡すと止まる。元に戻すには、ClearManualVelocityを呼ぶ。
+    /// </summary>
+    public void SetManualVelocity(float vx)
+    {
+        _manual = true;
+        _manualVx = vx;
+    }
+
+    public void ClearManualVelocity()
+    {
+        _manual = false;
+        _manualVx = 0f;
+    }
+
+    /// <summary>喜びのポーズ（両腕を上げて、小さく跳ねる）の、オン／オフ。</summary>
+    public void SetCheer(bool on)
+    {
+        _cheer = on;
+    }
+
     /// <summary>外から攻撃の動きを呼びたいとき用（Animatorを使わない場合）。</summary>
     public void PlayAttack()
     {
@@ -208,7 +241,7 @@ public class LimbRig : MonoBehaviour
             return;
 
         // ---------- 状態を読む ----------
-        float vx = _rb != null ? _rb.velocity.x : 0f;
+        float vx = _manual ? _manualVx : (_rb != null ? _rb.velocity.x : 0f);
         float vy = _rb != null ? _rb.velocity.y : 0f;
         bool dead = false;
 
@@ -288,6 +321,18 @@ public class LimbRig : MonoBehaviour
             tLegL = 18f * flail;
             tLegR = -18f * flail;
             tTilt = _hitSign * 12f * k;
+        }
+        else if (_cheer)
+        {
+            // 喜び：両腕を上げて、小さく跳ねる
+            float bounce = Mathf.Abs(Mathf.Sin(time * 7f));
+            float wave = Mathf.Sin(time * 14f);
+            tArmR = cheerArmAngle + 10f * wave;
+            tArmL = -(cheerArmAngle - 10f * wave);
+            tLegL = 6f * wave;
+            tLegR = -6f * wave;
+            tTilt = 4f * Mathf.Sin(time * 7f);
+            tLift = cheerHop * bounce;
         }
         else
         {

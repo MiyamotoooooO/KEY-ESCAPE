@@ -75,3 +75,6 @@ MonoBehaviour:
   stageClearJingle:
     clip: {fileID: 8300000, guid: 373b5aced1b41b9469c2d0c2988e94e1, type: 3}
     volume: 1
+  stageClearKeyVoice:
+    clip: {fileID: 8300000, guid: 5eafb615543973c41a4a645d4bfc6265, type: 3}
+    volume: 1

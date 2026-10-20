@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -112,6 +113,9 @@ public class StageGoal : MonoBehaviour
             return;
         _done = true;
 
+        // このステージで入手したキーを、先に取っておく（確定すると、記録が消えるため）。演出で走らせる。
+        List<KeyDefinition> gainedKeys = StageRun.GetRunKeys();
+
         StageRun.Complete(stageId); // このステージで入手したキーを、確定する（拠点に帰っても外されない）
         StageProgress.MarkCleared(stageId);
         GrantRewards();
@@ -121,7 +125,7 @@ public class StageGoal : MonoBehaviour
         if (dir != null)
         {
             // 演出が終わったら、拠点に戻る。
-            dir.Play(() => StartCoroutine(ReturnToHub(0f)));
+            dir.Play(gainedKeys, () => StartCoroutine(ReturnToHub(0f)));
         }
         else
         {

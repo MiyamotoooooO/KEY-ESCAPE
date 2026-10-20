@@ -65,6 +65,23 @@ public static class StageRun
             d.runKeys.Add(key.name);
     }
 
+    /// <summary>このステージの挑戦中に入手したキーの一覧（拾った順）。クリアの演出で、キーを走らせるのに使う。</summary>
+    public static List<KeyDefinition> GetRunKeys()
+    {
+        var list = new List<KeyDefinition>();
+        KeyInventory inv = KeyInventory.Instance;
+        if (inv == null)
+            return list;
+
+        foreach (string id in SaveManager.Data.runKeys)
+        {
+            KeyDefinition key = FindKey(inv, id);
+            if (key != null)
+                list.Add(key);
+        }
+        return list;
+    }
+
     /// <summary>ステージをクリアした時に、StageGoalから呼ばれる。記録を確定して、キーを残す。</summary>
     public static void Complete(string stageId)
     {

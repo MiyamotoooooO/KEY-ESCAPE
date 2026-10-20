@@ -2905,7 +2905,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 39.000015, y: -145.45633}
+  m_AnchoredPosition: {x: 39.000015, y: -145.4563}
   m_SizeDelta: {x: -64.99997, y: 0}
   m_Pivot: {x: 0.4, y: 0.8}
 --- !u!114 &292901696
@@ -15006,7 +15006,11 @@ MonoBehaviour:
   confettiSize: 40
   clearBgm: {fileID: 8300000, guid: 373b5aced1b41b9469c2d0c2988e94e1, type: 3}
   clearBgmLoop: 1
+  keyPrefab: {fileID: 6788922781978684695, guid: af009bf518c95344e96534e88bfde0bf, type: 3}
+  keyFacesRight: 0
+  keyScale: 1
   holdAfterSign: 2
+  holdAfterCheer: 3
 --- !u!4 &1569165532
 Transform:
   m_ObjectHideFlags: 0
@@ -15970,7 +15974,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 225764473}
   m_Direction: 2
   m_Value: 0
-  m_Size: 1
+  m_Size: 0.9888523
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
