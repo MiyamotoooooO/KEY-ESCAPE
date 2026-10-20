@@ -63,3 +63,15 @@ MonoBehaviour:
   keyConfigOpen:
     clip: {fileID: 8300000, guid: 1df3d4447cfd7fe46b63773e31c2284d, type: 3}
     volume: 0.888
+  stageClearGoal:
+    clip: {fileID: 8300000, guid: 8024c859bae705143bf2bf7800fcc1ab, type: 3}
+    volume: 0.776
+  stageClearGoal2:
+    clip: {fileID: 8300000, guid: 2ff5fc8c9ac3f6e4daa02a11d5b38eee, type: 3}
+    volume: 1
+  stageClearConfetti:
+    clip: {fileID: 8300000, guid: 06208aabc3b49974e8fca125ca5ffae7, type: 3}
+    volume: 1
+  stageClearJingle:
+    clip: {fileID: 8300000, guid: 373b5aced1b41b9469c2d0c2988e94e1, type: 3}
+    volume: 1

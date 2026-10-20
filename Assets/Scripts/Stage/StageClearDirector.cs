@@ -1,0 +1,528 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+/// <summary>
+/// KEY ESCAPE - ステージクリアの演出（ステージのシーンに、1つ置く）。
+///
+/// StageGoalがクリアになると、StageGoalから呼ばれる。流れ：
+///   1. ゴール：時間がスローになり、白いフラッシュが光り、カメラがプレイヤーに寄る。ステージのBGMは消えていく。
+///   2. さらにスローになり（もう一度、弱めのフラッシュが光る）、カメラがもう少し寄る。
+///   3. 紙吹雪が降り、「STAGE CLEAR!」の看板が出る。クリア用のBGMと効果音が鳴り、スローが解除される。
+///   4. しばらく待ってから、StageGoalに戻る（StageGoalが拠点へ戻る）。
+/// 演出の間、プレイヤーは操作できず、ダメージも受けない（無敵）。
+///
+/// 時間はすべて「実時間」で数えるので、スロー中でも演出がずれない。
+/// 数値は、下の「調整用の数値」を変えると、演出が変わる。
+/// 効果音は SoundEffects の StageClearGoal / StageClearGoal2 / StageClearConfetti / StageClearJingle に clip を入れると鳴る。
+///
+/// セットアップ：ステージのシーンに空のオブジェクトを作り、このスクリプトを付ける。
+///   Clear Sprite（看板の画像）、Confetti Sprites（紙吹雪の画像）、Clear Bgm は、空でも動く。
+/// </summary>
+public class StageClearDirector : MonoBehaviour
+{
+    // ================= 調整用の数値（ここを変えると演出が変わる） =================
+
+    // --- ゴール（1回目のスロー） ---
+    const float SlowScale1     = 0.25f; // 時間の速さ（0.25 = 1/4）
+    const float SlowTime1      = 0.9f;  // この秒数（実時間）のあいだ
+    const float ZoomRatio1     = 0.8f;  // カメラが寄る量（0.8 = 画面の広さが8割になる）
+    const float ZoomTime1      = 0.7f;  // 寄るのにかける秒数
+    const float FlashAlpha     = 0.9f;  // 白フラッシュの最初の濃さ
+    const float FlashFade      = 0.4f;  // フラッシュが消える秒数
+    const float BgmFadeOut     = 0.8f;  // ステージのBGMが消える秒数
+
+    // --- さらにスロー（2回目のスロー） ---
+    const float SlowScale2     = 0.08f; // 時間の速さ
+    const float SlowTime2      = 0.9f;  // この秒数（実時間）のあいだ
+    const float ZoomRatio2     = 0.65f; // カメラがさらに寄る量
+    const float ZoomTime2      = 0.9f;  // 寄るのにかける秒数
+    const float Flash2Alpha    = 0.6f;  // 2回目の白フラッシュの最初の濃さ（さらにスローになる瞬間）
+
+    // --- スロー解除 ---
+    const float ReleaseTime    = 0.35f; // 通常の速さへ戻していく秒数
+    const float ResetZoomTime  = 0.9f;  // カメラを元の大きさへ戻す秒数
+
+    // --- 看板（STAGE CLEAR!） ---
+    const float SignWidth      = 960f;  // 看板の幅（基準解像度1920x1080でのピクセル）
+    const float SignY          = 246f;  // 看板の高さ（画面の中心から上へ）
+    const float SignTilt       = 2f;    // 看板の傾き（度）
+    const float SignPopTime    = 0.45f; // ぽんと出る秒数
+
+    // --- 紙吹雪 ---
+    const int   ConfettiBurst  = 70;    // 最初に出る数
+    const float ConfettiRain   = 3.0f;  // そのあと降らせ続ける秒数
+    const float ConfettiPerSec = 28f;   // 降らせ続けている間の、1秒あたりの数
+    const int   ConfettiMax    = 180;   // 同時に出る最大数
+    const float FallSpeedMin   = 380f;  // 落ちる速さ（ピクセル/秒）
+    const float FallSpeedMax   = 760f;
+
+    // 読み込み直後などの長いフレームで演出が飛ばないよう、1フレームの最大時間を決めておく
+    const float MaxDt = 0.05f;
+
+    // ==============================================================================
+
+    [Header("看板")]
+    [Tooltip("「STAGE CLEAR!」の看板の画像。空なら、文字で出す。")]
+    public Sprite clearSprite;
+    [Tooltip("看板を文字で出す時のフォント。空なら、シーン内の文字からフォントを借りる。")]
+    public TMP_FontAsset font;
+
+    [Header("紙吹雪")]
+    [Tooltip("紙吹雪の画像（色違いを、いくつか入れる）。空なら、赤・黄・青の四角を、コードで作って降らせる。")]
+    public Sprite[] confettiSprites;
+    [Tooltip("紙吹雪1枚の高さ（基準解像度でのピクセル）。大きさは、少しずつばらつく。")]
+    public float confettiSize = 40f;
+
+    [Header("BGM")]
+    [Tooltip("クリアした時に流すBGM。空なら、BGMはステージの曲が消えるだけで、新しい曲は流さない。")]
+    public AudioClip clearBgm;
+    public bool clearBgmLoop = true;
+
+    [Header("演出のあと")]
+    [Tooltip("看板が出てから、StageGoalに戻るまでの秒数（実時間）。結果画面ができるまでの、つなぎ。")]
+    public float holdAfterSign = 3f;
+
+    /// <summary>演出の最中か。</summary>
+    public static bool IsPlaying { get; private set; }
+
+    private class Piece
+    {
+        public RectTransform rt;
+        public float vy;
+        public float sway;
+        public float swayAmp;
+        public float swaySpeed;
+        public float spin;
+    }
+
+    private Image _flash;
+    private RectTransform _confettiRoot;
+    private RectTransform _signRect;
+    private readonly List<Piece> _pieces = new List<Piece>();
+
+    private GameObject _player;
+    private CharacterController2D _controller;
+    private bool _slowActive;
+    private float _baseFixedDelta = 0.02f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        IsPlaying = false;
+    }
+
+    private void OnDestroy()
+    {
+        RestoreTime();
+        IsPlaying = false;
+    }
+
+    /// <summary>演出を始める。終わったら、onFinishedが呼ばれる。</summary>
+    public void Play(System.Action onFinished)
+    {
+        if (IsPlaying)
+            return;
+        IsPlaying = true;
+        StartCoroutine(Run(onFinished));
+    }
+
+    // ================= 演出の流れ =================
+
+    private IEnumerator Run(System.Action onFinished)
+    {
+        _baseFixedDelta = Time.fixedDeltaTime;
+        LockPlayer();
+        BuildOverlay();
+
+        CameraFollow cam = FindObjectOfType<CameraFollow>();
+        if (cam != null && cam.Target == null && _player != null)
+            cam.Target = _player.transform;
+
+        // --- ゴール：スロー、フラッシュ、カメラが寄る ---
+        SoundEffects.Play(SEId.StageClearGoal);
+        AudioManager.StopBGM(BgmFadeOut);
+        SetFlash(FlashAlpha);
+        SetTimeScale(SlowScale1);
+        if (cam != null)
+        {
+            cam.ShakeCamera(0.25f, cam.shakeAmount);
+            cam.ZoomTo(ZoomRatio1, ZoomTime1);
+        }
+
+        float t = 0f;
+        bool secondSlow = false;
+        float total = SlowTime1 + SlowTime2;
+        while (t < total)
+        {
+            t += Dt();
+            KeepSafe();
+
+            // --- さらにスロー（2回目のフラッシュと音） ---
+            if (!secondSlow && t >= SlowTime1)
+            {
+                secondSlow = true;
+                SoundEffects.Play(SEId.StageClearGoal2);
+                SetTimeScale(SlowScale2);
+                if (cam != null)
+                    cam.ZoomTo(ZoomRatio2, ZoomTime2);
+            }
+
+            // フラッシュは、1回目（ゴール）と2回目（さらにスロー）の濃いほうを出す。
+            float flash1 = FlashAlpha * (1f - Mathf.Clamp01(t / FlashFade));
+            float flash2 = secondSlow ? Flash2Alpha * (1f - Mathf.Clamp01((t - SlowTime1) / FlashFade)) : 0f;
+            SetFlash(Mathf.Max(flash1, flash2));
+            yield return null;
+        }
+        SetFlash(0f);
+
+        // --- 紙吹雪、看板、BGM。スローを解除して、カメラを戻す ---
+        if (cam != null)
+            cam.ZoomTo(1f, ResetZoomTime);
+
+        SoundEffects.Play(SEId.StageClearConfetti);
+        SoundEffects.Play(SEId.StageClearJingle);
+        if (clearBgm != null)
+            AudioManager.PlayBGM(clearBgm, 0.3f, clearBgmLoop);
+
+        StartCoroutine(ConfettiRoutine());
+        StartCoroutine(PopSignRoutine());
+
+        float r = 0f;
+        while (r < ReleaseTime)
+        {
+            r += Dt();
+            KeepSafe();
+            SetTimeScale(Mathf.Lerp(SlowScale2, 1f, Mathf.Clamp01(r / ReleaseTime)));
+            yield return null;
+        }
+        RestoreTime();
+
+        // --- しばらく待つ ---
+        float h = 0f;
+        while (h < holdAfterSign)
+        {
+            h += Dt();
+            KeepSafe();
+            yield return null;
+        }
+
+        if (onFinished != null)
+            onFinished();
+    }
+
+    private static float Dt()
+    {
+        return Mathf.Min(Time.unscaledDeltaTime, MaxDt);
+    }
+
+    // ================= プレイヤー =================
+
+    /// <summary>プレイヤーの操作を止める（演出の間は、攻撃もできない）。</summary>
+    private void LockPlayer()
+    {
+        // Playerタグが付いたもののうち、Rigidbody2Dを持つものが本物のプレイヤー
+        GameObject[] candidates = GameObject.FindGameObjectsWithTag("Player");
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (candidates[i].GetComponent<Rigidbody2D>() != null)
+            {
+                _player = candidates[i];
+                break;
+            }
+        }
+        if (_player == null)
+            return;
+
+        PlayerMovement move = _player.GetComponent<PlayerMovement>();
+        if (move != null)
+            move.SetInputLocked(true);
+
+        Attack attack = _player.GetComponent<Attack>();
+        if (attack != null)
+            attack.enabled = false;
+
+        _controller = _player.GetComponent<CharacterController2D>();
+        KeepSafe();
+    }
+
+    /// <summary>無敵のままにする（被弾後の無敵が途中で切れても、また付け直す）。</summary>
+    private void KeepSafe()
+    {
+        if (_controller != null)
+            _controller.invincible = true;
+    }
+
+    // ================= 時間 =================
+
+    private void SetTimeScale(float scale)
+    {
+        // ポーズ中は、触らない（ポーズを解除した時の速さが、狂わないように）
+        if (GamePause.IsPaused)
+            return;
+        Time.timeScale = scale;
+        Time.fixedDeltaTime = _baseFixedDelta * scale;
+        _slowActive = true;
+    }
+
+    private void RestoreTime()
+    {
+        if (!_slowActive)
+            return;
+        _slowActive = false;
+        if (!GamePause.IsPaused)
+            Time.timeScale = 1f;
+        Time.fixedDeltaTime = _baseFixedDelta;
+    }
+
+    // ================= 画面（コードで作る） =================
+
+    private void BuildOverlay()
+    {
+        GameObject canvasObj = new GameObject("StageClearCanvas");
+        canvasObj.transform.SetParent(transform, false);
+
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 2500; // ほかのUIより手前（被弾・死亡の演出の、すぐ下）
+
+        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        // 奥から：紙吹雪、看板、フラッシュ
+        _confettiRoot = MakeRect("Confetti", canvasObj.transform);
+        Stretch(_confettiRoot);
+
+        BuildSign(canvasObj.transform);
+
+        GameObject flashObj = new GameObject("Flash", typeof(RectTransform));
+        flashObj.transform.SetParent(canvasObj.transform, false);
+        Stretch((RectTransform)flashObj.transform);
+        _flash = flashObj.AddComponent<Image>();
+        _flash.color = Color.white;
+        _flash.raycastTarget = false;
+        SetFlash(0f);
+    }
+
+    private void BuildSign(Transform parent)
+    {
+        _signRect = MakeRect("Sign", parent);
+        _signRect.anchorMin = _signRect.anchorMax = new Vector2(0.5f, 0.5f);
+        _signRect.pivot = new Vector2(0.5f, 0.5f);
+        _signRect.anchoredPosition = new Vector2(0f, SignY);
+        _signRect.localRotation = Quaternion.Euler(0f, 0f, SignTilt);
+
+        if (clearSprite != null)
+        {
+            Image img = _signRect.gameObject.AddComponent<Image>();
+            img.sprite = clearSprite;
+            img.raycastTarget = false;
+            img.preserveAspect = true;
+            Rect r = clearSprite.rect;
+            float h = SignWidth * r.height / Mathf.Max(1f, r.width);
+            _signRect.sizeDelta = new Vector2(SignWidth, h);
+        }
+        else
+        {
+            _signRect.sizeDelta = new Vector2(SignWidth, 260f);
+            TextMeshProUGUI text = _signRect.gameObject.AddComponent<TextMeshProUGUI>();
+            TMP_FontAsset useFont = font != null ? font : FindSceneFont();
+            if (useFont != null)
+                text.font = useFont;
+            text.text = "STAGE CLEAR!";
+            text.fontSize = 150f;
+            text.color = new Color(0.1f, 0.1f, 0.1f, 1f);
+            text.alignment = TextAlignmentOptions.Center;
+            text.enableWordWrapping = false;
+            text.raycastTarget = false;
+        }
+
+        _signRect.localScale = Vector3.zero; // ぽんと出るまで、見えない
+    }
+
+    private static RectTransform MakeRect(string name, Transform parent)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        return (RectTransform)go.transform;
+    }
+
+    private static void Stretch(RectTransform rt)
+    {
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+    }
+
+    private void SetFlash(float a)
+    {
+        if (_flash == null)
+            return;
+        Color c = _flash.color;
+        c.a = a;
+        _flash.color = c;
+        _flash.enabled = a > 0.001f; // 見えない時は描かない
+    }
+
+    /// <summary>シーン内の文字から、フォントを借りる（日本語が出るフォントを、自分で入れなくて済むように）。</summary>
+    private static TMP_FontAsset FindSceneFont()
+    {
+        TMP_Text[] texts = FindObjectsOfType<TMP_Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            if (texts[i] != null && texts[i].font != null)
+                return texts[i].font;
+        }
+        return null;
+    }
+
+    // ================= 看板 =================
+
+    private IEnumerator PopSignRoutine()
+    {
+        float t = 0f;
+        while (t < SignPopTime)
+        {
+            t += Dt();
+            float k = Mathf.Clamp01(t / SignPopTime);
+            if (_signRect != null)
+                _signRect.localScale = Vector3.one * EaseOutBack(k);
+            yield return null;
+        }
+        if (_signRect != null)
+            _signRect.localScale = Vector3.one;
+    }
+
+    private static float EaseOutBack(float k)
+    {
+        const float c1 = 1.70158f;
+        const float c3 = c1 + 1f;
+        float x = k - 1f;
+        return 1f + c3 * x * x * x + c1 * x * x;
+    }
+
+    // ================= 紙吹雪 =================
+
+    private IEnumerator ConfettiRoutine()
+    {
+        // 最初に、まとめて出す（画面の上に、ばらばらの高さで並べて、順に降ってくるようにする）
+        for (int i = 0; i < ConfettiBurst; i++)
+            SpawnPiece(Random.Range(560f, 1250f));
+
+        float t = 0f;
+        float spawnDebt = 0f;
+        while (true)
+        {
+            float dt = Dt();
+            t += dt;
+
+            // そのあとも、しばらく降らせ続ける
+            if (t < ConfettiRain)
+            {
+                spawnDebt += ConfettiPerSec * dt;
+                while (spawnDebt >= 1f)
+                {
+                    spawnDebt -= 1f;
+                    SpawnPiece(Random.Range(560f, 700f));
+                }
+            }
+
+            for (int i = _pieces.Count - 1; i >= 0; i--)
+            {
+                Piece p = _pieces[i];
+                if (p.rt == null)
+                {
+                    _pieces.RemoveAt(i);
+                    continue;
+                }
+
+                p.sway += p.swaySpeed * dt;
+                Vector2 pos = p.rt.anchoredPosition;
+                pos.y -= p.vy * dt;
+                pos.x += Mathf.Sin(p.sway) * p.swayAmp * dt;
+                p.rt.anchoredPosition = pos;
+                p.rt.Rotate(0f, 0f, p.spin * dt);
+
+                if (pos.y < -640f)
+                {
+                    Destroy(p.rt.gameObject);
+                    _pieces.RemoveAt(i);
+                }
+            }
+
+            if (t >= ConfettiRain && _pieces.Count == 0)
+                yield break;
+            yield return null;
+        }
+    }
+
+    private void SpawnPiece(float y)
+    {
+        if (_confettiRoot == null || _pieces.Count >= ConfettiMax)
+            return;
+
+        GameObject go = new GameObject("Piece", typeof(RectTransform));
+        go.transform.SetParent(_confettiRoot, false);
+        RectTransform rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = new Vector2(Random.Range(-980f, 980f), y);
+        rt.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+
+        Image img = go.AddComponent<Image>();
+        img.raycastTarget = false;
+
+        float h = confettiSize * Random.Range(0.7f, 1.3f);
+        Sprite sprite = PickConfettiSprite();
+        if (sprite != null)
+        {
+            img.sprite = sprite;
+            img.preserveAspect = true;
+            Rect r = sprite.rect;
+            rt.sizeDelta = new Vector2(h * r.width / Mathf.Max(1f, r.height), h);
+        }
+        else
+        {
+            // 画像が無い時は、赤・黄・青の四角
+            img.color = PickFallbackColor();
+            rt.sizeDelta = new Vector2(h * 0.6f, h);
+        }
+
+        var p = new Piece();
+        p.rt = rt;
+        p.vy = Random.Range(FallSpeedMin, FallSpeedMax);
+        p.sway = Random.Range(0f, 6.28f);
+        p.swayAmp = Random.Range(40f, 140f);
+        p.swaySpeed = Random.Range(2f, 5f);
+        p.spin = Random.Range(-260f, 260f);
+        _pieces.Add(p);
+    }
+
+    private Sprite PickConfettiSprite()
+    {
+        if (confettiSprites == null || confettiSprites.Length == 0)
+            return null;
+        for (int tries = 0; tries < 4; tries++)
+        {
+            Sprite s = confettiSprites[Random.Range(0, confettiSprites.Length)];
+            if (s != null)
+                return s;
+        }
+        return null;
+    }
+
+    private static Color PickFallbackColor()
+    {
+        switch (Random.Range(0, 3))
+        {
+            case 0: return new Color(0.92f, 0.28f, 0.25f, 1f); // 赤
+            case 1: return new Color(0.98f, 0.82f, 0.25f, 1f); // 黄
+            default: return new Color(0.28f, 0.45f, 0.90f, 1f); // 青
+        }
+    }
+}

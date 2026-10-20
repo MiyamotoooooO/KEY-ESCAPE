@@ -20,7 +20,11 @@ public enum SEId
     StageSelectLocked,  // ステージ選択で、ロック中のステージを押した
     StageSelectPage,    // ステージ選択で、ページをめくった
     SettingsOpen,       // 設定画面を開いた
-    KeyConfigOpen       // キーコンフィグ画面を開いた
+    KeyConfigOpen,      // キーコンフィグ画面を開いた
+    StageClearGoal,     // ゴールした瞬間（フラッシュ）
+    StageClearConfetti, // 紙吹雪が出る
+    StageClearJingle,   // 「STAGE CLEAR!」の看板が出る
+    StageClearGoal2     // 2回目のフラッシュ（さらにスローになる瞬間）
 }
 
 /// <summary>
@@ -67,6 +71,12 @@ public class SoundEffects : ScriptableObject
     [Header("画面を開く")]
     public Entry settingsOpen = new Entry();
     public Entry keyConfigOpen = new Entry();
+
+    [Header("ステージクリア")]
+    public Entry stageClearGoal = new Entry();
+    public Entry stageClearGoal2 = new Entry();
+    public Entry stageClearConfetti = new Entry();
+    public Entry stageClearJingle = new Entry();
 
     private static SoundEffects _instance;
     private static readonly float[] _lastPlayTime = new float[Enum.GetValues(typeof(SEId)).Length];
@@ -133,6 +143,10 @@ public class SoundEffects : ScriptableObject
             case SEId.StageSelectPage: return stageSelectPage;
             case SEId.SettingsOpen: return settingsOpen;
             case SEId.KeyConfigOpen: return keyConfigOpen;
+            case SEId.StageClearGoal: return stageClearGoal;
+            case SEId.StageClearGoal2: return stageClearGoal2;
+            case SEId.StageClearConfetti: return stageClearConfetti;
+            case SEId.StageClearJingle: return stageClearJingle;
             default: return null;
         }
     }

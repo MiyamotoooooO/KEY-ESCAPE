@@ -37,6 +37,8 @@ public class StageGoal : MonoBehaviour
     public float delayBeforeReturn = 1.5f;
     [Tooltip("任意。クリアした時に表示する物（「STAGE CLEAR」の文字など）。最初は非表示にしておく。")]
     public GameObject clearMessage;
+    [Tooltip("任意。ゴールの演出（スロー・フラッシュ・紙吹雪・STAGE CLEAR!）を再生する部品（StageClearDirector）。空なら、シーンから自動で探す。無ければ、演出なしで拠点に戻る。")]
+    public StageClearDirector director;
 
     private bool _done;
     private bool _bossSeen;
@@ -105,7 +107,8 @@ public class StageGoal : MonoBehaviour
     /// <summary>クリアにする。ほかのスクリプトから呼んでもよい（ボスのやられた時の処理など）。</summary>
     public void Clear()
     {
-        if (_done)
+        // やられている最中は、クリアにしない（やられた時は、シーンが読み直される）。
+        if (_done || HitFeedback.IsDying)
             return;
         _done = true;
 
@@ -114,10 +117,18 @@ public class StageGoal : MonoBehaviour
         GrantRewards();
         CheckpointManager.Clear();
 
-        if (clearMessage != null)
-            clearMessage.SetActive(true);
-
-        StartCoroutine(ReturnToHub());
+        StageClearDirector dir = director != null ? director : FindObjectOfType<StageClearDirector>();
+        if (dir != null)
+        {
+            // 演出が終わったら、拠点に戻る。
+            dir.Play(() => StartCoroutine(ReturnToHub(0f)));
+        }
+        else
+        {
+            if (clearMessage != null)
+                clearMessage.SetActive(true);
+            StartCoroutine(ReturnToHub(delayBeforeReturn));
+        }
     }
 
     /// <summary>
@@ -157,9 +168,9 @@ public class StageGoal : MonoBehaviour
         SaveManager.Save();
     }
 
-    private IEnumerator ReturnToHub()
+    private IEnumerator ReturnToHub(float delay)
     {
-        yield return new WaitForSecondsRealtime(delayBeforeReturn);
+        yield return new WaitForSecondsRealtime(delay);
 
         StageCatalog catalog = StageCatalog.Instance;
         string hub = catalog != null ? catalog.hubSceneName : null;
