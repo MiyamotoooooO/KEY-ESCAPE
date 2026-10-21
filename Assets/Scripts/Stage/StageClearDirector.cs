@@ -185,24 +185,29 @@ public class StageClearDirector : MonoBehaviour
     /// <summary>演出を始める。keysは、このステージで入手したキー（走ってきて喜ぶ）。終わったら、onFinishedが呼ばれる。</summary>
     public void Play(List<KeyDefinition> keys, System.Action onFinished)
     {
-        Play(keys, false, onFinished);
+        Play(keys, false, null, onFinished);
+    }
+
+    public void Play(List<KeyDefinition> keys, bool newRecord, System.Action onFinished)
+    {
+        Play(keys, newRecord, null, onFinished);
     }
 
     /// <summary>
     /// 演出を始める。newRecordは、ベストタイムを更新したか（結果画面のNEW RECORD!）。
     /// 結果画面が出る場合は、「拠点に戻る」が押されたあとに、onFinishedが呼ばれる。
     /// </summary>
-    public void Play(List<KeyDefinition> keys, bool newRecord, System.Action onFinished)
+    public void Play(List<KeyDefinition> keys, bool newRecord, List<string> rewards, System.Action onFinished)
     {
         if (IsPlaying)
             return;
         IsPlaying = true;
-        StartCoroutine(Run(keys, newRecord, onFinished));
+        StartCoroutine(Run(keys, newRecord, rewards, onFinished));
     }
 
     // ================= 演出の流れ =================
 
-    private IEnumerator Run(List<KeyDefinition> keys, bool newRecord, System.Action onFinished)
+    private IEnumerator Run(List<KeyDefinition> keys, bool newRecord, List<string> rewards, System.Action onFinished)
     {
         _baseFixedDelta = Time.fixedDeltaTime;
         LockPlayer();
@@ -294,7 +299,7 @@ public class StageClearDirector : MonoBehaviour
                 KeepSafe();
                 yield return null;
             }
-            yield return StartCoroutine(ShowResult(keys, newRecord));
+            yield return StartCoroutine(ShowResult(keys, newRecord, rewards));
         }
         else
         {
@@ -315,12 +320,13 @@ public class StageClearDirector : MonoBehaviour
 
     // ================= 結果画面 =================
 
-    private IEnumerator ShowResult(List<KeyDefinition> keys, bool newRecord)
+    private IEnumerator ShowResult(List<KeyDefinition> keys, bool newRecord, List<string> rewards)
     {
         EnsureEventSystem(); // ボタンをクリックできるように
 
         StageResultPanel panel = Instantiate(resultPanelPrefab, _resultHost, false);
         panel.SetKeyCharacter(keyPrefab, keyFacesRight, keyScale); // キーの見た目は、走ってきたキーと同じものを使う
+        panel.SetRewards(rewards); // 新しく解放された操作（「覚えた！」の表示）
         panel.TimeCounted += OnResultTimeCounted;
         Canvas.ForceUpdateCanvases();
         StartCoroutine(MoveSignToResult(panel));

@@ -125,6 +125,17 @@ public class StageResultPanel : MonoBehaviour
     [Tooltip("キーが出てから、手を上げ始めるまでの遅れ（秒）。キーは1つずつ出るので、手を上げ始めるのも、自然にずれる。")]
     public float keyCheerDelay = 0.15f;
 
+    [Header("覚えた操作（このステージのクリアで、新しく解放されたもの）")]
+    [Tooltip("任意。「覚えた！ ジャンプ」を出す枠。空なら、「拠点に戻る」ボタンの左に、コードで枠を作って出す。新しく解放されたものが無ければ、出さない。")]
+    public RectTransform rewardPanel;
+    [Tooltip("任意。上の枠の中の文字。")]
+    public TMP_Text rewardText;
+    [Tooltip("表示する文字。{0} に、解放された物の名前（ジャンプ・攻撃のように、「・」でつなぐ）が入る。")]
+    public string rewardFormat = "覚えた！ {0}";
+    [Tooltip("Reward Panel が空の時に、コードで作る枠の位置と大きさ（画面の中央が基準）。")]
+    public Vector2 rewardFallbackPos = new Vector2(-520f, -448f);
+    public Vector2 rewardFallbackSize = new Vector2(620f, 92f);
+
     [Header("ボタン")]
     public Button returnButton;
 
@@ -144,6 +155,7 @@ public class StageResultPanel : MonoBehaviour
     private ResultCharacterStage _playerStage;
     private ResultCharacterStage _keyStage;
     private Vector3 _playerArtScale = Vector3.one;
+    private List<string> _rewards;
 
     /// <summary>キーの見た目を、あとから渡す（Key Character Prefab が空の時に、StageClearDirector が呼ぶ）。</summary>
     public void SetKeyCharacter(GameObject prefab, bool facesRight, float scale)
@@ -155,6 +167,12 @@ public class StageResultPanel : MonoBehaviour
         keyCharacterScale = scale;
     }
 
+    /// <summary>新しく解放された操作の名前を渡す（Playの前に呼ぶ）。空か null なら、出さない。</summary>
+    public void SetRewards(List<string> rewards)
+    {
+        _rewards = rewards;
+    }
+
     private void Awake()
     {
         // 最初は、すべて隠しておく（出す順番に、Play() が出していく）。
@@ -164,6 +182,7 @@ public class StageResultPanel : MonoBehaviour
         RegisterPop(timePanel);
         RegisterPop(deathPanel);
         RegisterPop(keysPanel);
+        RegisterPop(rewardPanel);
         if (returnButton != null)
             RegisterPop(returnButton.transform);
 
@@ -288,6 +307,9 @@ public class StageResultPanel : MonoBehaviour
         yield return Pop(keysPanel);
         yield return RevealKeys(keys);
         yield return Wait(PartInterval);
+
+        // 覚えた操作（新しく解放されたものだけ）
+        yield return RevealRewards();
 
         // ボタン
         if (returnButton != null)
@@ -584,6 +606,72 @@ public class StageResultPanel : MonoBehaviour
                 StartCoroutine(CheerLater(rigs[i], keyCheerDelay));
             yield return Wait(KeyInterval);
         }
+    }
+
+    // ---- 覚えた操作 -----------------------------------------------------
+
+    private IEnumerator RevealRewards()
+    {
+        if (_rewards == null || _rewards.Count == 0)
+            yield break;
+
+        RectTransform rt = rewardPanel;
+        TMP_Text txt = rewardText;
+        Vector3 target = Vector3.one;
+        if (rt == null)
+            rt = BuildRewardBanner(out txt);
+        else
+            target = ScaleOf(rt);
+
+        if (txt != null)
+            txt.text = string.Format(rewardFormat, string.Join("・", _rewards));
+
+        yield return Pop(rt, target);
+        yield return Wait(PartInterval);
+    }
+
+    /// <summary>Reward Panel が空の時に、枠と文字を、コードで作る。</summary>
+    private RectTransform BuildRewardBanner(out TMP_Text text)
+    {
+        GameObject go = new GameObject("RewardBanner", typeof(RectTransform));
+        go.transform.SetParent(transform, false);
+        RectTransform rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = rewardFallbackPos;
+        rt.sizeDelta = rewardFallbackSize;
+        rt.localScale = Vector3.zero;
+
+        Image img = go.AddComponent<Image>();
+        img.color = new Color(0.96f, 0.96f, 0.95f, 1f);
+        img.raycastTarget = false;
+        Outline outline = go.AddComponent<Outline>();
+        outline.effectColor = new Color(0.1f, 0.1f, 0.1f, 1f);
+        outline.effectDistance = new Vector2(3f, -3f);
+
+        GameObject textObj = new GameObject("Text", typeof(RectTransform));
+        textObj.transform.SetParent(rt, false);
+        RectTransform tr = (RectTransform)textObj.transform;
+        tr.anchorMin = Vector2.zero;
+        tr.anchorMax = Vector2.one;
+        tr.offsetMin = new Vector2(12f, 6f);
+        tr.offsetMax = new Vector2(-12f, -6f);
+
+        TextMeshProUGUI tmp = textObj.AddComponent<TextMeshProUGUI>();
+        TMP_FontAsset f = font != null ? font : (timeText != null ? timeText.font : null);
+        if (f != null)
+            tmp.font = f;
+        tmp.fontSize = 34f;
+        tmp.enableAutoSizing = true;
+        tmp.fontSizeMin = 18f;
+        tmp.fontSizeMax = 34f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color(0.1f, 0.1f, 0.1f, 1f);
+        tmp.enableWordWrapping = false;
+        tmp.raycastTarget = false;
+
+        text = tmp;
+        return rt;
     }
 
     /// <summary>キーのキャラクターを撮影場所に置いて、その映像を、キーの枠の「絵」の場所に貼る。</summary>

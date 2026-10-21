@@ -3,9 +3,9 @@
 /// Ver.0.2時点の範囲：Chapter 1に存在するのはこの6つのみ。物語の後半で
 /// 新しいアクションが解放される場合は、デザイン側の必要に応じてここに追加すること。
 ///
-/// MoveLeft / MoveRight / Jump / Attack はゲーム開始時点から解放済み
-/// （KeyBindingManagerのデフォルト割り当てを参照）。DashとRangedAttackは
-/// 最初はロックされていて、プレイヤーが獲得したタイミングで
+/// MoveLeft / MoveRight はゲーム開始時点から解放済み
+/// （KeyBindingManagerのデフォルト割り当てを参照）。Jump / Attack / Dash / RangedAttack は
+/// 最初はロックされていて（Unlocked From Startをオフにする）、ステージクリア報酬（StageReward）などで、プレイヤーが獲得したタイミングで
 /// KeyBindingManager.UnlockAction(...) を通じて解放される
 /// （Dashはステージクリア報酬、RangedAttackはStage 7のボス撃破 -
 /// 仕様書Ver.0.2 §12）。

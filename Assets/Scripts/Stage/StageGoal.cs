@@ -124,14 +124,14 @@ public class StageGoal : MonoBehaviour
 
         StageRun.Complete(stageId); // このステージで入手したキーを、確定する（拠点に帰っても外されない）
         StageProgress.MarkCleared(stageId);
-        GrantRewards();
+        List<string> newRewards = GrantRewards(); // 今回、新しく解放されたもの（結果画面で知らせる）
         CheckpointManager.Clear();
 
         StageClearDirector dir = director != null ? director : FindObjectOfType<StageClearDirector>();
         if (dir != null)
         {
             // 演出と結果画面が終わったら（「拠点に戻る」を押したら）、拠点に戻る。
-            dir.Play(gainedKeys, newRecord, () => StartCoroutine(ReturnToHub(0f)));
+            dir.Play(gainedKeys, newRecord, newRewards, () => StartCoroutine(ReturnToHub(0f)));
         }
         else
         {
@@ -145,12 +145,15 @@ public class StageGoal : MonoBehaviour
     /// StageCatalog のこのステージの欄に設定した「クリア報酬」を解放する。
     /// すでにクリア済みのステージをもう一度クリアしても、まだ解放していない報酬は解放される。
     /// </summary>
-    private void GrantRewards()
+    private List<string> GrantRewards()
     {
+        // 今回、新しく解放されたものの名前（結果画面の「覚えた！」に出す）。すでに解放済みのものは入れない。
+        var gained = new List<string>();
+
         StageCatalog catalog = StageCatalog.Instance;
         StageCatalog.Entry entry = catalog != null ? catalog.Find(stageId) : null;
         if (entry == null || entry.rewards == null || entry.rewards.Count == 0)
-            return;
+            return gained;
 
         KeyBindingManager keys = KeyBindingManager.Instance;
         for (int i = 0; i < entry.rewards.Count; i++)
@@ -158,24 +161,48 @@ public class StageGoal : MonoBehaviour
             switch (entry.rewards[i])
             {
                 case StageReward.Dash:
-                    if (keys != null) keys.UnlockAction(GameAction.Dash);
+                    UnlockActionReward(keys, GameAction.Dash, "ダッシュ", gained);
                     break;
                 case StageReward.RangedAttack:
-                    if (keys != null) keys.UnlockAction(GameAction.RangedAttack);
+                    UnlockActionReward(keys, GameAction.RangedAttack, "遠距離攻撃", gained);
+                    break;
+                case StageReward.Jump:
+                    UnlockActionReward(keys, GameAction.Jump, "ジャンプ", gained);
+                    break;
+                case StageReward.Attack:
+                    UnlockActionReward(keys, GameAction.Attack, "攻撃", gained);
                     break;
                 case StageReward.ModifierKey:
-                    if (keys != null) keys.UnlockModifierKey();
+                    if (keys != null)
+                    {
+                        if (!keys.IsModifierUnlocked)
+                            gained.Add("特殊キー（Ctrl）");
+                        keys.UnlockModifierKey();
+                    }
                     break;
                 case StageReward.DoubleJump:
+                    if (!SaveManager.Data.doubleJumpUnlocked)
+                        gained.Add("二段ジャンプ");
                     SaveManager.Data.doubleJumpUnlocked = true;
                     break;
             }
         }
 
         if (keys == null)
-            Debug.LogWarning("[StageGoal] KeyBindingManagerが見つからないため、キーに関する報酬（ダッシュ・遠距離攻撃・特殊キー）を解放できませんでした（Bootstrapが無い？）。");
+            Debug.LogWarning("[StageGoal] KeyBindingManagerが見つからないため、キーに関する報酬（ジャンプ・攻撃・ダッシュ・遠距離攻撃・特殊キー）を解放できませんでした（Bootstrapが無い？）。");
 
         SaveManager.Save();
+        return gained;
+    }
+
+    /// <summary>アクションを解放する。まだ解放されていなかった時だけ、名前を gained に足す。</summary>
+    private static void UnlockActionReward(KeyBindingManager keys, GameAction action, string label, List<string> gained)
+    {
+        if (keys == null)
+            return;
+        if (!keys.IsActionUnlocked(action))
+            gained.Add(label);
+        keys.UnlockAction(action);
     }
 
     private IEnumerator ReturnToHub(float delay)

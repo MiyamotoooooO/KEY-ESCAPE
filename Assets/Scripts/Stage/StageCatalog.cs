@@ -9,6 +9,8 @@ public enum StageReward
     RangedAttack,  // 遠距離攻撃（アクションの解放。使うには、キーを割り当てる）
     ModifierKey,   // 特殊キー（Ctrl）の解放。Ctrl+攻撃の強攻撃に使う
     DoubleJump,    // 二段ジャンプ（Jumpのキーでそのまま使える）
+    Jump,          // ジャンプ（アクションの解放。最初は使えない。割り当て済みのキーで、そのまま使える）
+    Attack,        // 攻撃（アクションの解放。最初は使えない。割り当て済みのキーで、そのまま使える）
 }
 
 /// <summary>
