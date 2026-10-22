@@ -99,6 +99,10 @@ public class DialogueKeyRecruit : MonoBehaviour
     [Tooltip("フェードアウトさせたい対象をdialogueTextより広い範囲にしたい場合（例：返答の吹き出し背景ごと）に使う。未設定ならdialogueText自体の文字の透明度だけをフェードする。")]
     public CanvasGroup dialogueFadeGroup;
 
+    [Header("Spaceキーの案内（任意）")]
+    [Tooltip("返事が表示されて、Spaceキー（またはクリック）で閉じられる間だけ表示する。Spaceキーの絵のImageなどを入れる。BlinkingPrompt を付けると点滅する。最初は非表示でよい。")]
+    public GameObject spacePrompt;
+
     private bool _triggered;
     private bool _waitingForSpaceToClose;
     private Coroutine _revealCoroutine;
@@ -191,7 +195,16 @@ public class DialogueKeyRecruit : MonoBehaviour
 
         // 連打・連続クリックでフェードが何重にも始まらないよう、ここで即座にfalseにする。
         _waitingForSpaceToClose = false;
+        SetSpacePrompt(false);
+        if (_emote != null)
+            _emote.NotifyDialogueEnd();
         StartCoroutine(FadeOutThenEndDialogue());
+    }
+
+    private void SetSpacePrompt(bool show)
+    {
+        if (spacePrompt != null && spacePrompt.activeSelf != show)
+            spacePrompt.SetActive(show);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -257,6 +270,7 @@ public class DialogueKeyRecruit : MonoBehaviour
     private void BeginDialogue()
     {
         _waitingForSpaceToClose = false;
+        SetSpacePrompt(false);
 
         // Time.timeScaleは変更しない：プレイヤー/相手キャラのアイドル
         // アニメーションを会話中も再生し続けたいため（要望により変更）。
@@ -482,6 +496,7 @@ public class DialogueKeyRecruit : MonoBehaviour
             hoverCursor.gameObject.SetActive(false);
 
         _waitingForSpaceToClose = true;
+        SetSpacePrompt(true);
     }
 
     /// <summary>
@@ -524,6 +539,9 @@ public class DialogueKeyRecruit : MonoBehaviour
     private void EndDialogue()
     {
         _waitingForSpaceToClose = false;
+        SetSpacePrompt(false);
+        if (_emote != null)
+            _emote.NotifyDialogueEnd();
 
         if (_playerMovement != null)
             _playerMovement.SetInputLocked(false);

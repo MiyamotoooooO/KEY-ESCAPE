@@ -7,6 +7,10 @@ public class CameraFollow : MonoBehaviour
 	public float FollowSpeed = 2f;
 	public Transform Target;
 
+	// ONの間は、ゲームを止めている（Time.timeScale = 0）ときも、カメラがターゲットを追いかける。
+	// ギミック紹介でカメラを動かすときに使う。
+	public bool followUnscaled = false;
+
 	// Transform of the camera to shake. Grabs the gameObject's transform
 	// if null.
 	private Transform camTransform;
@@ -53,8 +57,9 @@ public class CameraFollow : MonoBehaviour
 		Vector3 basePos = camTransform.position - lastShakeOffset;
 
 		// ズーム中は、時間がスローになっていてもカメラはしっかり追いかける
-		float followDt = zooming ? Mathf.Min(Time.unscaledDeltaTime, 0.05f) : Time.deltaTime;
-		float speed = zooming ? FollowSpeed * 2f : FollowSpeed;
+		bool unscaledFollow = zooming || followUnscaled;
+		float followDt = unscaledFollow ? Mathf.Min(Time.unscaledDeltaTime, 0.05f) : Time.deltaTime;
+		float speed = unscaledFollow ? FollowSpeed * 2f : FollowSpeed;
 
 		if (Target != null)
 		{

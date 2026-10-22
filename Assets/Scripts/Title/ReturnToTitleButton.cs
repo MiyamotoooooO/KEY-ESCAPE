@@ -82,6 +82,20 @@ public class ReturnToTitleButton : MonoBehaviour
         _button.onClick.AddListener(OnClicked);
         if (confirmYesButton != null) confirmYesButton.onClick.AddListener(Leave);
         if (confirmNoButton != null) confirmNoButton.onClick.AddListener(CloseConfirm);
+
+        // 効果音：プレハブのボタンに UIButtonSound が付いていなくても鳴るよう、無ければここで付ける。
+        // 「いいえ」は「もどる」用の音。
+        EnsureButtonSound(_button, UIButtonSound.ClickKind.Normal);
+        EnsureButtonSound(confirmYesButton, UIButtonSound.ClickKind.Normal);
+        EnsureButtonSound(confirmNoButton, UIButtonSound.ClickKind.Back);
+    }
+
+    private static void EnsureButtonSound(Button button, UIButtonSound.ClickKind kind)
+    {
+        if (button == null || button.GetComponent<UIButtonSound>() != null)
+            return;
+        UIButtonSound sound = button.gameObject.AddComponent<UIButtonSound>();
+        sound.clickKind = kind;
     }
 
     private void OnEnable()

@@ -35,13 +35,13 @@ MonoBehaviour:
     volume: 0.537
   playerDamage:
     clip: {fileID: 8300000, guid: 60cf4d2e3c8635c4e861cdef5357c32f, type: 3}
-    volume: 0.836
+    volume: 0.692
   playerDeath:
     clip: {fileID: 8300000, guid: c2c3675789d376b479f58d622a146c94, type: 3}
-    volume: 0.441
+    volume: 0.185
   deathFlash:
     clip: {fileID: 8300000, guid: 2c8247283631bae4ca497b28f9b6cab7, type: 3}
-    volume: 0.744
+    volume: 0.435
   stageSelectOpen:
     clip: {fileID: 8300000, guid: 1df3d4447cfd7fe46b63773e31c2284d, type: 3}
     volume: 0.766
@@ -65,21 +65,24 @@ MonoBehaviour:
     volume: 0.888
   stageClearGoal:
     clip: {fileID: 8300000, guid: 8024c859bae705143bf2bf7800fcc1ab, type: 3}
-    volume: 0.776
+    volume: 0.612
   stageClearGoal2:
     clip: {fileID: 8300000, guid: 2ff5fc8c9ac3f6e4daa02a11d5b38eee, type: 3}
-    volume: 1
+    volume: 0.64
   stageClearConfetti:
     clip: {fileID: 8300000, guid: 06208aabc3b49974e8fca125ca5ffae7, type: 3}
-    volume: 1
+    volume: 0.626
   stageClearJingle:
     clip: {fileID: 8300000, guid: 373b5aced1b41b9469c2d0c2988e94e1, type: 3}
-    volume: 1
+    volume: 0.654
   stageClearKeyVoice:
     clip: {fileID: 8300000, guid: 5eafb615543973c41a4a645d4bfc6265, type: 3}
     volume: 1
   stageResultShow:
     clip: {fileID: 8300000, guid: dabc2bb54685ac546973de21c22a2329, type: 3}
+    volume: 1
+  stageClearResult:
+    clip: {fileID: 8300000, guid: 1690ad84937a0264bab527e3a2181799, type: 3}
     volume: 1
   checkpointConfetti:
     clip: {fileID: 8300000, guid: 662e6566b6dbb744d8454816e880e602, type: 3}

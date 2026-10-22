@@ -14,8 +14,8 @@
 ///   ・ダメージを受けた       … 一定時間だけ出す（巡回型 Enemy が ApplyDamage で知らせる）
 ///   ・会話型（DialogueKeyRecruit と同じオブジェクトに付けた場合）
 ///        話しかける前 … 話しかけるまで、ずっと出し続ける
-///        質問のとき   … 会話が始まった時、一定時間だけ出す
-///        選択したとき … 選択肢を選んだ時、一定時間だけ出す
+///        質問のとき   … 会話が始まった時に出す（Keep Dialogue Bubble Until Next がONなら、選択肢を選ぶまで出し続ける）
+///        選択したとき … 選択肢を選んだ時に出す（ONなら、会話が閉じるまで出し続ける。OFFなら一定時間だけ）
 ///
 /// 「索敵していない」吹き出しは、1つ目と2つ目の欄のうち、入っているものからランダムに選ぶ。
 /// 巡回型（Enemy）は索敵しないので、生きている間ずっとこの状態として、一定間隔で出す。
@@ -79,6 +79,8 @@ public class EmoteBubble : MonoBehaviour
     public GameObject dialogueChoicePrefab;
     [Tooltip("選択の吹き出しを出している時間（秒）")]
     public float dialogueChoiceDuration = 1.5f;
+    [Tooltip("ONなら、質問の吹き出しは選択肢を選ぶまで、選択の吹き出しは会話が閉じるまで、出し続ける（上の「時間」は使わない）。OFFなら、上の「時間」が過ぎたら消える。")]
+    public bool keepDialogueBubbleUntilNext = true;
 
     [Header("表示位置")]
     [Tooltip("敵の位置からの距離（ワールド単位）。頭の上に来るように調整する")]
@@ -261,7 +263,10 @@ public class EmoteBubble : MonoBehaviour
             return;
         _dialogueStarted = true;
         ClearBubble(); // 話しかける前の吹き出しを消す
-        ShowTimed(dialogueQuestionPrefab, dialogueQuestionDuration, true);
+        if (keepDialogueBubbleUntilNext)
+            ShowPersistent(dialogueQuestionPrefab);
+        else
+            ShowTimed(dialogueQuestionPrefab, dialogueQuestionDuration, true);
     }
 
     /// <summary>選択肢を選んだとき。DialogueKeyRecruit から呼ばれる。</summary>
@@ -270,7 +275,18 @@ public class EmoteBubble : MonoBehaviour
         if (_dead)
             return;
         ClearBubble(); // 質問の吹き出しが残っていれば消す
-        ShowTimed(dialogueChoicePrefab, dialogueChoiceDuration, true);
+        if (keepDialogueBubbleUntilNext)
+            ShowPersistent(dialogueChoicePrefab);
+        else
+            ShowTimed(dialogueChoicePrefab, dialogueChoiceDuration, true);
+    }
+
+    /// <summary>会話が閉じられたとき（Spaceキーやクリックで次へ進んだとき）。DialogueKeyRecruit から呼ばれる。</summary>
+    public void NotifyDialogueEnd()
+    {
+        if (_dead)
+            return;
+        ClearBubble();
     }
 
     /// <summary>「索敵していない」吹き出しを、入っているものからランダムに選ぶ。</summary>
@@ -308,6 +324,16 @@ public class EmoteBubble : MonoBehaviour
         _timedUnscaled = unscaled;
     }
 
+    /// <summary>消すまで出し続ける吹き出し（会話用）。ゲームが止まっていてもアニメーションが動く。</summary>
+    private void ShowPersistent(GameObject prefab)
+    {
+        if (prefab == null)
+            return;
+        if (!Spawn(prefab, true))
+            return;
+        _kind = Kind.Persistent;
+    }
+
     private void ShowUnaware(GameObject prefab)
     {
         if (prefab == null)
@@ -317,7 +343,7 @@ public class EmoteBubble : MonoBehaviour
         _kind = Kind.Unaware;
     }
 
-    private bool Spawn(GameObject prefab)
+    private bool Spawn(GameObject prefab, bool unscaledAnimators = false)
     {
         ClearBubble();
 
@@ -332,7 +358,7 @@ public class EmoteBubble : MonoBehaviour
         _currentPrefab = prefab;
 
         // ゲームを止めている間に出した吹き出しも、アニメーションが動くようにする
-        if (GamePause.IsPaused)
+        if (GamePause.IsPaused || unscaledAnimators)
         {
             Animator[] animators = _bubble.GetComponentsInChildren<Animator>(true);
             for (int i = 0; i < animators.Length; i++)

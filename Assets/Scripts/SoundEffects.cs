@@ -27,7 +27,8 @@ public enum SEId
     StageClearGoal2,    // 2回目のフラッシュ（さらにスローになる瞬間）
     StageClearKeyVoice, // クリア演出で、キーが喜ぶ声（1回の喜びで、短く数回鳴る）
     CheckpointConfetti, // 中間地点を初めて通って、旗の上に紙吹雪が出た
-    StageResultShow     // クリア後、結果画面が出る
+    StageResultShow,    // クリア後、結果画面が出る
+    StageClearResult    // クリアの結果画面の間に、1回だけ鳴る音（以前のループするクリアBGMの代わり）
 }
 
 /// <summary>
@@ -82,6 +83,7 @@ public class SoundEffects : ScriptableObject
     public Entry stageClearJingle = new Entry();
     public Entry stageClearKeyVoice = new Entry();
     public Entry stageResultShow = new Entry();
+    public Entry stageClearResult = new Entry();
 
     [Header("中間地点")]
     public Entry checkpointConfetti = new Entry();
@@ -130,6 +132,16 @@ public class SoundEffects : ScriptableObject
             AudioManager.PlaySE(e.clip, e.volume);
     }
 
+    /// <summary>その効果音のクリップの長さ（秒）。クリップが入っていなければ 0。</summary>
+    public static float GetLength(SEId id)
+    {
+        SoundEffects se = Instance;
+        if (se == null)
+            return 0f;
+        Entry e = se.Get(id);
+        return (e != null && e.clip != null) ? e.clip.length : 0f;
+    }
+
     private Entry Get(SEId id)
     {
         switch (id)
@@ -158,6 +170,7 @@ public class SoundEffects : ScriptableObject
             case SEId.StageClearKeyVoice: return stageClearKeyVoice;
             case SEId.CheckpointConfetti: return checkpointConfetti;
             case SEId.StageResultShow: return stageResultShow;
+            case SEId.StageClearResult: return stageClearResult;
             default: return null;
         }
     }

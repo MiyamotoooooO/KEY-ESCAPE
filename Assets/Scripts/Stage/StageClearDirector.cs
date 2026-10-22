@@ -19,7 +19,7 @@ using UnityEngine.UI;
 ///
 /// 時間はすべて「実時間」で数えるので、スロー中でも演出がずれない。
 /// 数値は、下の「調整用の数値」を変えると、演出が変わる。
-/// 効果音は SoundEffects の StageClearGoal / StageClearGoal2 / StageClearConfetti / StageClearJingle / StageClearKeyVoice に clip を入れると鳴る。
+/// 効果音は SoundEffects の StageClearGoal / StageClearGoal2 / StageClearConfetti / StageClearJingle / StageClearKeyVoice / StageClearResult に clip を入れると鳴る。
 ///
 /// セットアップ：ステージのシーンに空のオブジェクトを作り、このスクリプトを付ける。
 ///   Clear Sprite（看板の画像）、Confetti Sprites（紙吹雪の画像）、Clear Bgm は、空でも動く。
@@ -36,6 +36,8 @@ public class StageClearDirector : MonoBehaviour
     const float FlashAlpha     = 0.9f;  // 白フラッシュの最初の濃さ
     const float FlashFade      = 0.4f;  // フラッシュが消える秒数
     const float BgmFadeOut     = 0.8f;  // ステージのBGMが消える秒数
+    const float ClearBgmMaxWait = 8f;   // 専用BGMを流すまで、ゴール効果音を待つ最長の秒数
+    const float ClearBgmFadeIn = 0.5f;  // 専用BGMがフェードインする秒数
 
     // --- さらにスロー（2回目のスロー） ---
     const float SlowScale2     = 0.08f; // 時間の速さ
@@ -105,8 +107,9 @@ public class StageClearDirector : MonoBehaviour
     public float confettiSize = 40f;
 
     [Header("BGM")]
-    [Tooltip("クリアした時に流すBGM。空なら、BGMはステージの曲が消えるだけで、新しい曲は流さない。")]
+    [Tooltip("クリアの専用BGM。ゴール効果音（SoundEffects の Stage Clear Result。空なら Stage Clear Jingle）が鳴り終わってから流れ始め、キーが話す間も結果画面でもずっと鳴り続ける。空なら流さない。")]
     public AudioClip clearBgm;
+    [Tooltip("専用BGMをループさせるか。")]
     public bool clearBgmLoop = true;
 
     [Header("キー（回収したキーが走ってきて、喜ぶ）")]
@@ -205,6 +208,16 @@ public class StageClearDirector : MonoBehaviour
         StartCoroutine(Run(keys, newRecord, rewards, onFinished));
     }
 
+    /// <summary>ゴール効果音が鳴り終わるのを待ってから、専用BGMを流し始める（実時間で数える）。</summary>
+    private IEnumerator StartClearBgmRoutine()
+    {
+        float wait = Mathf.Max(SoundEffects.GetLength(SEId.StageClearResult), SoundEffects.GetLength(SEId.StageClearJingle));
+        wait = Mathf.Min(wait, ClearBgmMaxWait);
+        if (wait > 0f)
+            yield return new WaitForSecondsRealtime(wait);
+        AudioManager.PlayBGM(clearBgm, ClearBgmFadeIn, clearBgmLoop);
+    }
+
     // ================= 演出の流れ =================
 
     private IEnumerator Run(List<KeyDefinition> keys, bool newRecord, List<string> rewards, System.Action onFinished)
@@ -260,8 +273,9 @@ public class StageClearDirector : MonoBehaviour
 
         SoundEffects.Play(SEId.StageClearConfetti);
         SoundEffects.Play(SEId.StageClearJingle);
+        SoundEffects.Play(SEId.StageClearResult);
         if (clearBgm != null)
-            AudioManager.PlayBGM(clearBgm, 0.3f, clearBgmLoop);
+            StartCoroutine(StartClearBgmRoutine());
 
         StartConfetti(ConfettiBurst, ConfettiRain, ConfettiPerSec);
         StartCoroutine(PopSignRoutine());

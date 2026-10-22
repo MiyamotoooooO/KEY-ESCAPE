@@ -55,6 +55,9 @@ public class SaveData
 
     /// <summary>ステージごとのベストタイム（クリアにかかった秒数）。</summary>
     public List<StageTimeSave> bestTimes = new List<StageTimeSave>();
+
+    /// <summary>一度見たギミック紹介のID（GimmickIntroZone）。二度と出さないために使う。</summary>
+    public List<string> seenIntros = new List<string>();
 }
 
 /// <summary>
@@ -113,6 +116,7 @@ public static class SaveManager
         if (Data.runKeys == null) Data.runKeys = new List<string>();
         if (Data.runStageId == null) Data.runStageId = "";
         if (Data.bestTimes == null) Data.bestTimes = new List<StageTimeSave>();
+        if (Data.seenIntros == null) Data.seenIntros = new List<string>();
     }
 
     public static void Save()
