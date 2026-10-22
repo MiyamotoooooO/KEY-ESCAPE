@@ -64,7 +64,7 @@ public class KeyAcquiredPopup : MonoBehaviour
     public GameObject continueArrow;
 
     [Header("閉じる操作")]
-    [Tooltip("Spaceキーの代わりにクリックでも閉じられるようにするための受け皿。未設定ならpanelRootを使う。Image等のRaycast Targetが有効なGraphicが付いている必要がある。")]
+    [Tooltip("（今は使わない）ポップアップは、Spaceキーだけで閉じる。クリックでは閉じない。")]
     public GameObject closeClickTarget;
 
     [Header("演出タイミング（調整用）")]
@@ -170,13 +170,6 @@ public class KeyAcquiredPopup : MonoBehaviour
     private Coroutine _sparkleBlinkCoroutine;
     private Coroutine _arrowBlinkCoroutine;
 
-    /// <summary>closeClickTargetのクリックを本体に中継するだけの小さなヘルパー。</summary>
-    private class CloseClickRelay : MonoBehaviour, IPointerClickHandler
-    {
-        public KeyAcquiredPopup owner;
-        public void OnPointerClick(PointerEventData eventData) => owner.RequestClose();
-    }
-
     private void Start()
     {
         if (KeyInventory.Instance != null)
@@ -187,14 +180,6 @@ public class KeyAcquiredPopup : MonoBehaviour
         if (panelRoot != null)
             panelRoot.SetActive(false);
 
-        var clickTarget = closeClickTarget != null ? closeClickTarget : panelRoot;
-        if (clickTarget != null)
-        {
-            var relay = clickTarget.GetComponent<CloseClickRelay>();
-            if (relay == null)
-                relay = clickTarget.AddComponent<CloseClickRelay>();
-            relay.owner = this;
-        }
     }
 
     private void OnDestroy()

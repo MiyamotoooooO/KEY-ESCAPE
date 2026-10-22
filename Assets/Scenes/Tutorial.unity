@@ -3057,7 +3057,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 39.000015, y: -145.45627}
+  m_AnchoredPosition: {x: 39.000015, y: -145.45628}
   m_SizeDelta: {x: -64.99997, y: 0}
   m_Pivot: {x: 0.4, y: 0.8}
 --- !u!114 &292901696
@@ -9467,11 +9467,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5039451079902285223, guid: 11ce70207bc4bbf4b9c07466d61cf1a7, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 6.479291
+      value: 6.47
       objectReference: {fileID: 0}
     - target: {fileID: 5039451079902285223, guid: 11ce70207bc4bbf4b9c07466d61cf1a7, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.5686064
+      value: 0.737
       objectReference: {fileID: 0}
     - target: {fileID: 5039451079902285223, guid: 11ce70207bc4bbf4b9c07466d61cf1a7, type: 3}
       propertyPath: m_LocalPosition.z
@@ -15636,6 +15636,7 @@ MonoBehaviour:
   confettiSize: 40
   clearBgm: {fileID: 8300000, guid: 861efab67329bc04196c512e73ebfb14, type: 3}
   clearBgmLoop: 1
+  clearBgmVolume: 1
   keyPrefab: {fileID: 6788922781978684695, guid: af009bf518c95344e96534e88bfde0bf, type: 3}
   keyFacesRight: 0
   keyScale: 1
@@ -16631,7 +16632,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 225764473}
   m_Direction: 2
   m_Value: 0
-  m_Size: 1
+  m_Size: 0.99999696
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

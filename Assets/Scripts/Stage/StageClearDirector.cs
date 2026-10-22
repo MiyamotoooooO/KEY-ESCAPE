@@ -111,6 +111,8 @@ public class StageClearDirector : MonoBehaviour
     public AudioClip clearBgm;
     [Tooltip("専用BGMをループさせるか。")]
     public bool clearBgmLoop = true;
+    [Tooltip("専用BGMの音量（0〜1）。曲ごとの音量調整。設定画面のBGM音量には、さらに掛け合わされる。")]
+    [Range(0f, 1f)] public float clearBgmVolume = 1f;
 
     [Header("キー（回収したキーが走ってきて、喜ぶ）")]
     [Tooltip("走ってくるキーの見た目。Assets/Prefab/Mob/Enemy/KeyNPC_Visual を入れる。空なら、キーは出ない。")]
@@ -229,7 +231,7 @@ public class StageClearDirector : MonoBehaviour
         wait = Mathf.Min(wait, ClearBgmMaxWait);
         if (wait > 0f)
             yield return new WaitForSecondsRealtime(wait);
-        AudioManager.PlayBGM(clearBgm, ClearBgmFadeIn, clearBgmLoop);
+        AudioManager.PlayBGM(clearBgm, ClearBgmFadeIn, clearBgmLoop, clearBgmVolume);
     }
 
     // ================= 演出の流れ =================

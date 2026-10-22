@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 
@@ -115,6 +116,8 @@ public class KeyConfigUI : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (_interactionLocked)
+            ReleaseInteractionLock();
         if (KeyBindingManager.Instance != null)
             KeyBindingManager.Instance.OnBindingsChanged -= RefreshBindingsOnly;
         if (KeyInventory.Instance != null)
@@ -401,6 +404,74 @@ public class KeyConfigUI : MonoBehaviour
         _hiddenOwnedKey = key;
         if (_isOpen)
             RefreshKeyList();
+    }
+
+    // ---- 演出中の操作の禁止（KeyConfigUnlockSequence / ActionLockBreakSequence 用） ----------
+
+    private bool _interactionLocked;
+    private GameObject _blocker;
+    private bool _prevSendNavigation;
+    private bool _navigationChanged;
+
+    /// <summary>演出のために、画面の操作を禁止しているか。</summary>
+    public bool IsInteractionLocked { get { return _interactionLocked; } }
+
+    /// <summary>
+    /// 画面の操作の禁止／解除。禁止すると、画面全体を覆う透明な板が一番手前に出て、マウスのクリック・ドラッグ・ホバーを受け止める。
+    /// さらに、キーボードでボタンを押す操作（決定・移動の入力）も止める。解除すると、どちらも元に戻る。
+    /// </summary>
+    public void SetInteractionLocked(bool locked)
+    {
+        if (locked == _interactionLocked)
+            return;
+        _interactionLocked = locked;
+
+        if (locked)
+        {
+            if (panelRoot != null)
+            {
+                _blocker = new GameObject("InteractionBlocker", typeof(RectTransform), typeof(LayoutElement));
+                _blocker.transform.SetParent(panelRoot.transform, false);
+                _blocker.GetComponent<LayoutElement>().ignoreLayout = true;
+                RectTransform br = (RectTransform)_blocker.transform;
+                br.anchorMin = Vector2.zero;
+                br.anchorMax = Vector2.one;
+                br.offsetMin = new Vector2(-1000f, -1000f); // 拡大されても、画面全体を覆うように、大きめにする
+                br.offsetMax = new Vector2(1000f, 1000f);
+                Image img = _blocker.AddComponent<Image>();
+                img.color = new Color(0f, 0f, 0f, 0.01f); // ほぼ透明（完全に透明だと、クリックを受け止めないことがあるため）
+                img.raycastTarget = true;
+                _blocker.transform.SetAsLastSibling();
+            }
+
+            EventSystem es = EventSystem.current;
+            if (es != null)
+            {
+                _prevSendNavigation = es.sendNavigationEvents;
+                es.sendNavigationEvents = false;
+                es.SetSelectedGameObject(null);
+                _navigationChanged = true;
+            }
+        }
+        else
+        {
+            ReleaseInteractionLock();
+        }
+    }
+
+    private void ReleaseInteractionLock()
+    {
+        if (_blocker != null)
+            Destroy(_blocker);
+        _blocker = null;
+
+        if (_navigationChanged)
+        {
+            EventSystem es = EventSystem.current;
+            if (es != null)
+                es.sendNavigationEvents = _prevSendNavigation;
+            _navigationChanged = false;
+        }
     }
 
     // ---- アクションのロックを壊す演出（ActionLockBreakSequence）用 -----------------

@@ -262,6 +262,7 @@ public class ActionLockBreakSequence : MonoBehaviour
         {
             // 解放するアクションの行を、ロック中の見た目のまま、画面を開く。
             config.SetForcedLockedActions(actions);
+            config.SetInteractionLocked(true); // 演出の間は、画面を操作できない
             config.Open();
 
             // 開始の演出（看板・線）が終わるのを待つ。
@@ -345,6 +346,7 @@ public class ActionLockBreakSequence : MonoBehaviour
 
         if (_config != null)
         {
+            _config.SetInteractionLocked(false);
             _config.ClearForcedLockedActions();
             _config.Close();
         }

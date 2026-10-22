@@ -178,6 +178,7 @@ public class KeyConfigUnlockSequence : MonoBehaviour
             // 新しいキーのマスだけ「？」のままにして、すべてのキーが見えるタブで、画面を開く。
             config.currentFilter = KeyConfigFilter.All;
             config.SetHiddenOwnedKey(key);
+            config.SetInteractionLocked(true); // 演出の間は、画面を操作できない
             config.Open();
 
             // 開始の演出（看板・線）が終わるのを待つ。
@@ -242,6 +243,7 @@ public class KeyConfigUnlockSequence : MonoBehaviour
 
         if (_config != null)
         {
+            _config.SetInteractionLocked(false);
             _config.SetHiddenOwnedKey(null);
             _config.SetFilter(_prevFilter);
             _config.Close();

@@ -27,6 +27,7 @@ public class AudioManager : MonoBehaviour
     // BGMは2つのAudioSourceを使い、片方を消しながらもう片方を出して、曲を切り替える（クロスフェード）。
     private readonly AudioSource[] _bgm = new AudioSource[2];
     private readonly float[] _fade = new float[2];   // 各AudioSourceのフェード係数（0〜1）
+    private readonly float[] _trackVolume = { 1f, 1f }; // 各AudioSourceで鳴らしている曲の音量（曲ごとの音量調整。0〜1）
     private int _active;                             // 今のBGMを鳴らしているほうの番号
     private Coroutine _crossfade;
 
@@ -37,6 +38,7 @@ public class AudioManager : MonoBehaviour
         public AudioClip clip;
         public float time;
         public bool loop;
+        public float volume;
     }
     private readonly Stack<BgmState> _stack = new Stack<BgmState>();
 
@@ -92,31 +94,34 @@ public class AudioManager : MonoBehaviour
         for (int i = 0; i < _bgm.Length; i++)
         {
             if (_bgm[i] != null)
-                _bgm[i].volume = v * _fade[i];
+                _bgm[i].volume = v * _trackVolume[i] * _fade[i];
         }
     }
 
     // ---- BGM ------------------------------------------------------------
 
-    /// <summary>BGMを切り替える。同じ曲がすでに鳴っているなら、何もしない（シーンをまたいでも途切れない）。</summary>
-    public static void PlayBGM(AudioClip clip, float fadeTime = 1f, bool loop = true)
+    /// <summary>
+    /// BGMを切り替える。同じ曲がすでに鳴っているなら、曲はそのまま（シーンをまたいでも途切れない）。
+    /// volumeは、この曲だけの音量（0〜1）。設定画面のBGM音量に、さらに掛け合わされる。
+    /// </summary>
+    public static void PlayBGM(AudioClip clip, float fadeTime = 1f, bool loop = true, float volume = 1f)
     {
         if (Instance == null) return;
-        Instance.SwitchTo(clip, fadeTime, loop, 0f);
+        Instance.SwitchTo(clip, fadeTime, loop, 0f, volume);
     }
 
     /// <summary>BGMを止める。</summary>
     public static void StopBGM(float fadeTime = 1f)
     {
         if (Instance == null) return;
-        Instance.SwitchTo(null, fadeTime, true, 0f);
+        Instance.SwitchTo(null, fadeTime, true, 0f, 1f);
     }
 
     /// <summary>今のBGMと再生位置を覚えてから、別のBGMに切り替える。clipがnullなら、覚えるだけで曲は切り替えない。</summary>
-    public static void PushBGM(AudioClip clip, float fadeTime = 0.5f, bool loop = true)
+    public static void PushBGM(AudioClip clip, float fadeTime = 0.5f, bool loop = true, float volume = 1f)
     {
         if (Instance == null) return;
-        Instance.PushInternal(clip, fadeTime, loop);
+        Instance.PushInternal(clip, fadeTime, loop, volume);
     }
 
     /// <summary>PushBGMで覚えたBGMを、覚えた位置から再開する。</summary>
@@ -126,18 +131,19 @@ public class AudioManager : MonoBehaviour
         Instance.PopInternal(fadeTime);
     }
 
-    private void PushInternal(AudioClip clip, float fadeTime, bool loop)
+    private void PushInternal(AudioClip clip, float fadeTime, bool loop, float volume)
     {
         AudioSource cur = _bgm[_active];
         _stack.Push(new BgmState
         {
             clip = cur.isPlaying ? cur.clip : null,
             time = cur.time,
-            loop = cur.loop
+            loop = cur.loop,
+            volume = _trackVolume[_active]
         });
 
         if (clip != null)
-            SwitchTo(clip, fadeTime, loop, 0f);
+            SwitchTo(clip, fadeTime, loop, 0f, volume);
     }
 
     private void PopInternal(float fadeTime)
@@ -145,16 +151,25 @@ public class AudioManager : MonoBehaviour
         if (_stack.Count == 0)
             return;
         BgmState s = _stack.Pop();
-        SwitchTo(s.clip, fadeTime, s.loop, s.time);
+        SwitchTo(s.clip, fadeTime, s.loop, s.time, s.volume);
     }
 
-    private void SwitchTo(AudioClip clip, float fadeTime, bool loop, float startTime)
+    private void SwitchTo(AudioClip clip, float fadeTime, bool loop, float startTime, float volume)
     {
         AudioSource cur = _bgm[_active];
+        volume = Mathf.Clamp01(volume);
 
-        // 同じ曲がすでに鳴っているなら何もしない。無音を頼まれた時に、すでに無音でも何もしない。
+        // 同じ曲がすでに鳴っているなら、曲はそのまま（音量だけ、頼まれた値にする）。
+        // 無音を頼まれた時に、すでに無音でも何もしない。
         if (clip == null ? !cur.isPlaying : (cur.clip == clip && cur.isPlaying))
+        {
+            if (clip != null && !Mathf.Approximately(_trackVolume[_active], volume))
+            {
+                _trackVolume[_active] = volume;
+                ApplyVolumes();
+            }
             return;
+        }
 
         if (_crossfade != null)
             StopCoroutine(_crossfade);
@@ -166,6 +181,7 @@ public class AudioManager : MonoBehaviour
         _bgm[next].Stop();
         _bgm[next].clip = clip;
         _bgm[next].loop = loop;
+        _trackVolume[next] = volume;
         _fade[next] = 0f;
 
         if (clip != null)
