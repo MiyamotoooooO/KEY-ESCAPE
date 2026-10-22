@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2e8d284b72e2e740af2a4dc7a7cad0b, type: 3}
+  m_Name: Key_H
+  m_EditorClassIdentifier: 
+  keyCode: 104
+  displayName: H
+  keySprite: {fileID: 0}
+  rank: 2
+  personality: 1
+  isSpecialKey: 0
+  flavorText: "\u3042\u3063\u3001\u307E\u305F\u62BC\u3057\u9593\u9055\u3048\u305F\u2026\u2026\u3002"
