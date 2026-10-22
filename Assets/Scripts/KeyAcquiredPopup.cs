@@ -1,6 +1,8 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
@@ -92,6 +94,77 @@ public class KeyAcquiredPopup : MonoBehaviour
     [Tooltip("ポップアップが出ている間、後ろのゲームを止める（敵もプレイヤーも動かない。アニメーションだけ流れる）。")]
     public bool pauseGameWhileShowing = true;
 
+    [Header("キーキャラクター（キーの文字の代わりに出す）")]
+    [Tooltip("手足の生えたキー（Assets/Prefab/Mob/Enemy/KeyNPC_Visual）。空なら、今までどおり文字を出す。")]
+    public GameObject keyCharacterPrefab;
+    [Tooltip("キャラクターの映像を映す RawImage。キーの枠（keyCapGroup）の中に置くと、キーと一緒にフェードインする。")]
+    public RawImage characterView;
+    [Tooltip("キャラクターの拡大率。")]
+    public float characterScale = 1f;
+    [Tooltip("映像に映る高さ（ワールドの単位）。大きいほど、キャラクターが小さく映る。")]
+    public float characterViewHeight = 2.2f;
+    [Tooltip("ONなら右向き。もとの絵は左向き。")]
+    public bool characterFacesRight = false;
+    [Tooltip("キャラクターの動き（ランダムに切り替えて踊る）。")]
+    public KeyMotionSettings keyMotion = new KeyMotionSettings();
+
+    [Header("一言（KeyDefinition の Flavor Text）")]
+    [Tooltip("キーキャラクターの下に出す一言の文字。空の一言のキーでは、何も出さない。")]
+    public TMP_Text commentText;
+
+    [Header("効果音")]
+    [Tooltip("ポップアップが出る効果音は、SoundEffects の Key Acquired Show に割り当てる。")]
+    public bool playShowSound = true;
+
+    [Header("キーの紙吹雪（ポップアップが出ている間、上から降る）")]
+    [Tooltip("紙吹雪を出す場所（画面いっぱいの大きさのRectTransform）。空なら、panelRootの中に出す。")]
+    public RectTransform confettiLayer;
+    [Tooltip("紙吹雪の絵（何種類でも）。空なら、獲得したキーの Key Sprite。それも無ければ、コードで作ったキーキャップ風の四角。")]
+    public Sprite[] confettiSprites;
+    [Tooltip("1秒間に降らせる数。0なら出さない。")]
+    public float confettiPerSecond = 9f;
+    public float confettiSizeMin = 40f;
+    public float confettiSizeMax = 80f;
+    [Tooltip("落ちる速さ（画面の単位／秒）。")]
+    public float confettiFallMin = 220f;
+    public float confettiFallMax = 420f;
+
+    [Header("BGM")]
+    [Tooltip("ONなら、ポップアップが出ている間、後ろのBGMを消す。閉じてキーコンフィグ画面へ移る瞬間に、BGMが戻る。")]
+    public bool muteBgmWhileShowing = true;
+    [Tooltip("BGMが消えるまでの秒数。")]
+    public float bgmFadeOutTime = 0.4f;
+    [Tooltip("BGMが戻るまでの秒数。")]
+    public float bgmFadeInTime = 0.5f;
+
+    [Header("閉じたあとの演出（任意）")]
+    [Tooltip("ポップアップを閉じたあとに、キーコンフィグ画面で、キーキャラクターが走って来て置かれる演出。空なら、シーンの中から探す。それも無ければ、演出なし。")]
+    public KeyConfigUnlockSequence unlockSequence;
+
+    private KeyDefinition _lastKey;
+    private bool _bgmPushed;
+
+    // キーキャラクター
+    private ResultCharacterStage _stage;
+    private GameObject _characterObject;
+
+    // 紙吹雪
+    private class ConfettiPiece
+    {
+        public RectTransform rt;
+        public float baseX;
+        public float y;
+        public float size;
+        public float speed;
+        public float sway;
+        public float swayFreq;
+        public float phase;
+        public float spin;
+        public float rot;
+    }
+    private readonly List<ConfettiPiece> _confetti = new List<ConfettiPiece>();
+    private Coroutine _confettiCoroutine;
+    private static Sprite _fallbackConfettiSprite;
     private bool _waitingForClose;
     private Coroutine _sequenceCoroutine;
     private Coroutine _sparkleBlinkCoroutine;
@@ -129,6 +202,9 @@ public class KeyAcquiredPopup : MonoBehaviour
         if (KeyInventory.Instance != null)
             KeyInventory.Instance.OnKeyAdded -= OnKeyAdded;
 
+        StopConfetti();
+        TeardownCharacter();
+        RestoreBgm();
         GamePause.Release(this);
     }
 
@@ -154,6 +230,7 @@ public class KeyAcquiredPopup : MonoBehaviour
     private IEnumerator PlaySequence(KeyDefinition key)
     {
         _waitingForClose = false;
+        _lastKey = key;
         StopSparkleBlink(keepVisible: false);
         StopArrowBlink(keepVisible: false);
 
@@ -181,6 +258,22 @@ public class KeyAcquiredPopup : MonoBehaviour
             $"activeSelf={(panelRoot != null ? panelRoot.activeSelf.ToString() : "N/A")}, " +
             $"activeInHierarchy={(panelRoot != null ? panelRoot.activeInHierarchy.ToString() : "N/A")}");
 
+        // 後ろのBGMを覚えて、消す（すでに消してあるときは、二重に覚えない）。
+        if (muteBgmWhileShowing && !_bgmPushed)
+        {
+            AudioManager.PushBGM(null);
+            AudioManager.StopBGM(bgmFadeOutTime);
+            _bgmPushed = true;
+        }
+
+        // 出現の効果音、キーキャラクター、一言、紙吹雪の準備。
+        if (playShowSound)
+            SoundEffects.Play(SEId.KeyAcquiredShow);
+        StopConfetti();
+        SetupCharacter(key);
+        if (commentText != null)
+            commentText.gameObject.SetActive(false);
+
         if (backgroundRect != null)
             backgroundRect.localScale = Vector3.one * backgroundStartScale;
         if (titleTextObject != null)
@@ -203,6 +296,9 @@ public class KeyAcquiredPopup : MonoBehaviour
         // 1. 背景：小さい状態から等倍へ。
         yield return ScaleUp(backgroundRect, backgroundStartScale, 1f, backgroundScaleDuration);
 
+        // 背景が出たら、キーの紙吹雪を降らせ始める（閉じるまで続く）。
+        StartConfetti(key);
+
         // 2. タイトル文言と横のキラキラを同時に表示（この時点ではまだ点滅しない）。
         if (titleTextObject != null)
             titleTextObject.SetActive(true);
@@ -214,6 +310,9 @@ public class KeyAcquiredPopup : MonoBehaviour
 
         // 4. 下の線のスプライトをフェードイン。
         yield return FadeCanvasGroup(underlineGroup, 0f, 1f, underlineFadeInDuration);
+
+        // 4.5. 一言を、ふわっと表示する。
+        yield return ShowComment(key);
 
         // 5. 横のキラキラを点灯（点滅ループ開始）。
         StartSparkleBlink();
@@ -248,14 +347,298 @@ public class KeyAcquiredPopup : MonoBehaviour
 
         StopSparkleBlink(keepVisible: false);
         StopArrowBlink(keepVisible: false);
+        StopConfetti();
+        TeardownCharacter();
+        RestoreBgm(); // キーコンフィグ画面へ移る前に、BGMを戻す（画面に専用のBGMがあれば、そちらに切り替わる）
 
         if (panelRoot != null)
             panelRoot.SetActive(false);
 
-        if (lockPlayerWhileShowing && playerMovement != null)
+        // キーコンフィグ画面での演出に引き継ぐ。引き継いだときは、演出が先にゲームを止め、操作もロックし続ける
+        // （演出が終わったら、演出が解除する）。
+        bool handedOver = false;
+        if (_lastKey != null)
+        {
+            if (unlockSequence == null)
+                unlockSequence = FindObjectOfType<KeyConfigUnlockSequence>(true);
+            if (unlockSequence != null)
+                handedOver = unlockSequence.TryPlay(_lastKey);
+        }
+
+        if (!handedOver && lockPlayerWhileShowing && playerMovement != null)
             playerMovement.SetInputLocked(false);
 
         GamePause.Release(this);
+    }
+
+    /// <summary>消していたBGMを、覚えた位置から戻す。</summary>
+    private void RestoreBgm()
+    {
+        if (!_bgmPushed)
+            return;
+        _bgmPushed = false;
+        AudioManager.PopBGM(bgmFadeInTime);
+    }
+
+    // ---- キーキャラクター -----------------------------------------------
+
+    /// <summary>キーの文字の代わりに、キーキャラクターを出す（プレハブと映像の欄が入っているときだけ）。</summary>
+    private void SetupCharacter(KeyDefinition key)
+    {
+        TeardownCharacter();
+
+        bool hasCharacter = keyCharacterPrefab != null && characterView != null;
+        if (keyLetterText != null)
+            keyLetterText.gameObject.SetActive(!hasCharacter);
+        if (characterView != null)
+            characterView.gameObject.SetActive(hasCharacter);
+        if (!hasCharacter)
+            return;
+
+        Rect r = characterView.rectTransform.rect;
+        float aspect = (r.width > 1f && r.height > 1f) ? r.width / r.height : 1f;
+
+        _stage = new ResultCharacterStage("KeyAcquiredStage", new Vector3(0f, -9000f, 0f), 1, characterViewHeight, aspect, 384);
+
+        GameObject go = Instantiate(keyCharacterPrefab);
+        go.name = "KeyAcquiredKey";
+        _stage.Place(go, 0, false);
+
+        // もとの絵は左向き。右向きにしたいときだけ、左右を反転する。
+        float face = characterFacesRight ? -1f : 1f;
+        Vector3 s = go.transform.localScale;
+        go.transform.localScale = new Vector3(s.x * face * characterScale, s.y * characterScale, s.z * characterScale);
+
+        KeyLabel[] labels = go.GetComponentsInChildren<KeyLabel>(true);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            labels[i].keyOverride = key;
+            labels[i].Refresh();
+        }
+
+        LimbRig rig = go.GetComponentInChildren<LimbRig>(true);
+        if (rig != null)
+        {
+            rig.SetManualVelocity(0f);
+            KeyMotionRandomizer.Begin(rig, keyMotion);
+        }
+
+        characterView.texture = _stage.Texture;
+        characterView.uvRect = _stage.SlotUv(0);
+        _characterObject = go;
+    }
+
+    private void TeardownCharacter()
+    {
+        if (_characterObject != null)
+            Destroy(_characterObject);
+        _characterObject = null;
+        if (_stage != null)
+            _stage.Dispose();
+        _stage = null;
+    }
+
+    // ---- 一言 ---------------------------------------------------------
+
+    private IEnumerator ShowComment(KeyDefinition key)
+    {
+        if (commentText == null)
+            yield break;
+
+        string text = key != null ? key.flavorText : "";
+        if (string.IsNullOrEmpty(text))
+        {
+            commentText.gameObject.SetActive(false);
+            yield break;
+        }
+
+        commentText.text = text;
+        Color c = commentText.color;
+        c.a = 0f;
+        commentText.color = c;
+        commentText.gameObject.SetActive(true);
+
+        const float dur = 0.25f;
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            c.a = Mathf.Clamp01(t / dur);
+            commentText.color = c;
+            yield return null;
+        }
+        c.a = 1f;
+        commentText.color = c;
+    }
+
+    // ---- キーの紙吹雪 -----------------------------------------------------
+
+    private void StartConfetti(KeyDefinition key)
+    {
+        StopConfetti();
+        if (confettiPerSecond <= 0f)
+            return;
+        _confettiCoroutine = StartCoroutine(ConfettiRoutine(key));
+    }
+
+    private void StopConfetti()
+    {
+        if (_confettiCoroutine != null)
+        {
+            StopCoroutine(_confettiCoroutine);
+            _confettiCoroutine = null;
+        }
+        for (int i = 0; i < _confetti.Count; i++)
+        {
+            if (_confetti[i] != null && _confetti[i].rt != null)
+                Destroy(_confetti[i].rt.gameObject);
+        }
+        _confetti.Clear();
+    }
+
+    private IEnumerator ConfettiRoutine(KeyDefinition key)
+    {
+        RectTransform layer = confettiLayer != null ? confettiLayer
+                            : (panelRoot != null ? panelRoot.transform as RectTransform : null);
+        if (layer == null)
+            yield break;
+
+        // 使う絵：Inspectorで入れたもの → キーの絵 → コードで作った四角
+        List<Sprite> sprites = new List<Sprite>();
+        if (confettiSprites != null)
+        {
+            for (int i = 0; i < confettiSprites.Length; i++)
+                if (confettiSprites[i] != null) sprites.Add(confettiSprites[i]);
+        }
+        bool generated = false;
+        if (sprites.Count == 0 && key != null && key.keySprite != null)
+            sprites.Add(key.keySprite);
+        if (sprites.Count == 0)
+        {
+            sprites.Add(GetFallbackConfettiSprite());
+            generated = true;
+        }
+
+        // 最初から、上のほうに何枚か出しておく（少し寂しくならないように）。
+        Rect first = layer.rect;
+        int prewarm = Mathf.Clamp(Mathf.RoundToInt(confettiPerSecond * 1.2f), 0, 24);
+        for (int i = 0; i < prewarm; i++)
+            SpawnConfetti(layer, sprites, generated, Random.Range(first.center.y, first.yMax));
+
+        float acc = 0f;
+        float time = 0f;
+        while (true)
+        {
+            float dt = Time.unscaledDeltaTime;
+            time += dt;
+            Rect r = layer.rect;
+
+            acc += confettiPerSecond * dt;
+            while (acc >= 1f)
+            {
+                acc -= 1f;
+                SpawnConfetti(layer, sprites, generated, r.yMax + confettiSizeMax);
+            }
+
+            for (int i = _confetti.Count - 1; i >= 0; i--)
+            {
+                ConfettiPiece p = _confetti[i];
+                if (p == null || p.rt == null)
+                {
+                    _confetti.RemoveAt(i);
+                    continue;
+                }
+                p.y -= p.speed * dt;
+                p.rot += p.spin * dt;
+                float x = p.baseX + Mathf.Sin(time * p.swayFreq + p.phase) * p.sway;
+                p.rt.localPosition = new Vector3(x, p.y, 0f);
+                p.rt.localRotation = Quaternion.Euler(0f, 0f, p.rot);
+
+                if (p.y < r.yMin - p.size)
+                {
+                    Destroy(p.rt.gameObject);
+                    _confetti.RemoveAt(i);
+                }
+            }
+            yield return null;
+        }
+    }
+
+    private void SpawnConfetti(RectTransform layer, List<Sprite> sprites, bool generated, float y)
+    {
+        Rect r = layer.rect;
+        float size = Random.Range(confettiSizeMin, Mathf.Max(confettiSizeMin, confettiSizeMax));
+
+        GameObject go = new GameObject("KeyConfetti", typeof(RectTransform));
+        go.transform.SetParent(layer, false);
+        RectTransform rt = (RectTransform)go.transform;
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(size, size);
+
+        Image img = go.AddComponent<Image>();
+        img.sprite = sprites[Random.Range(0, sprites.Count)];
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+        img.color = generated
+            ? Color.HSVToRGB(Random.value, 0.35f, 1f)
+            : Color.Lerp(Color.white, new Color(0.85f, 0.85f, 0.85f, 1f), Random.value * 0.5f);
+
+        ConfettiPiece p = new ConfettiPiece
+        {
+            rt = rt,
+            baseX = Random.Range(r.xMin, r.xMax),
+            y = y,
+            size = size,
+            speed = Random.Range(confettiFallMin, Mathf.Max(confettiFallMin, confettiFallMax)),
+            sway = Random.Range(15f, 60f),
+            swayFreq = Random.Range(1.2f, 3.2f),
+            phase = Random.Range(0f, 6.28f),
+            spin = Random.Range(-220f, 220f),
+            rot = Random.Range(0f, 360f),
+        };
+        rt.localPosition = new Vector3(p.baseX, y, 0f);
+        rt.localRotation = Quaternion.Euler(0f, 0f, p.rot);
+        _confetti.Add(p);
+    }
+
+    /// <summary>絵が無いときの、キーキャップ風の四角（白）。色は、紙吹雪ごとに付ける。</summary>
+    private static Sprite GetFallbackConfettiSprite()
+    {
+        if (_fallbackConfettiSprite != null)
+            return _fallbackConfettiSprite;
+
+        const int N = 64;
+        const float radius = 14f;
+        const float border = 4f;
+        Texture2D tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        Color32[] px = new Color32[N * N];
+        for (int y = 0; y < N; y++)
+        {
+            for (int x = 0; x < N; x++)
+            {
+                float fx = x + 0.5f;
+                float fy = y + 0.5f;
+                float dx = Mathf.Max(radius - fx, fx - (N - radius), 0f);
+                float dy = Mathf.Max(radius - fy, fy - (N - radius), 0f);
+                float dist = Mathf.Sqrt(dx * dx + dy * dy) - radius; // 角丸の外側で正
+                if (dist > 0.5f)
+                {
+                    px[y * N + x] = new Color32(0, 0, 0, 0);
+                    continue;
+                }
+                bool edge = dist > -border;
+                byte v = edge ? (byte)150 : (byte)255;
+                px[y * N + x] = new Color32(v, v, v, 255);
+            }
+        }
+        tex.SetPixels32(px);
+        tex.Apply();
+        _fallbackConfettiSprite = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), 100f);
+        return _fallbackConfettiSprite;
     }
 
     // ---- 演出の細かい部品 ----------------------------------------------

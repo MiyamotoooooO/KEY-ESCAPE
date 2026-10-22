@@ -22,7 +22,7 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 0ea5e0eff0e0ef647be743bda21a3727, type: 3}
     volume: 0.85
   dialogueTalk:
-    clip: {fileID: 8300000, guid: 34b3a3b1d37a31248a84387b19e85440, type: 3}
+    clip: {fileID: 8300000, guid: adccc4f7e9848634abdfbec5ca625fc6, type: 3}
     volume: 0.414
   dialogueAdvance:
     clip: {fileID: 8300000, guid: 5eafb615543973c41a4a645d4bfc6265, type: 3}
@@ -77,13 +77,22 @@ MonoBehaviour:
     volume: 0.654
   stageClearKeyVoice:
     clip: {fileID: 8300000, guid: 5eafb615543973c41a4a645d4bfc6265, type: 3}
-    volume: 1
+    volume: 0.682
   stageResultShow:
     clip: {fileID: 8300000, guid: dabc2bb54685ac546973de21c22a2329, type: 3}
     volume: 1
   stageClearResult:
     clip: {fileID: 8300000, guid: 1690ad84937a0264bab527e3a2181799, type: 3}
     volume: 1
+  keyUnlockPlace:
+    clip: {fileID: 8300000, guid: 0ea5e0eff0e0ef647be743bda21a3727, type: 3}
+    volume: 0.715
+  keyUnlockComplete:
+    clip: {fileID: 8300000, guid: df6c60334bd085545ad8c2d9328040bc, type: 3}
+    volume: 0.734
+  keyAcquiredShow:
+    clip: {fileID: 8300000, guid: eecb7aebf19e5e84d8820dd0c548d181, type: 3}
+    volume: 0.822
   checkpointConfetti:
     clip: {fileID: 8300000, guid: 662e6566b6dbb744d8454816e880e602, type: 3}
     volume: 0.874

@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   keyCode: 102
   displayName: F
+  keySprite: {fileID: 0}
   rank: 3
   personality: 0
   isSpecialKey: 0

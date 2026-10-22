@@ -97,6 +97,9 @@ public class KeyConfigIntroAnimator : MonoBehaviour
     [Header("追加の装飾スプライト（木・猫など、ふわっとフェード＋拡大で表示）")]
     public DecorativeSpriteIntro[] decorativeSprites;
 
+    /// <summary>看板と線の開始演出を再生している最中か（キー獲得の演出が、終わるのを待つために使う）。</summary>
+    public bool IsPlaying { get { return _playingRoutine != null; } }
+
     private Vector2 _signboardRestPosition;
     private bool _cachedRestPosition;
     private Vector3[] _decorativeRestScales;

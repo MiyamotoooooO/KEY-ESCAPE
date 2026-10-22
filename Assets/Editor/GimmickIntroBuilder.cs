@@ -20,6 +20,7 @@ public static class GimmickIntroBuilder
     private const string UiPath = "Assets/Prefab/GimmickIntroUI.prefab";
     private const string ZonePath = "Assets/Prefab/Object/GimmickIntroZone.prefab";
     private const string FontPath = "Assets/Font/ドットフォント.asset";
+    private const string KeyPrefabPath = "Assets/Prefab/Mob/Enemy/KeyNPC_Visual.prefab";
 
     [MenuItem("Tools/KEY ESCAPE/ステージ部品/ギミック紹介のプレハブを作る")]
     public static void Build()
@@ -152,12 +153,90 @@ public static class GimmickIntroBuilder
         ui.spacePrompt = key;
         ui.fadeGroup = group;
 
+        EnsureKeyCharacter(ui);
+
         panel.SetActive(false);
         key.SetActive(false);
 
         GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path);
         Object.DestroyImmediate(root);
         return saved;
+    }
+
+    // ---- キーのキャラクターを足す ----------------------------------------
+
+    /// <summary>
+    /// 既存の Assets/Prefab/GimmickIntroUI.prefab に、説明の横のキーのキャラクター表示を足す。
+    /// 見た目の調整など、すでに直した設定は、そのまま残る。
+    /// </summary>
+    [MenuItem("Tools/KEY ESCAPE/ステージ部品/ギミック紹介UIにキーキャラクターを足す")]
+    public static void AddKeyCharacterToExisting()
+    {
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(UiPath) == null)
+        {
+            EditorUtility.DisplayDialog("ギミック紹介UI", UiPath + " がありません。\n先に「ギミック紹介のプレハブを作る」を実行してください。", "OK");
+            return;
+        }
+
+        GameObject contents = PrefabUtility.LoadPrefabContents(UiPath);
+        try
+        {
+            GimmickIntroUI ui = contents.GetComponent<GimmickIntroUI>();
+            if (ui == null)
+            {
+                Debug.LogError("[GimmickIntroBuilder] " + UiPath + " に GimmickIntroUI が付いていません。");
+                return;
+            }
+            EnsureKeyCharacter(ui);
+            PrefabUtility.SaveAsPrefabAsset(contents, UiPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(contents);
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("[GimmickIntroBuilder] " + UiPath + " にキーのキャラクター表示を足しました（CharacterView の位置・大きさは、プレハブで調整できます）。");
+    }
+
+    /// <summary>キャラクター表示の部品（RawImage とプレハブの割り当て）が無ければ足し、説明の文字の左側を空ける。</summary>
+    private static void EnsureKeyCharacter(GimmickIntroUI ui)
+    {
+        Transform panelTf = ui.panel != null ? ui.panel.transform : ui.transform;
+
+        if (ui.characterView == null)
+        {
+            GameObject view = new GameObject("CharacterView", typeof(RectTransform));
+            view.transform.SetParent(panelTf, false);
+            RectTransform vr = (RectTransform)view.transform;
+            vr.anchorMin = new Vector2(0f, 0f);
+            vr.anchorMax = new Vector2(0f, 0f);
+            vr.pivot = new Vector2(0f, 0f);
+            vr.anchoredPosition = new Vector2(30f, 10f);
+            vr.sizeDelta = new Vector2(240f, 300f); // パネルより少し背が高く、上にはみ出す
+            RawImage raw = view.AddComponent<RawImage>();
+            raw.color = Color.white;
+            raw.raycastTarget = false;
+            ui.characterView = raw;
+
+            // 説明の文字を、キャラクターの右にずらす。
+            if (ui.messageText != null)
+            {
+                RectTransform tr = ui.messageText.rectTransform;
+                if (tr.offsetMin.x < 280f)
+                    tr.offsetMin = new Vector2(300f, tr.offsetMin.y);
+            }
+        }
+
+        if (ui.keyCharacterPrefab == null)
+        {
+            GameObject keyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KeyPrefabPath);
+            if (keyPrefab == null)
+                Debug.LogWarning("[GimmickIntroBuilder] " + KeyPrefabPath + " が見つかりません。GimmickIntroUI の Key Character Prefab に手動で入れてください。");
+            ui.keyCharacterPrefab = keyPrefab;
+        }
+
+        EditorUtility.SetDirty(ui);
     }
 
     // ---- 範囲 ----------------------------------------------------------

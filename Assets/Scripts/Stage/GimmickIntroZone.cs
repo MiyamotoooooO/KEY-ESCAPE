@@ -5,7 +5,8 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// KEY ESCAPE - ギミックやチェックポイントの紹介。
 /// プレイヤーがこの範囲に入ると、ゲームが止まり、カメラが指定した場所（トゲなど）へ動いて、
-/// 画面の下に説明が出る。Spaceキーで次の手順へ進み、最後まで進むとカメラが戻ってゲームが再開する。
+/// 画面の下に説明が出る（文字は1文字ずつ出て、キーのキャラクターが話す）。
+/// 文字が出ている間にSpaceキーを押すと全文が出て、もう一度押すと次の手順へ進む。最後まで進むとカメラが戻ってゲームが再開する。
 ///
 /// ・手順（Steps）は、いくつでも並べられる。手順ごとに「カメラが映す場所」「説明」「ズーム」を決める。
 ///   カメラが映す場所を空にすると、カメラはプレイヤーのまま（チェックポイントの説明など、文だけを出したいとき）。
@@ -50,7 +51,7 @@ public class GimmickIntroZone : MonoBehaviour
     public float cameraArriveDistance = 0.15f;
     [Tooltip("カメラが目的地に着くのを待つ最長の秒数。")]
     public float cameraMoveMaxTime = 2.5f;
-    [Tooltip("説明が出てから、Spaceキーを受け付けるまでの秒数（ジャンプのSpaceで、うっかり飛ばさないため）。")]
+    [Tooltip("説明が出てから、Spaceキーを受け付けるまでの秒数（ジャンプのSpaceで、うっかり飛ばさないため）。Spaceキーの案内も、この秒数がたつまで出ない。")]
     public float inputDelay = 0.5f;
     [Tooltip("ズームにかける秒数。")]
     public float zoomTime = 0.6f;
@@ -156,17 +157,24 @@ public class GimmickIntroZone : MonoBehaviour
             if (_ui != null)
                 _ui.Show(s.message);
 
+            // 文字が出ている間にSpaceを押すと、全文をすぐ表示する。出終わってからSpaceを押すと、次へ進む。
             float t = 0f;
-            while (t < inputDelay)
+            while (true)
             {
                 t += Time.unscaledDeltaTime;
+                bool typing = _ui != null && _ui.IsTyping;
+                if (_ui != null)
+                    _ui.SetPromptVisible(!typing && t >= inputDelay);
+
+                if (t >= inputDelay && Input.GetKeyDown(KeyCode.Space))
+                {
+                    if (typing)
+                        _ui.CompleteText();
+                    else
+                        break;
+                }
                 yield return null;
             }
-            if (_ui != null)
-                _ui.SetPromptVisible(true);
-
-            while (!Input.GetKeyDown(KeyCode.Space))
-                yield return null;
 
             SoundEffects.Play(SEId.DialogueAdvance);
             if (_ui != null)

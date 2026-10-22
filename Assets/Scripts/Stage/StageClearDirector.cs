@@ -120,6 +120,9 @@ public class StageClearDirector : MonoBehaviour
     [Tooltip("キーの大きさの倍率。")]
     public float keyScale = 1f;
 
+    [Header("キーの動き（止まったあと、ランダムに切り替えて踊る）")]
+    public KeyMotionSettings keyMotion = new KeyMotionSettings();
+
     [Header("キーのエモート（キーが手を上げた時に、頭の上に出す）")]
     [Tooltip("エモートのプレハブ（Assets/Prefab/Emotes）。何個でも入れられる。キーごとに、ランダムで1つ出す（一巡するまで、同じものは出さない）。空なら、エモートは出さない。")]
     public GameObject[] cheerEmotePrefabs;
@@ -555,8 +558,7 @@ public class StageClearDirector : MonoBehaviour
             rig.SetManualVelocity(0f);
         yield return new WaitForSeconds(KeyCheerDelay);
 
-        if (rig != null)
-            rig.SetCheer(true);
+        KeyMotionRandomizer.Begin(rig, keyMotion);
         StartCoroutine(VoiceRoutine());
         SpawnCheerEmote(root.transform);
         _keysDone++;

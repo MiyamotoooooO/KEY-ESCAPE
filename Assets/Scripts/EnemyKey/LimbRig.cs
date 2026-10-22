@@ -19,6 +19,18 @@ using TMPro;
 [DisallowMultipleComponent]
 public class LimbRig : MonoBehaviour
 {
+    /// <summary>外から指定できる動き（SetMotion）。</summary>
+    public enum KeyMotion
+    {
+        None,   // 普段の動き（待機・歩きなど）
+        Talk,   // 話す（身振り・うなずき）
+        Cheer,  // 喜ぶ（両腕を上げて跳ねる）
+        Sway,   // ゆらゆら（体を左右に傾けて、腕を交互に振る）
+        Hop,    // ぴょんぴょん（リズムよく連続ジャンプ）
+        Wave,   // 手を振る
+        Disco,  // ディスコ（腕を交互に上下、体を斜めに傾ける）
+    }
+
     [Header("パーツ（メニューのプレハブ作成で自動設定される）")]
     [Tooltip("体と手足をまとめた親。体の揺れ・傾き・倒れる動きはここに掛かる（原点は足元）")]
     public Transform visual;
@@ -77,6 +89,24 @@ public class LimbRig : MonoBehaviour
     public float attackDuration = 0.4f;
     [Tooltip("遠距離攻撃（弾を投げる）の腕振りにかける秒数")]
     public float throwDuration = 0.35f;
+
+    [Header("話す（SetTalk(true) の間。説明パネルのキーなど）")]
+    [Tooltip("身振りをする腕を持ち上げる角度（度）")]
+    public float talkGestureAngle = 40f;
+    [Tooltip("身振りの速さ")]
+    public float talkGestureSpeed = 5f;
+    [Tooltip("話すリズムに合わせて跳ねる高さ（ローカル単位）")]
+    public float talkHop = 0.05f;
+    [Tooltip("話すリズムに合わせて伸び縮みする量")]
+    public float talkSquash = 0.03f;
+    [Tooltip("うなずく角度（度）")]
+    public float talkNod = 4f;
+
+    [Header("踊り（SetMotion で Sway / Hop / Wave / Disco にしたとき）")]
+    [Tooltip("踊りの大きさ。1が標準。大きいほど、腕も体も大きく動く")]
+    public float danceIntensity = 1f;
+    [Tooltip("踊りの速さ。1が標準")]
+    public float danceSpeed = 1f;
 
     [Header("鎮静（倒れる）")]
     [Tooltip("倒れる角度（度）")]
@@ -156,6 +186,15 @@ public class LimbRig : MonoBehaviour
         if (legR == null) legR = FindChildByName("LegR");
 
         _sprites = GetComponentsInChildren<SpriteRenderer>(true);
+
+        var limbList = new System.Collections.Generic.List<SpriteRenderer>();
+        Transform[] limbRoots = { armL, armR, legL, legR };
+        for (int i = 0; i < limbRoots.Length; i++)
+        {
+            if (limbRoots[i] != null)
+                limbList.AddRange(limbRoots[i].GetComponentsInChildren<SpriteRenderer>(true));
+        }
+        _limbSprites = limbList.ToArray();
         _labels = GetComponentsInChildren<TextMeshPro>(true);
 
         if (visual != null)
@@ -190,6 +229,14 @@ public class LimbRig : MonoBehaviour
     private bool _manual;
     private float _manualVx;
     private bool _cheer;
+    private bool _talk;
+
+    // 手足だけを薄くする（キー獲得の演出：手足が消えて、キーだけが残る）
+    private SpriteRenderer[] _limbSprites;
+    private float _limbAlpha = 1f;
+    private float _limbFadeSpeed;
+    private bool _limbFading;
+    private KeyMotion _extraMotion = KeyMotion.None;
 
     /// <summary>
     /// 速度を外から指定して、歩く・走る動きをさせる（待機専用のキーでも使える）。
@@ -211,6 +258,37 @@ public class LimbRig : MonoBehaviour
     public void SetCheer(bool on)
     {
         _cheer = on;
+    }
+
+    /// <summary>話しかけているような動き（身振り・うなずき・小さく跳ねる）の、オン／オフ。</summary>
+    public void SetTalk(bool on)
+    {
+        _talk = on;
+    }
+
+    /// <summary>
+    /// 動きを1つ指定する（Talk / Cheer / Sway / Hop / Wave / Disco）。None で普段の動きに戻る。
+    /// SetTalk / SetCheer の指定も、ここで置き換わる。
+    /// </summary>
+    public void SetMotion(KeyMotion motion)
+    {
+        _talk = motion == KeyMotion.Talk;
+        _cheer = motion == KeyMotion.Cheer;
+        _extraMotion = (motion == KeyMotion.Sway || motion == KeyMotion.Hop
+                        || motion == KeyMotion.Wave || motion == KeyMotion.Disco) ? motion : KeyMotion.None;
+    }
+
+    /// <summary>手足（腕・脚）だけを、duration秒かけて透明にする。キーの本体は、そのまま残る。</summary>
+    public void FadeOutLimbs(float duration)
+    {
+        _limbFadeSpeed = duration > 0f ? 1f / duration : 1000f;
+        _limbFading = true;
+    }
+
+    /// <summary>手足が、すっかり消えたか。</summary>
+    public bool LimbsGone
+    {
+        get { return _limbAlpha <= 0.001f; }
     }
 
     /// <summary>外から攻撃の動きを呼びたいとき用（Animatorを使わない場合）。</summary>
@@ -334,6 +412,60 @@ public class LimbRig : MonoBehaviour
             tTilt = 4f * Mathf.Sin(time * 7f);
             tLift = cheerHop * bounce;
         }
+        else if (_extraMotion != KeyMotion.None)
+        {
+            // 脚は、動きによっては使わないので、先に0（まっすぐ）にしておく
+            tLegL = 0f;
+            tLegR = 0f;
+
+            float k = danceIntensity;
+            float dt2 = time * danceSpeed;
+            switch (_extraMotion)
+            {
+                case KeyMotion.Sway:
+                {
+                    float sw = Mathf.Sin(dt2 * 3.5f);
+                    tArmR = 55f + 35f * k * sw;
+                    tArmL = -(55f - 35f * k * sw);
+                    tLegL = 10f * k * sw;
+                    tLegR = -10f * k * sw;
+                    tTilt = 12f * k * sw;
+                    tLift = 0.03f * k * Mathf.Abs(sw);
+                    break;
+                }
+                case KeyMotion.Hop:
+                {
+                    float b = Mathf.Abs(Mathf.Sin(dt2 * 8f));
+                    float flap = Mathf.Sin(dt2 * 16f);
+                    tArmR = 50f + 15f * k * flap;
+                    tArmL = -(50f - 15f * k * flap);
+                    tLegL = 14f * k * b;
+                    tLegR = -14f * k * b;
+                    tLift = 0.2f * k * b;
+                    tSquash = 1f + 0.05f * k * (0.5f - b);
+                    break;
+                }
+                case KeyMotion.Wave:
+                {
+                    tArmR = 150f + 20f * k * Mathf.Sin(dt2 * 12f);
+                    tArmL = -(armRest + 4f);
+                    tTilt = 5f * k * Mathf.Sin(dt2 * 3f);
+                    tLift = 0.02f * k * Mathf.Abs(Mathf.Sin(dt2 * 3f));
+                    break;
+                }
+                default: // Disco
+                {
+                    float s = Mathf.Sin(dt2 * 6f);
+                    tArmR = 90f + 80f * k * s;
+                    tArmL = -(90f - 80f * k * s);
+                    tLegL = 16f * k * s;
+                    tLegR = -16f * k * s;
+                    tTilt = 14f * k * Mathf.Sin(dt2 * 3f);
+                    tLift = 0.06f * k * Mathf.Abs(s);
+                    break;
+                }
+            }
+        }
         else
         {
             float swing = Mathf.Sin(_phase);
@@ -360,6 +492,17 @@ public class LimbRig : MonoBehaviour
                 tTilt = w * walkTilt * swing + idle * 0.8f * Mathf.Sin(time * 1.6f);
                 tLift = w * bobHeight * Mathf.Abs(swing) + idle * 0.02f * (0.5f + 0.5f * Mathf.Sin(time * (breathSpeed + 0.4f)));
                 tSquash = 1f + idle * breathAmount * Mathf.Sin(time * (breathSpeed + 0.4f));
+            }
+
+            // 話す：片腕で身振りをしながら、リズムに合わせて小さく跳ね、うなずく
+            if (_talk && !airborne)
+            {
+                float gesture = 0.5f + 0.5f * Mathf.Sin(time * talkGestureSpeed);
+                tArmR = armRest + talkGestureAngle * gesture;
+                tArmL = -(armRest + 6f * Mathf.Sin(time * 3f + 1f));
+                tTilt += talkNod * Mathf.Sin(time * talkGestureSpeed * 0.9f);
+                tLift += talkHop * Mathf.Abs(Mathf.Sin(time * 10f));
+                tSquash += talkSquash * Mathf.Sin(time * 20f);
             }
 
             // 攻撃は腕と傾きだけ上書きする（脚は歩き/待機のまま）
@@ -448,6 +591,23 @@ public class LimbRig : MonoBehaviour
         }
 
         ApplyColors(dead);
+
+        // 手足だけを薄くする（ほかの色の指定のあとに、透明度だけ上書きする）
+        if (_limbFading || _limbAlpha < 1f)
+        {
+            if (_limbFading)
+                _limbAlpha = Mathf.MoveTowards(_limbAlpha, 0f, _limbFadeSpeed * dt);
+            if (_limbSprites != null)
+            {
+                for (int i = 0; i < _limbSprites.Length; i++)
+                {
+                    if (_limbSprites[i] == null) continue;
+                    Color lc = _limbSprites[i].color;
+                    lc.a = _limbAlpha;
+                    _limbSprites[i].color = lc;
+                }
+            }
+        }
     }
 
     private void ApplyColors(bool dead)

@@ -81,6 +81,8 @@ public class KeyConfigUI : MonoBehaviour
     public GameObject resetConfirmPanel;
 
     private readonly List<GameObject> _spawnedKeyButtons = new List<GameObject>();
+    // キー獲得の演出中だけ、所持済みでも「？」と鍵の表示のままにするキー（演出で、走ってきて置かれたあとに見せる）。
+    private KeyDefinition _hiddenOwnedKey;
     private bool _isOpen;
     private bool _hadPanel; // 開始時にpanelRootが割り当てられていたか（あとで消えたかを見分けるため）
     /// <summary>キー設定画面が開いているか。設定画面（SettingsUI）が、Escを無視するかの判断に使う。</summary>
@@ -382,9 +384,43 @@ public class KeyConfigUI : MonoBehaviour
             GameObject go = Instantiate(keyGridButtonPrefab, keyGridContent);
             var ui = go.GetComponent<KeyGridButtonUI>();
             if (ui != null)
-                ui.Setup(key, owned, this);
+                ui.Setup(key, owned && key != _hiddenOwnedKey, this);
             _spawnedKeyButtons.Add(go);
         }
+    }
+
+    // ---- キー獲得の演出（KeyConfigUnlockSequence）用 -----------------------
+
+    /// <summary>所持済みでも、このキーのマスだけ「？」のままにする（nullで解除）。画面が開いていれば、一覧を作り直す。</summary>
+    public void SetHiddenOwnedKey(KeyDefinition key)
+    {
+        _hiddenOwnedKey = key;
+        if (_isOpen)
+            RefreshKeyList();
+    }
+
+    /// <summary>左の一覧にある、このキーのマスを返す（無ければnull）。</summary>
+    public KeyGridButtonUI FindKeyTile(KeyDefinition key)
+    {
+        foreach (var go in _spawnedKeyButtons)
+        {
+            if (go == null)
+                continue;
+            var ui = go.GetComponent<KeyGridButtonUI>();
+            if (ui != null && ui.Key == key)
+                return ui;
+        }
+        return null;
+    }
+
+    /// <summary>「？」にしていたキーのマスを、所持済みの表示にする。</summary>
+    public void RevealKey(KeyDefinition key)
+    {
+        if (_hiddenOwnedKey == key)
+            _hiddenOwnedKey = null;
+        var tile = FindKeyTile(key);
+        if (tile != null)
+            tile.Setup(key, KeyInventory.Instance != null && KeyInventory.Instance.Owns(key), this);
     }
 
     private void ShowKeyInfo(KeyDefinition key)

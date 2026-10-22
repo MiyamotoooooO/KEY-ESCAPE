@@ -124,6 +124,8 @@ public class StageResultPanel : MonoBehaviour
     public float keyViewHeight = 2.8f;
     [Tooltip("キーが出てから、手を上げ始めるまでの遅れ（秒）。キーは1つずつ出るので、手を上げ始めるのも、自然にずれる。")]
     public float keyCheerDelay = 0.15f;
+    [Header("キーの動き（出たあと、ランダムに切り替えて踊る）")]
+    public KeyMotionSettings keyMotion = new KeyMotionSettings();
 
     [Header("覚えた操作（このステージのクリアで、新しく解放されたもの）")]
     [Tooltip("任意。「覚えた！ ジャンプ」を出す枠。空なら、「拠点に戻る」ボタンの左に、コードで枠を作って出す。新しく解放されたものが無ければ、出さない。")]
@@ -720,8 +722,7 @@ public class StageResultPanel : MonoBehaviour
     private IEnumerator CheerLater(LimbRig rig, float delay)
     {
         yield return Wait(delay);
-        if (rig != null)
-            rig.SetCheer(true);
+        KeyMotionRandomizer.Begin(rig, keyMotion);
     }
 
     /// <summary>星の絵：キーコンフィグ画面（KeyConfigUI）のものを借りる。無ければ、このパネルの予備。それも無ければ、コードで作る。</summary>

@@ -28,7 +28,10 @@ public enum SEId
     StageClearKeyVoice, // クリア演出で、キーが喜ぶ声（1回の喜びで、短く数回鳴る）
     CheckpointConfetti, // 中間地点を初めて通って、旗の上に紙吹雪が出た
     StageResultShow,    // クリア後、結果画面が出る
-    StageClearResult    // クリアの結果画面の間に、1回だけ鳴る音（以前のループするクリアBGMの代わり）
+    StageClearResult,   // クリアの結果画面の間に、1回だけ鳴る音（以前のループするクリアBGMの代わり）
+    KeyUnlockPlace,     // キー獲得の演出で、キーキャラクターが一覧のマスで止まって置かれた
+    KeyUnlockComplete,  // キー獲得の演出で、手足が消えて、キーが解放された
+    KeyAcquiredShow     // 「新しいキーを獲得した！」のポップアップが出た
 }
 
 /// <summary>
@@ -84,6 +87,11 @@ public class SoundEffects : ScriptableObject
     public Entry stageClearKeyVoice = new Entry();
     public Entry stageResultShow = new Entry();
     public Entry stageClearResult = new Entry();
+
+    [Header("キー獲得の演出（キーコンフィグ）")]
+    public Entry keyUnlockPlace = new Entry();
+    public Entry keyUnlockComplete = new Entry();
+    public Entry keyAcquiredShow = new Entry();
 
     [Header("中間地点")]
     public Entry checkpointConfetti = new Entry();
@@ -171,6 +179,9 @@ public class SoundEffects : ScriptableObject
             case SEId.CheckpointConfetti: return checkpointConfetti;
             case SEId.StageResultShow: return stageResultShow;
             case SEId.StageClearResult: return stageClearResult;
+            case SEId.KeyUnlockPlace: return keyUnlockPlace;
+            case SEId.KeyUnlockComplete: return keyUnlockComplete;
+            case SEId.KeyAcquiredShow: return keyAcquiredShow;
             default: return null;
         }
     }
