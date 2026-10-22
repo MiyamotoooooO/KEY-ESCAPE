@@ -40,6 +40,12 @@ public class TitleMenu : MonoBehaviour
     public Button settingsButton;
     public Button quitButton;
 
+    [Header("オープニングムービー")]
+    [Tooltip("ゲームを起動した最初の1回だけ流す、ストーリームービー。終わると、そのままタイトル画面になる。空なら、流さない。")]
+    public OpeningMovie openingMovie;
+    [Tooltip("OFFにすると、ムービーを流さない（確認用）。")]
+    public bool playOpeningMovie = true;
+
     [Header("設定画面")]
     [Tooltip("設定画面のSettingsUI（SettingsControllerに付いているもの）。")]
     public SettingsUI settingsUI;
@@ -96,6 +102,15 @@ public class TitleMenu : MonoBehaviour
         if (versionText != null)
             versionText.text = "v" + Application.version;
 
+        // 起動して最初の1回なら、ストーリームービーを流す（終わったら、ここでボタンを選ぶ）。
+        if (openingMovie != null)
+            openingMovie.BeginTitle(playOpeningMovie, SelectFirstButton);
+        else
+            SelectFirstButton();
+    }
+
+    private void SelectFirstButton()
+    {
         if (selectFirstButton)
             SelectButton(_hasSave ? continueButton : newGameButton);
     }

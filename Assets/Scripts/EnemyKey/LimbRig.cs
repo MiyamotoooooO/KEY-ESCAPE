@@ -228,6 +228,8 @@ public class LimbRig : MonoBehaviour
     // ---- 外から動かす（ステージクリアの演出用） ----
     private bool _manual;
     private float _manualVx;
+    private float _manualVy;
+    private bool _manualVyOn;   // 縦の速度も指定されているか（指定されていなければ、今までどおり Rigidbody2D の速度を読む）
     private bool _cheer;
     private bool _talk;
 
@@ -246,12 +248,25 @@ public class LimbRig : MonoBehaviour
     {
         _manual = true;
         _manualVx = vx;
+        _manualVy = 0f;
+        _manualVyOn = false;
+    }
+
+    /// <summary>横だけでなく、縦の速度も指定する（ジャンプ中の「空中のポーズ」を出したいとき用）。</summary>
+    public void SetManualVelocity(float vx, float vy)
+    {
+        _manual = true;
+        _manualVx = vx;
+        _manualVy = vy;
+        _manualVyOn = true;
     }
 
     public void ClearManualVelocity()
     {
         _manual = false;
         _manualVx = 0f;
+        _manualVy = 0f;
+        _manualVyOn = false;
     }
 
     /// <summary>喜びのポーズ（両腕を上げて、小さく跳ねる）の、オン／オフ。</summary>
@@ -320,7 +335,7 @@ public class LimbRig : MonoBehaviour
 
         // ---------- 状態を読む ----------
         float vx = _manual ? _manualVx : (_rb != null ? _rb.velocity.x : 0f);
-        float vy = _rb != null ? _rb.velocity.y : 0f;
+        float vy = (_manual && _manualVyOn) ? _manualVy : (_rb != null ? _rb.velocity.y : 0f);
         bool dead = false;
 
         if (_hasLife)

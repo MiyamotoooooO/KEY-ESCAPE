@@ -266,6 +266,8 @@ MonoBehaviour:
   continueButton: {fileID: 1312561203}
   settingsButton: {fileID: 1777965136}
   quitButton: {fileID: 1068125163}
+  openingMovie: {fileID: 1462676498}
+  playOpeningMovie: 1
   settingsUI: {fileID: 575587915}
   confirmPanel: {fileID: 1879497869}
   confirmYesButton: {fileID: 158944028}
@@ -2391,6 +2393,86 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1462676497
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1462676499}
+  - component: {fileID: 1462676498}
+  m_Layer: 0
+  m_Name: OpeningMovie
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1462676498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1462676497}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd205037124e2754286a420042a5287e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  keyCharacterPrefab: {fileID: 6788922781978684695, guid: af009bf518c95344e96534e88bfde0bf, type: 3}
+  charScale: 1.36
+  font: {fileID: 11400000, guid: d0df37096b53bd14495a71f0bc6d44e2, type: 2}
+  textScale: 1
+  fingerSprite: {fileID: 0}
+  deskBackground: {fileID: 0}
+  keyboardSprite: {fileID: 0}
+  roomBackground: {fileID: 0}
+  doorSprite: {fileID: 21300000, guid: 56e5672397c2b37469460a6d406ddfd2, type: 3}
+  doorFrameSprite: {fileID: 21300000, guid: 8144738cc2dbf7748a22cba7394dcd83, type: 3}
+  roomGroundSprite: {fileID: 21300000, guid: fb9427d0ee10ec245b38ee9bf85c5b95, type: 3}
+  skyBackground: {fileID: 21300000, guid: 093c16abd76a73848a8c707992999f0d, type: 3}
+  groundSprite: {fileID: 21300000, guid: 408c5669e6f1ab1498bbbc1efb6faab5, type: 3}
+  grassSprite: {fileID: 21300000, guid: 036acc7c632d70543bcfc6718e6d8899, type: 3}
+  keycapSprite: {fileID: 21300000, guid: 3ac22efd1f611bb4097f7069a1fa1bac, type: 3}
+  titleLogo: {fileID: 1067212673}
+  titleButtons:
+  - {fileID: 719485194}
+  - {fileID: 1312561203}
+  - {fileID: 1777965136}
+  - {fileID: 1068125163}
+  titleWalkSpeed: 4.4
+  hopOverRock: 1
+  bgm: {fileID: 0}
+  bgmVolume: 0.8
+  clackClips: []
+  slamSe: {fileID: 0}
+  hopSe: {fileID: 0}
+  collapseSe: {fileID: 0}
+  resolveSe: {fileID: 0}
+  doorSe: {fileID: 0}
+  landSe: {fileID: 0}
+  logoSe: {fileID: 0}
+  seVolume: 1
+  typingTime: 6
+  skipGuardTime: 0.5
+--- !u!4 &1462676499
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1462676497}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1537494505 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 908474989976427166, guid: 59be1388e2332d14783938a545fc62c7, type: 3}
@@ -3455,3 +3537,4 @@ SceneRoots:
   - {fileID: 579926039}
   - {fileID: 1435513978}
   - {fileID: 2131735595}
+  - {fileID: 1462676499}
