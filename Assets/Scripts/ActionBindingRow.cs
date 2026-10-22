@@ -129,7 +129,7 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
     private void UpdateDragHighlight()
     {
         var mgr = KeyBindingManager.Instance;
-        bool show = _dragging && mgr != null && mgr.IsActionUnlocked(action);
+        bool show = _dragging && mgr != null && mgr.IsActionUnlocked(action) && !IsForcedLocked();
 
         if (dragBackdrop != null)
             dragBackdrop.SetActive(show);
@@ -167,6 +167,12 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
             owner.PlayActionPreview(action);
     }
 
+    /// <summary>ロックを壊す演出のために、この行を「ロック中」の見た目にしている最中か。</summary>
+    private bool IsForcedLocked()
+    {
+        return owner != null && owner.IsForcedLocked(action);
+    }
+
     /// <summary>Called by KeyConfigUI.RefreshAll() whenever bindings/locks change.</summary>
     public void Refresh()
     {
@@ -174,7 +180,8 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
         if (mgr == null)
             return;
 
-        bool unlocked = mgr.IsActionUnlocked(action);
+        // ロックを壊す演出の最中は、解放済みでも、ロック中の見た目にしておく。
+        bool unlocked = mgr.IsActionUnlocked(action) && !IsForcedLocked();
         var key = mgr.GetBinding(action);
         bool hasKey = unlocked && key != null;
 

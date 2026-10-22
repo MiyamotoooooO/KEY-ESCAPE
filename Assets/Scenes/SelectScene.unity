@@ -1831,7 +1831,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 39.000015, y: -145.4563}
+  m_AnchoredPosition: {x: 39.000015, y: -145.45627}
   m_SizeDelta: {x: -64.99997, y: 0}
   m_Pivot: {x: 0.4, y: 0.8}
 --- !u!114 &110308155
@@ -3072,7 +3072,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1294523384}
   m_Direction: 2
   m_Value: 0
-  m_Size: 1
+  m_Size: 0.9999979
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -11105,11 +11105,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2501895121565067224, guid: 58f42932b1f49634d880da4061f6cfe8, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -5.36
+      value: 1.96
       objectReference: {fileID: 0}
     - target: {fileID: 2501895121565067224, guid: 58f42932b1f49634d880da4061f6cfe8, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -3.6077745
+      value: -1.68
       objectReference: {fileID: 0}
     - target: {fileID: 2501895121565067224, guid: 58f42932b1f49634d880da4061f6cfe8, type: 3}
       propertyPath: m_LocalPosition.z
@@ -14715,17 +14715,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   defaultBindings:
   - action: 0
-    key: {fileID: 11400000, guid: c9740522cc74a52449248c0afaedd203, type: 2}
-    unlockedFromStart: 1
+    key: {fileID: 0}
+    unlockedFromStart: 0
   - action: 1
     key: {fileID: 11400000, guid: 536048a786a296e49bdaba3a441bd88d, type: 2}
     unlockedFromStart: 1
   - action: 2
-    key: {fileID: 11400000, guid: 21f78bb7ce116c441b43a99a9891c1db, type: 2}
-    unlockedFromStart: 1
+    key: {fileID: 0}
+    unlockedFromStart: 0
   - action: 3
-    key: {fileID: 11400000, guid: e73eb4669b0f23e47a05616f9e7823f0, type: 2}
-    unlockedFromStart: 1
+    key: {fileID: 0}
+    unlockedFromStart: 0
   - action: 4
     key: {fileID: 0}
     unlockedFromStart: 0
@@ -19590,6 +19590,8 @@ MonoBehaviour:
   swapFadeTime: 0.25
   tilePunch: 1.3
   afterRevealWait: 1.5
+  skipPrompt: {fileID: 0}
+  skipGuardTime: 0.3
 --- !u!1 &1676656329
 GameObject:
   m_ObjectHideFlags: 0
@@ -24343,11 +24345,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1296094542993970369, guid: 3b7f6d73330b30546b20525526cc8285, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 6.7
+      value: -13.63
       objectReference: {fileID: 0}
     - target: {fileID: 1296094542993970369, guid: 3b7f6d73330b30546b20525526cc8285, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -1.37
+      value: -3.45
       objectReference: {fileID: 0}
     - target: {fileID: 1296094542993970369, guid: 3b7f6d73330b30546b20525526cc8285, type: 3}
       propertyPath: m_LocalPosition.z

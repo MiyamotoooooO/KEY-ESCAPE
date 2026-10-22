@@ -271,6 +271,10 @@ public class KeyConfigUI : MonoBehaviour
         if (key == null || KeyBindingManager.Instance == null)
             return;
 
+        // ロックを壊す演出の最中は、まだロック中の見た目の行には、割り当てられない。
+        if (_forcedLocked.Contains(action))
+            return;
+
         bool ok = KeyBindingManager.Instance.TryBindKey(action, key);
         if (ok)
         {
@@ -397,6 +401,58 @@ public class KeyConfigUI : MonoBehaviour
         _hiddenOwnedKey = key;
         if (_isOpen)
             RefreshKeyList();
+    }
+
+    // ---- アクションのロックを壊す演出（ActionLockBreakSequence）用 -----------------
+
+    // 実際には解放済みでも、演出が終わるまで「ロック中」の見た目のままにするアクション。
+    private readonly HashSet<GameAction> _forcedLocked = new HashSet<GameAction>();
+
+    /// <summary>このアクションの行を、演出のために「ロック中」の見た目にしているか。</summary>
+    public bool IsForcedLocked(GameAction action)
+    {
+        return _forcedLocked.Contains(action);
+    }
+
+    /// <summary>これらのアクションの行を、解放済みでも「ロック中」の見た目にする。画面が開いていれば、行を更新する。</summary>
+    public void SetForcedLockedActions(IEnumerable<GameAction> actions)
+    {
+        _forcedLocked.Clear();
+        if (actions != null)
+        {
+            foreach (GameAction a in actions)
+                _forcedLocked.Add(a);
+        }
+        if (_isOpen)
+            RefreshBindingsOnly();
+    }
+
+    /// <summary>このアクションの行の「ロック中」の見た目を外す（本当の解放済みの表示になる）。</summary>
+    public void ReleaseForcedLock(GameAction action)
+    {
+        if (_forcedLocked.Remove(action) && _isOpen)
+            RefreshBindingsOnly();
+    }
+
+    /// <summary>すべての行の「ロック中」の見た目の固定を外す。</summary>
+    public void ClearForcedLockedActions()
+    {
+        if (_forcedLocked.Count == 0)
+            return;
+        _forcedLocked.Clear();
+        if (_isOpen)
+            RefreshBindingsOnly();
+    }
+
+    /// <summary>このアクションの行（ActionBindingRow）を返す（無ければnull）。</summary>
+    public ActionBindingRow FindRow(GameAction action)
+    {
+        foreach (var row in rows)
+        {
+            if (row != null && row.action == action)
+                return row;
+        }
+        return null;
     }
 
     /// <summary>左の一覧にある、このキーのマスを返す（無ければnull）。</summary>

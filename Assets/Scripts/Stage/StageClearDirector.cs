@@ -160,6 +160,7 @@ public class StageClearDirector : MonoBehaviour
         public float spin;
     }
 
+    private GameObject _overlayRoot;
     private Image _flash;
     private RectTransform _confettiRoot;
     private RectTransform _signRect;
@@ -186,6 +187,16 @@ public class StageClearDirector : MonoBehaviour
     {
         RestoreTime();
         IsPlaying = false;
+    }
+
+    /// <summary>
+    /// 演出の画面（結果画面・紙吹雪・看板など）を隠す。結果画面のあとに、キーコンフィグ画面などを手前に見せたいときに使う
+    /// （この画面は、ほかのUIより手前にあるため）。
+    /// </summary>
+    public void HideOverlay()
+    {
+        if (_overlayRoot != null)
+            _overlayRoot.SetActive(false);
     }
 
     /// <summary>演出を始める。keysは、このステージで入手したキー（走ってきて喜ぶ）。終わったら、onFinishedが呼ばれる。</summary>
@@ -690,6 +701,7 @@ public class StageClearDirector : MonoBehaviour
 
         GameObject canvasObj = new GameObject("StageClearCanvas");
         canvasObj.transform.SetParent(transform, false);
+        _overlayRoot = canvasObj;
 
         Canvas canvas = canvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;

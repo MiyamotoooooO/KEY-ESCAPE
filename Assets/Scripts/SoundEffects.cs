@@ -31,7 +31,10 @@ public enum SEId
     StageClearResult,   // クリアの結果画面の間に、1回だけ鳴る音（以前のループするクリアBGMの代わり）
     KeyUnlockPlace,     // キー獲得の演出で、キーキャラクターが一覧のマスで止まって置かれた
     KeyUnlockComplete,  // キー獲得の演出で、手足が消えて、キーが解放された
-    KeyAcquiredShow     // 「新しいキーを獲得した！」のポップアップが出た
+    KeyAcquiredShow,    // 「新しいキーを獲得した！」のポップアップが出た
+    ActionLockLand,     // アクション解放の演出で、キーキャラクターがロックの上に着地した
+    ActionLockHit,      // アクション解放の演出で、ロックを踏んで、ヒビが入った（最後の一撃以外）
+    ActionLockBreak     // アクション解放の演出で、ロックが砕けた
 }
 
 /// <summary>
@@ -92,6 +95,11 @@ public class SoundEffects : ScriptableObject
     public Entry keyUnlockPlace = new Entry();
     public Entry keyUnlockComplete = new Entry();
     public Entry keyAcquiredShow = new Entry();
+
+    [Header("アクション解放の演出（ロックを壊す）")]
+    public Entry actionLockLand = new Entry();
+    public Entry actionLockHit = new Entry();
+    public Entry actionLockBreak = new Entry();
 
     [Header("中間地点")]
     public Entry checkpointConfetti = new Entry();
@@ -182,6 +190,9 @@ public class SoundEffects : ScriptableObject
             case SEId.KeyUnlockPlace: return keyUnlockPlace;
             case SEId.KeyUnlockComplete: return keyUnlockComplete;
             case SEId.KeyAcquiredShow: return keyAcquiredShow;
+            case SEId.ActionLockLand: return actionLockLand;
+            case SEId.ActionLockHit: return actionLockHit;
+            case SEId.ActionLockBreak: return actionLockBreak;
             default: return null;
         }
     }

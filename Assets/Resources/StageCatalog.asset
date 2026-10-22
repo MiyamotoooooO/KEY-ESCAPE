@@ -20,7 +20,7 @@ MonoBehaviour:
     thumbnail: {fileID: 21300000, guid: bb6dc628606ad66458fe41beaf98eb34, type: 3}
     description: 
     sceneName: Tutorial
-    rewards: 
+    rewards: 06000000
   - id: Stage1
     displayName: "\u98DB\u3073\u8D8A\u3048\u308D"
     stageNumber: 1-1

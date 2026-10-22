@@ -43,6 +43,8 @@ public class StageGoal : MonoBehaviour
 
     private bool _done;
     private bool _bossSeen;
+    // 今回のクリアで、新しく解放されたアクション（結果画面のあとに、ロックを壊す演出で見せる）
+    private readonly List<GameAction> _newActions = new List<GameAction>();
     private Enemy _bossEnemy;
     private Ally _bossAlly;
 
@@ -131,13 +133,14 @@ public class StageGoal : MonoBehaviour
         if (dir != null)
         {
             // 演出と結果画面が終わったら（「拠点に戻る」を押したら）、拠点に戻る。
-            dir.Play(gainedKeys, newRecord, newRewards, () => StartCoroutine(ReturnToHub(0f)));
+            // そのあと、新しく解放されたアクションがあれば、キーコンフィグ画面でロックを壊す演出を見せる。
+            dir.Play(gainedKeys, newRecord, newRewards, () => StartCoroutine(FinishRoutine(0f, dir)));
         }
         else
         {
             if (clearMessage != null)
                 clearMessage.SetActive(true);
-            StartCoroutine(ReturnToHub(delayBeforeReturn));
+            StartCoroutine(FinishRoutine(delayBeforeReturn, null));
         }
     }
 
@@ -149,6 +152,7 @@ public class StageGoal : MonoBehaviour
     {
         // 今回、新しく解放されたものの名前（結果画面の「覚えた！」に出す）。すでに解放済みのものは入れない。
         var gained = new List<string>();
+        _newActions.Clear();
 
         StageCatalog catalog = StageCatalog.Instance;
         StageCatalog.Entry entry = catalog != null ? catalog.Find(stageId) : null;
@@ -161,16 +165,19 @@ public class StageGoal : MonoBehaviour
             switch (entry.rewards[i])
             {
                 case StageReward.Dash:
-                    UnlockActionReward(keys, GameAction.Dash, "ダッシュ", gained);
+                    UnlockActionReward(keys, GameAction.Dash, "ダッシュ", gained, _newActions);
                     break;
                 case StageReward.RangedAttack:
-                    UnlockActionReward(keys, GameAction.RangedAttack, "遠距離攻撃", gained);
+                    UnlockActionReward(keys, GameAction.RangedAttack, "遠距離攻撃", gained, _newActions);
                     break;
                 case StageReward.Jump:
-                    UnlockActionReward(keys, GameAction.Jump, "ジャンプ", gained);
+                    UnlockActionReward(keys, GameAction.Jump, "ジャンプ", gained, _newActions);
                     break;
                 case StageReward.Attack:
-                    UnlockActionReward(keys, GameAction.Attack, "攻撃", gained);
+                    UnlockActionReward(keys, GameAction.Attack, "攻撃", gained, _newActions);
+                    break;
+                case StageReward.MoveLeft:
+                    UnlockActionReward(keys, GameAction.MoveLeft, "左移動", gained, _newActions);
                     break;
                 case StageReward.ModifierKey:
                     if (keys != null)
@@ -196,13 +203,44 @@ public class StageGoal : MonoBehaviour
     }
 
     /// <summary>アクションを解放する。まだ解放されていなかった時だけ、名前を gained に足す。</summary>
-    private static void UnlockActionReward(KeyBindingManager keys, GameAction action, string label, List<string> gained)
+    private static void UnlockActionReward(KeyBindingManager keys, GameAction action, string label, List<string> gained, List<GameAction> newActions)
     {
         if (keys == null)
             return;
         if (!keys.IsActionUnlocked(action))
+        {
             gained.Add(label);
+            newActions.Add(action);
+        }
         keys.UnlockAction(action);
+    }
+
+    /// <summary>
+    /// 結果画面が終わったあとの流れ。新しく解放されたアクションがあれば、キーコンフィグ画面で
+    /// 「ロックを壊す演出」を見せてから、拠点に戻る。無ければ（または演出が始められなければ）、そのまま拠点に戻る。
+    /// </summary>
+    private IEnumerator FinishRoutine(float delay, StageClearDirector dir)
+    {
+        if (delay > 0f)
+            yield return new WaitForSecondsRealtime(delay);
+
+        if (_newActions.Count > 0)
+        {
+            ActionLockBreakSequence seq = FindObjectOfType<ActionLockBreakSequence>(true);
+            if (seq == null)
+                seq = new GameObject("ActionLockBreakSequence").AddComponent<ActionLockBreakSequence>();
+
+            if (seq.TryPlay(_newActions))
+            {
+                // キーコンフィグ画面が開くので、手前にある結果画面などは隠す。
+                if (dir != null)
+                    dir.HideOverlay();
+                while (seq != null && seq.IsRunning)
+                    yield return null;
+            }
+        }
+
+        yield return ReturnToHub(0f);
     }
 
     private IEnumerator ReturnToHub(float delay)
