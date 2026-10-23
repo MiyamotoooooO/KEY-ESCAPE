@@ -13,6 +13,7 @@ using UnityEngine.UI;
 ///   2. さらにスローになり（もう一度、弱めのフラッシュが光る）、カメラがもう少し寄る。
 ///   3. 紙吹雪が降り、「STAGE CLEAR!」の看板が出る。クリア用のBGMと効果音が鳴り、スローが解除される。
 ///   4. このステージで入手したキーが、拾った順に、左から走ってきて、プレイヤーの左側に並び、手を上げて喜ぶ（声が鳴り、頭の上にエモートが出る）。
+///      左側に、ゴールの G O A L があって重なるときは、右側から走ってきて、プレイヤーの右側に並ぶ。
 ///   5. 結果画面が出る（看板が左上へ移り、クリアタイム・死亡シーン・回収したキーが出る）。「拠点に戻る」を押すと、StageGoalに戻る（StageGoalが拠点へ戻る）。
 ///      結果画面のプレハブ（Result Panel Prefab）が空のときは、しばらく待ってから戻る。
 /// 演出の間、プレイヤーは操作できず、ダメージも受けない（無敵）。
@@ -85,6 +86,8 @@ public class StageClearDirector : MonoBehaviour
     const float KeyCheerDelay    = 0.15f; // 止まってから、手を上げるまでの秒数
     const int   KeyVoiceCount    = 3;     // 喜ぶ時の声の回数
     const float KeyVoiceInterval = 0.09f; // 声の間隔（秒）
+    const float KeyGoalMargin    = 0.6f;  // ゴールの G O A L と、並べるキーの間に、あけておく距離
+    const float KeyGoalHalfWidth = 0.8f;  // G O A L の1体の、横の半分の幅（重なりを調べる時に足す）
     const float KeyWaitLimit     = 20f;   // キーがそろうのを待つ、最大の秒数（念のため）
     const float LandWaitLimit    = 3f;    // プレイヤーが空中でゴールした時に、地面に降りるのを待つ最大の秒数
     const float LandStillTime    = 0.15f; // 縦の動きが止まったままの時間がこれ以上なら、降りたとみなす
@@ -452,15 +455,31 @@ public class StageClearDirector : MonoBehaviour
 
         Camera cam = Camera.main;
         float leftEdge = playerX - 12f;
+        float rightEdge = playerX + 12f;
         if (cam != null && cam.orthographic)
-            leftEdge = cam.transform.position.x - cam.orthographicSize * cam.aspect;
+        {
+            float halfW = cam.orthographicSize * cam.aspect;
+            leftEdge = cam.transform.position.x - halfW;
+            rightEdge = cam.transform.position.x + halfW;
+        }
 
-        // 並べる間隔：画面の左端に収まるように、数が多ければ詰める
         int n = keys.Count;
+
+        // 並べる側：ふだんは、プレイヤーの左側。左側に、ゴールの G O A L があって重なるときは、右側にする。
+        float goalMin, goalMax;
+        bool hasGoal = GetGoalLettersExtent(out goalMin, out goalMax);
+        float nearLeft = KeyNearEdge(-1, playerX, n, hasGoal, goalMin, goalMax);
+        float nearRight = KeyNearEdge(1, playerX, n, hasGoal, goalMin, goalMax);
+        float costLeft = Mathf.Abs(nearLeft - (playerX - KeyNearGap));
+        float costRight = Mathf.Abs(nearRight - (playerX + KeyNearGap));
+        int side = costRight < costLeft - 0.01f ? 1 : -1;
+        float near = side < 0 ? nearLeft : nearRight;
+
+        // 並べる間隔：画面の端に収まるように、数が多ければ詰める
         float spacing = KeySpacing;
         if (n > 1)
         {
-            float available = (playerX - KeyNearGap) - (leftEdge + 1f);
+            float available = side < 0 ? near - (leftEdge + 1f) : (rightEdge - 1f) - near;
             spacing = Mathf.Clamp(available / (n - 1), KeyMinSpacing, KeySpacing);
         }
 
@@ -475,8 +494,8 @@ public class StageClearDirector : MonoBehaviour
         // 最初に拾ったキーが、プレイヤーにいちばん近く（走る距離はいちばん長い）。
         for (int i = 0; i < n; i++)
         {
-            float stopX = playerX - KeyNearGap - i * spacing;
-            StartCoroutine(KeyRoutine(keys[i], stopX, groundY, z));
+            float stopX = near + side * i * spacing;
+            StartCoroutine(KeyRoutine(keys[i], stopX, groundY, z, side));
 
             float d = 0f;
             while (d < KeyStartInterval)
@@ -495,6 +514,48 @@ public class StageClearDirector : MonoBehaviour
             KeepSafe();
             yield return null;
         }
+    }
+
+    /// <summary>ゴールの G O A L が、左右どこからどこまでを占めているか。無ければ false。</summary>
+    private static bool GetGoalLettersExtent(out float minX, out float maxX)
+    {
+        minX = float.MaxValue;
+        maxX = float.MinValue;
+        StageGoalLetters[] all = FindObjectsOfType<StageGoalLetters>();
+        for (int i = 0; i < all.Length; i++)
+        {
+            StageGoalLetters g = all[i];
+            if (g == null || g.letters == null)
+                continue;
+            for (int k = 0; k < g.letters.Length; k++)
+            {
+                if (g.letters[k] == null)
+                    continue;
+                float x = g.letters[k].position.x;
+                minX = Mathf.Min(minX, x - KeyGoalHalfWidth);
+                maxX = Mathf.Max(maxX, x + KeyGoalHalfWidth);
+            }
+        }
+        return minX <= maxX;
+    }
+
+    /// <summary>
+    /// 片側（side：-1が左、+1が右）に、キーを並べるときの、プレイヤーにいちばん近いキーの位置。
+    /// ゴールの G O A L と重なるときは、G O A L の向こう側（外側）へずらす。
+    /// </summary>
+    private static float KeyNearEdge(int side, float playerX, int n, bool hasGoal, float goalMin, float goalMax)
+    {
+        float near = playerX + side * KeyNearGap;
+        if (!hasGoal)
+            return near;
+
+        float span = Mathf.Max(0, n - 1) * KeySpacing;
+        float lo = side < 0 ? near - span : near;
+        float hi = side < 0 ? near : near + span;
+        bool overlap = hi + KeyGoalMargin >= goalMin && lo - KeyGoalMargin <= goalMax;
+        if (!overlap)
+            return near;
+        return side < 0 ? goalMin - KeyGoalMargin : goalMax + KeyGoalMargin;
     }
 
     /// <summary>プレイヤーの縦の動きが止まるまで待つ（落ちている間と、上っている間は待つ）。</summary>
@@ -524,14 +585,20 @@ public class StageClearDirector : MonoBehaviour
         }
     }
 
-    private IEnumerator KeyRoutine(KeyDefinition key, float stopX, float groundY, float z)
+    private IEnumerator KeyRoutine(KeyDefinition key, float stopX, float groundY, float z, int side)
     {
-        // 走り出す位置：いまの画面の左端の、少し外
+        // 走り出す位置：いまの画面の端（左側に並べるなら左端、右側なら右端）の、少し外
+        float dir = side < 0 ? 1f : -1f;   // 左から来るなら右へ、右から来るなら左へ走る
         Camera cam = Camera.main;
-        float startX = stopX - 12f;
+        float startX = stopX - dir * 12f;
         if (cam != null && cam.orthographic)
-            startX = cam.transform.position.x - cam.orthographicSize * cam.aspect - KeyOffscreen;
-        startX = Mathf.Min(startX, stopX - 1f);
+        {
+            float halfW = cam.orthographicSize * cam.aspect;
+            startX = side < 0
+                ? cam.transform.position.x - halfW - KeyOffscreen
+                : cam.transform.position.x + halfW + KeyOffscreen;
+        }
+        startX = side < 0 ? Mathf.Min(startX, stopX - 1f) : Mathf.Max(startX, stopX + 1f);
 
         // 親（root）は反転しない。反転するのは見た目（visual）だけ。
         // → 親の子として出すエモートが、裏返らない。
@@ -541,7 +608,7 @@ public class StageClearDirector : MonoBehaviour
         GameObject visual = Instantiate(keyPrefab, root.transform);
         visual.transform.localPosition = Vector3.zero;
         visual.transform.localRotation = Quaternion.identity;
-        float face = keyFacesRight ? 1f : -1f; // 右へ走るので、左向きの絵は反転する
+        float face = (keyFacesRight ? 1f : -1f) * dir; // 右へ走るとき、左向きの絵は反転する（左へ走るときは、そのまま）
         Vector3 s = visual.transform.localScale;
         visual.transform.localScale = new Vector3(s.x * face * keyScale, s.y * keyScale, s.z * keyScale);
 
@@ -557,9 +624,10 @@ public class StageClearDirector : MonoBehaviour
 
         // 走る
         float x = startX;
-        while (x < stopX)
+        while (dir > 0f ? x < stopX : x > stopX)
         {
-            x = Mathf.Min(stopX, x + KeyRunSpeed * Time.deltaTime);
+            x += dir * KeyRunSpeed * Time.deltaTime;
+            x = dir > 0f ? Mathf.Min(stopX, x) : Mathf.Max(stopX, x);
             root.transform.position = new Vector3(x, groundY, z);
             if (rig != null)
                 rig.SetManualVelocity(KeyRunSpeed);

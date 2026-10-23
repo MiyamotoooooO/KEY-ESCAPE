@@ -7,6 +7,9 @@ using UnityEngine;
 /// ふだんは、左から順に、ぴょんぴょんと跳ねる（ウェーブ）。
 /// プレイヤーが近づくと、4体とも両腕を上げて大喜びして、「お疲れ様!」の吹き出しが出る。
 /// そのあと、少しして、いつものゴールの演出（StageGoal の Clear）に進む。
+/// 「お疲れ様!」の吹き出しは、最初から出し続け、プレイヤーが見つけて近づくと消える。
+/// ゴールしたあと（クリアになったあと）は、踊りを1つランダムに選んで、4体そろって結果画面までループする。
+/// さらに、4体から、プレイヤーに向けて、花火のような粒を打ち上げ続ける。
 ///
 /// 付け方：StageGoal の付いたゴールのオブジェクトを選んで、メニュー
 ///   Tools > KEY ESCAPE > ゴール > 選んだゴールに G O A L を並べる
@@ -54,6 +57,12 @@ public class StageGoalLetters : MonoBehaviour
     public float clearDelay = 1f;
 
     [Header("吹き出し")]
+    [Tooltip("ONなら、「お疲れ様!」の吹き出しを、最初から出し続ける（プレイヤーに見つけてもらうため）。OFFなら、近づいたときに出す。")]
+    public bool bubbleFromStart = true;
+    [Tooltip("ONなら、プレイヤーが近づいたら（見つけたら）、吹き出しを消す。OFFなら、クリアになるまで出し続ける。")]
+    public bool hideBubbleOnApproach = true;
+    [Tooltip("吹き出しが、ふわふわ上下する幅（ワールドの単位）。0で動かない。")]
+    public float bubbleFloatAmount = 0.08f;
     public string bubbleText = "お疲れ様!";
     [Tooltip("吹き出しの位置。4体の真ん中の足元からのずれ（上が＋Y）。吹き出しのしっぽの先が、ここに来る。")]
     public Vector2 bubbleOffset = new Vector2(0f, 2.2f);
@@ -70,6 +79,46 @@ public class StageGoalLetters : MonoBehaviour
     public float bubblePopSeconds = 0.25f;
     [Tooltip("吹き出しの描く順番。大きいほど手前。")]
     public int bubbleSortingOrder = 600;
+
+    [Header("ゴールしたあとの踊り（結果画面まで、ループする）")]
+    [Tooltip("ONなら、ゴールしたとき、下の動きの中から1つをランダムに選んで、4体そろってループする。OFFなら、「喜ぶ」のまま。")]
+    public bool randomDanceOnClear = true;
+    [Tooltip("ランダムに選ぶ動きの一覧。出したくない動きは、一覧から外す。")]
+    public LimbRig.KeyMotion[] danceMotions = new LimbRig.KeyMotion[]
+    {
+        LimbRig.KeyMotion.Cheer,
+        LimbRig.KeyMotion.Sway,
+        LimbRig.KeyMotion.Hop,
+        LimbRig.KeyMotion.Wave,
+        LimbRig.KeyMotion.Disco,
+    };
+
+    [Header("花火（ゴールしたあと、4体からプレイヤーに向けて打ち上げる）")]
+    public bool fireworksEnabled = true;
+    [Tooltip("ゴールしてから、最初の1発までの秒数。")]
+    public float fireworkFirstDelay = 0.1f;
+    [Tooltip("次の1発までの秒数。")]
+    public float fireworkInterval = 0.45f;
+    [Tooltip("打ち上げを続ける秒数。0なら、シーンが変わるまで（結果画面のあとまで）続ける。")]
+    public float fireworkDuration = 0f;
+    [Tooltip("打ち上げた玉が、プレイヤーのそばに届くまでの秒数。")]
+    public float fireworkRocketSeconds = 0.8f;
+    [Tooltip("玉が向かう位置。プレイヤーからのずれ（上が＋Y）。")]
+    public Vector2 fireworkAimOffset = new Vector2(0f, 3.2f);
+    [Tooltip("向かう位置の、左右のばらつき。")]
+    public float fireworkAimSpread = 1.6f;
+    [Tooltip("玉が開いて、飛び散る粒の数。")]
+    public int fireworkSparkCount = 24;
+    [Tooltip("粒が飛び散る速さ（ワールドの単位/秒）。")]
+    public float fireworkSparkSpeed = 4.5f;
+    [Tooltip("粒が消えるまでの秒数。")]
+    public float fireworkSparkLife = 1.2f;
+    [Tooltip("粒の大きさ（ワールドの単位）。")]
+    public float fireworkSparkSize = 0.18f;
+    [Tooltip("粒が落ちる強さ。")]
+    public float fireworkGravity = 3f;
+    [Tooltip("花火の描く順番。大きいほど手前。")]
+    public int fireworkSortingOrder = 700;
 
     [Header("紙吹雪（ゴールの上に、ずっと降らせる。ゴールすると止まる）")]
     [Tooltip("ONなら、ゴールの上から、紙吹雪を降らせ続ける。ゴールした（クリアになった）ら、止まる。")]
@@ -99,6 +148,43 @@ public class StageGoalLetters : MonoBehaviour
     private float _findTimer;
     private bool _triggered;
     private GameObject _bubble;
+    private Vector3 _bubbleBase;
+    private bool _bubbleFloat;
+    private bool _cheered;
+    private bool _danced;
+
+    private class Rocket
+    {
+        public Transform tr;
+        public SpriteRenderer sr;
+        public Vector3 from;
+        public Vector3 ctrl;
+        public Vector3 to;
+        public float t;
+        public float dur;
+        public float trailAcc;
+        public Color color;
+    }
+    private class Spark
+    {
+        public Transform tr;
+        public SpriteRenderer sr;
+        public Vector2 vel;
+        public float age;
+        public float life;
+        public float size;
+        public float drag;
+        public float gravityMul;
+        public Color color;
+    }
+    private readonly System.Collections.Generic.List<Rocket> _rockets = new System.Collections.Generic.List<Rocket>();
+    private readonly System.Collections.Generic.List<Spark> _sparks = new System.Collections.Generic.List<Spark>();
+    private GameObject _fwRoot;
+    private bool _fwActive;
+    private float _fwTimer;
+    private float _fwElapsed;
+    private static Sprite s_dot;
+    private const int MaxSparks = 420;
 
     private class ConfettiPiece
     {
@@ -140,6 +226,10 @@ public class StageGoalLetters : MonoBehaviour
             _basePos[i] = letters[i].localPosition;
             _rigs[i] = letters[i].GetComponentInChildren<LimbRig>(true);
         }
+
+        // 「お疲れ様!」の吹き出し：最初から出し続ける。
+        if (bubbleFromStart)
+            ShowBubble(Center());
 
         // 紙吹雪：すでに降っているところから、始まるようにする。
         if (confettiEnabled && confettiPerSecond > 0f && confettiLifeSeconds > 0f)
@@ -193,12 +283,23 @@ public class StageGoalLetters : MonoBehaviour
 
     private void Update()
     {
-        if (!_triggered)
+        // ゴールしたら（クリアになったら）、踊りを1つ選んで、結果画面までループする。花火も始める。
+        if (!_danced && goal != null && goal.IsDone)
+            StartClearDance();
+
+        if (!_triggered && !_danced)
         {
             Wave();
             CheckApproach();
         }
         UpdateConfetti();
+        UpdateFireworks();
+
+        // 「お疲れ様!」の吹き出し：ふわふわ動かす。
+        if (_bubble != null && _bubbleFloat)
+        {
+            _bubble.transform.position = _bubbleBase + new Vector3(0f, Mathf.Sin(Time.time * 3f) * bubbleFloatAmount, 0f);
+        }
 
         // 「STAGE CLEAR!」が出るとき（クリアになったとき）、「お疲れ様!」の吹き出しは、消す。
         if (_bubble != null && goal != null && goal.IsDone)
@@ -206,6 +307,61 @@ public class StageGoalLetters : MonoBehaviour
             Destroy(_bubble);
             _bubble = null;
         }
+    }
+
+    // ---- ゴールしたあとの踊り ---------------------------------------------------
+
+    private void StartClearDance()
+    {
+        _danced = true;
+        _triggered = true;   // 跳ねるのも、近づいたかの判定も、もう要らない
+
+        // 跳ねるのをやめて、元の位置に戻す
+        if (letters != null && _basePos != null && _basePos.Length == letters.Length)
+        {
+            for (int i = 0; i < letters.Length; i++)
+            {
+                if (letters[i] != null)
+                    letters[i].localPosition = _basePos[i];
+            }
+        }
+
+        LimbRig.KeyMotion motion = LimbRig.KeyMotion.Cheer;
+        if (randomDanceOnClear)
+            motion = PickDance();
+        if (_rigs != null)
+        {
+            for (int i = 0; i < _rigs.Length; i++)
+            {
+                if (_rigs[i] != null)
+                    _rigs[i].SetMotion(motion);
+            }
+        }
+
+        _fwActive = fireworksEnabled;
+        _fwTimer = Mathf.Max(0f, fireworkFirstDelay);
+        _fwElapsed = 0f;
+    }
+
+    /// <summary>踊りの一覧から、1つ選ぶ。近づいたときに「喜ぶ」をしていたら、できれば、それ以外にする。</summary>
+    private LimbRig.KeyMotion PickDance()
+    {
+        System.Collections.Generic.List<LimbRig.KeyMotion> pool = new System.Collections.Generic.List<LimbRig.KeyMotion>();
+        if (danceMotions != null)
+        {
+            for (int i = 0; i < danceMotions.Length; i++)
+            {
+                LimbRig.KeyMotion m = danceMotions[i];
+                if (m == LimbRig.KeyMotion.None || m == LimbRig.KeyMotion.Talk || m == LimbRig.KeyMotion.Injured)
+                    continue;
+                pool.Add(m);
+            }
+        }
+        if (pool.Count == 0)
+            return LimbRig.KeyMotion.Cheer;
+        if (_cheered && pool.Count > 1)
+            pool.Remove(LimbRig.KeyMotion.Cheer);
+        return pool[Random.Range(0, pool.Count)];
     }
 
     // ---- 紙吹雪 -----------------------------------------------------------------
@@ -357,6 +513,270 @@ public class StageGoalLetters : MonoBehaviour
     {
         if (_confettiRoot != null)
             Destroy(_confettiRoot);
+        if (_fwRoot != null)
+            Destroy(_fwRoot);
+    }
+
+    // ---- 花火（ゴールしたあと、4体からプレイヤーに向けて打ち上げる） -------------
+
+    private static readonly Color[] FireworkColors = new Color[]
+    {
+        new Color(1f, 0.35f, 0.30f, 1f),   // 赤
+        new Color(1f, 0.85f, 0.30f, 1f),   // 黄
+        new Color(0.40f, 0.85f, 1f, 1f),   // 水色
+        new Color(0.50f, 1f, 0.50f, 1f),   // 緑
+        new Color(1f, 0.55f, 0.85f, 1f),   // 桃
+        new Color(1f, 0.60f, 0.20f, 1f),   // 橙
+    };
+
+    /// <summary>やわらかい丸い光の画像（中心が白く、まわりへいくほど透明）。</summary>
+    private static Sprite DotSprite()
+    {
+        if (s_dot != null)
+            return s_dot;
+        const int N = 32;
+        Texture2D tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < N; y++)
+        {
+            for (int x = 0; x < N; x++)
+            {
+                float dx = (x + 0.5f) / N * 2f - 1f;
+                float dy = (y + 0.5f) / N * 2f - 1f;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = Mathf.Clamp01(1f - r);
+                a = Mathf.Pow(a, 0.8f);
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+        }
+        tex.Apply();
+        s_dot = Sprite.Create(tex, new Rect(0f, 0f, N, N), new Vector2(0.5f, 0.5f), N);
+        return s_dot;
+    }
+
+    private Transform FindPlayerTransform()
+    {
+        if (_player != null)
+            return _player;
+        // Playerタグが付いたもののうち、Rigidbody2Dを持つものが、本物のプレイヤー
+        GameObject[] c = GameObject.FindGameObjectsWithTag(playerTag);
+        for (int i = 0; i < c.Length; i++)
+        {
+            if (c[i].GetComponent<Rigidbody2D>() != null)
+            {
+                _player = c[i].transform;
+                return _player;
+            }
+        }
+        if (c.Length > 0)
+            _player = c[0].transform;
+        return _player;
+    }
+
+    private void UpdateFireworks()
+    {
+        if (!_fwActive && _rockets.Count == 0 && _sparks.Count == 0)
+            return;
+
+        // ゴールの演出でゲームが遅くなっても、花火は同じ速さで動かす（ポーズ中は止める）。
+        float dt = GamePause.IsPaused ? 0f : Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+        if (dt <= 0f)
+            return;
+
+        if (_fwActive)
+        {
+            _fwElapsed += dt;
+            if (fireworkDuration > 0f && _fwElapsed >= fireworkDuration)
+            {
+                _fwActive = false;
+            }
+            else
+            {
+                _fwTimer -= dt;
+                if (_fwTimer <= 0f)
+                {
+                    _fwTimer += Mathf.Max(0.05f, fireworkInterval);
+                    LaunchRocket();
+                }
+            }
+        }
+
+        // 打ち上げた玉
+        for (int i = _rockets.Count - 1; i >= 0; i--)
+        {
+            Rocket r = _rockets[i];
+            if (r.tr == null)
+            {
+                _rockets.RemoveAt(i);
+                continue;
+            }
+            r.t += dt / Mathf.Max(0.05f, r.dur);
+            float k = Mathf.Clamp01(r.t);
+            Vector3 pos = Bezier(r.from, r.ctrl, r.to, k);
+            r.tr.position = pos;
+
+            // 通ったあとに、小さな光を残す
+            r.trailAcc += dt;
+            while (r.trailAcc >= 0.03f)
+            {
+                r.trailAcc -= 0.03f;
+                AddSpark(pos, Vector2.zero, r.color, fireworkSparkSize * 0.6f, 0.35f, 0f, 0f);
+            }
+
+            if (r.t >= 1f)
+            {
+                Burst(pos, r.color);
+                Destroy(r.tr.gameObject);
+                _rockets.RemoveAt(i);
+            }
+        }
+
+        // 飛び散った粒
+        for (int i = _sparks.Count - 1; i >= 0; i--)
+        {
+            Spark s = _sparks[i];
+            if (s.tr == null)
+            {
+                _sparks.RemoveAt(i);
+                continue;
+            }
+            s.age += dt;
+            if (s.age >= s.life)
+            {
+                Destroy(s.tr.gameObject);
+                _sparks.RemoveAt(i);
+                continue;
+            }
+            s.vel.y -= fireworkGravity * s.gravityMul * dt;
+            s.vel *= Mathf.Max(0f, 1f - s.drag * dt);
+            Vector3 p = s.tr.position;
+            p.x += s.vel.x * dt;
+            p.y += s.vel.y * dt;
+            s.tr.position = p;
+
+            float u = s.age / s.life;
+            Color c = s.color;
+            c.a = Mathf.Clamp01(1f - u * u);
+            s.sr.color = c;
+            float sz = s.size * Mathf.Lerp(1f, 0.4f, u);
+            s.tr.localScale = new Vector3(sz, sz, 1f);
+        }
+
+        if (!_fwActive && _rockets.Count == 0 && _sparks.Count == 0 && _fwRoot != null)
+        {
+            Destroy(_fwRoot);
+            _fwRoot = null;
+        }
+    }
+
+    private static Vector3 Bezier(Vector3 a, Vector3 b, Vector3 c, float t)
+    {
+        float u = 1f - t;
+        return u * u * a + 2f * u * t * b + t * t * c;
+    }
+
+    private Transform FwRoot()
+    {
+        if (_fwRoot == null)
+            _fwRoot = new GameObject("GoalFireworks");
+        return _fwRoot.transform;
+    }
+
+    /// <summary>4体のどれかから、プレイヤーの上あたりに向けて、玉を1つ打ち上げる。</summary>
+    private void LaunchRocket()
+    {
+        if (letters == null || letters.Length == 0)
+            return;
+
+        // 打ち上げる文字を、ランダムに選ぶ（左から順にしないほうが、にぎやか）
+        Transform src = null;
+        for (int tries = 0; tries < 8 && src == null; tries++)
+            src = letters[Random.Range(0, letters.Length)];
+        if (src == null)
+            return;
+
+        Vector3 from = src.position + new Vector3(0f, 0.9f, 0f);
+        Transform pl = FindPlayerTransform();
+        Vector3 target = pl != null ? pl.position : Center();
+        Vector3 to = target + new Vector3(
+            fireworkAimOffset.x + Random.Range(-fireworkAimSpread, fireworkAimSpread),
+            fireworkAimOffset.y + Random.Range(-0.6f, 0.8f),
+            0f);
+        to.z = from.z;
+        Vector3 ctrl = (from + to) * 0.5f + new Vector3(0f, Random.Range(1.5f, 3.2f), 0f);
+
+        Color col = FireworkColors[Random.Range(0, FireworkColors.Length)];
+
+        GameObject go = new GameObject("Rocket");
+        go.transform.SetParent(FwRoot(), false);
+        go.transform.position = from;
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = DotSprite();
+        sr.sortingOrder = fireworkSortingOrder + 1;
+        sr.color = Color.Lerp(col, Color.white, 0.5f);
+        float sz = fireworkSparkSize * 1.8f;
+        go.transform.localScale = new Vector3(sz, sz, 1f);
+
+        Rocket r = new Rocket();
+        r.tr = go.transform;
+        r.sr = sr;
+        r.from = from;
+        r.ctrl = ctrl;
+        r.to = to;
+        r.t = 0f;
+        r.dur = fireworkRocketSeconds * Random.Range(0.85f, 1.15f);
+        r.color = col;
+        _rockets.Add(r);
+    }
+
+    /// <summary>玉が開いて、粒が丸く飛び散る。</summary>
+    private void Burst(Vector3 pos, Color col)
+    {
+        int n = Mathf.Max(6, fireworkSparkCount);
+        float offset = Random.Range(0f, 6.2832f);
+        for (int i = 0; i < n; i++)
+        {
+            float ang = offset + 6.2832f * i / n + Random.Range(-0.08f, 0.08f);
+            float sp = fireworkSparkSpeed * Random.Range(0.7f, 1.05f);
+            Vector2 v = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * sp;
+            AddSpark(pos, v, col, fireworkSparkSize, fireworkSparkLife * Random.Range(0.85f, 1.1f), 1.4f, 1f);
+        }
+        // 中心に、白い小さな粒（きらっと光る）
+        int core = Mathf.Max(3, n / 4);
+        for (int i = 0; i < core; i++)
+        {
+            float ang = Random.Range(0f, 6.2832f);
+            float sp = fireworkSparkSpeed * Random.Range(0.1f, 0.4f);
+            Vector2 v = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * sp;
+            AddSpark(pos, v, Color.Lerp(col, Color.white, 0.8f), fireworkSparkSize * 0.8f, fireworkSparkLife * 0.6f, 2f, 0.6f);
+        }
+    }
+
+    private void AddSpark(Vector3 pos, Vector2 vel, Color col, float size, float life, float drag, float gravityMul)
+    {
+        if (_sparks.Count >= MaxSparks)
+            return;
+        GameObject go = new GameObject("Spark");
+        go.transform.SetParent(FwRoot(), false);
+        go.transform.position = pos;
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = DotSprite();
+        sr.sortingOrder = fireworkSortingOrder;
+        sr.color = col;
+        go.transform.localScale = new Vector3(size, size, 1f);
+
+        Spark s = new Spark();
+        s.tr = go.transform;
+        s.sr = sr;
+        s.vel = vel;
+        s.age = 0f;
+        s.life = Mathf.Max(0.1f, life);
+        s.size = size;
+        s.drag = drag;
+        s.gravityMul = gravityMul;
+        s.color = col;
+        _sparks.Add(s);
     }
 
     // ---- ウェーブ -------------------------------------------------------------
@@ -433,6 +853,7 @@ public class StageGoalLetters : MonoBehaviour
 
         if (cheerOnApproach)
         {
+            _cheered = true;
             for (int i = 0; i < _rigs.Length; i++)
             {
                 if (_rigs[i] != null)
@@ -440,9 +861,12 @@ public class StageGoalLetters : MonoBehaviour
             }
         }
 
-        _bubble = BuildBubble(center);
-        if (_bubble != null)
-            StartCoroutine(PopBubble(_bubble.transform));
+        // 吹き出し：最初から出していたら、見つけてもらったので、消す（設定でそのまま残せる）。
+        // 最初は出していなかったときは、ここで出す。
+        if (_bubble == null && !bubbleFromStart)
+            ShowBubble(center);
+        else if (_bubble != null && hideBubbleOnApproach)
+            StartCoroutine(HideBubble());
 
         yield return new WaitForSeconds(Mathf.Max(0f, clearDelay));
 
@@ -451,6 +875,40 @@ public class StageGoalLetters : MonoBehaviour
             if (goal.mode == StageGoal.GoalMode.Touch)
                 goal.Clear();
         }
+    }
+
+    /// <summary>吹き出しを作って、ポンと出す。</summary>
+    private void ShowBubble(Vector3 center)
+    {
+        _bubble = BuildBubble(center);
+        if (_bubble == null)
+            return;
+        _bubbleBase = _bubble.transform.position;
+        _bubbleFloat = false;
+        StartCoroutine(PopBubble(_bubble.transform));
+    }
+
+    /// <summary>吹き出しを、ぽんと小さくして、消す。</summary>
+    private IEnumerator HideBubble()
+    {
+        GameObject b = _bubble;
+        _bubbleFloat = false;
+        if (b == null)
+            yield break;
+        Transform t = b.transform;
+        float dur = 0.2f;
+        float time = 0f;
+        while (time < dur && t != null)
+        {
+            time += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(time / dur);
+            t.localScale = Vector3.one * Mathf.Lerp(1f, 0f, k * k);
+            yield return null;
+        }
+        if (b != null)
+            Destroy(b);
+        if (_bubble == b)
+            _bubble = null;
     }
 
     private IEnumerator PopBubble(Transform t)
@@ -467,7 +925,11 @@ public class StageGoalLetters : MonoBehaviour
             yield return null;
         }
         if (t != null)
+        {
             t.localScale = Vector3.one;
+            if (_bubble != null && _bubble.transform == t && !_triggered)
+                _bubbleFloat = true;
+        }
     }
 
     // ---- 吹き出し ---------------------------------------------------------------

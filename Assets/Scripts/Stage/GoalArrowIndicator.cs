@@ -8,7 +8,7 @@ using UnityEngine.UI;
 ///
 /// ・ゴールが画面の外にいる間だけ、画面の縁に矢印が出る。ゴールが画面に映ったら消える。
 ///   例：ゴールが左下にあるときは、画面の左下の縁に「↙」向きの矢印が出る。
-/// ・矢印の内側（画面の中心がわ）に、「GOAL」と書いたキーのアイコンと、「あと 25m」のような距離が並ぶ。
+/// ・矢印の内側（画面の中心がわ）に、「GOAL」と書いたキーのアイコンと、「25m」のような小さくうすい距離が並ぶ（じゃまにならないように）。
 /// ・ゴールをクリアしたあと、一時停止中（ヒント・結果画面など）、ロード中、やられている最中は隠れる。
 ///
 /// 使い方：
@@ -57,11 +57,12 @@ public class GoalArrowIndicator : MonoBehaviour
     [Header("距離")]
     public bool showDistance = true;
     [Tooltip("{0}の部分に、ゴールまでの距離（m）が入る。")]
-    public string distanceFormat = "あと {0}m";
+    public string distanceFormat = "{0}m";
     [Tooltip("任意。距離の文字のフォント。空なら、シーンにある日本語が出るフォントを探す。")]
     public TMP_FontAsset distanceFont;
-    public int distanceFontSize = 40;
-    public Color distanceColor = Color.white;
+    public int distanceFontSize = 28;
+    [Tooltip("距離の文字の色。アルファ（透明さ）を下げると、うすくなる。")]
+    public Color distanceColor = new Color(1f, 1f, 1f, 0.6f);
     [Tooltip("ゲームの長さ1つ（Unityの1ユニット）を、何mとして表示するか。")]
     public float unitsPerMeter = 1f;
 
@@ -213,7 +214,7 @@ public class GoalArrowIndicator : MonoBehaviour
             _fmt = fmt;
             _label = NewText("Distance", _canvas.transform, font, distanceFontSize, distanceColor);
             _label.fontStyle = FontStyles.Bold;
-            _label.outlineWidth = 0.3f;
+            _label.outlineWidth = 0.2f;
             _label.outlineColor = new Color32(30, 10, 10, 255);
             _labelRt = _label.rectTransform;
         }

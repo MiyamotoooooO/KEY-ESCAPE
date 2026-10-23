@@ -3208,7 +3208,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 39.000015, y: -145.45372}
+  m_AnchoredPosition: {x: 39.000015, y: -145.45135}
   m_SizeDelta: {x: -64.99997, y: 0}
   m_Pivot: {x: 0.4, y: 0.8}
 --- !u!114 &292901696
@@ -14483,6 +14483,63 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5178928485185103144, guid: c6d9f4f639215cb4b94524203c19838b, type: 3}
   m_PrefabInstance: {fileID: 2046655308}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1371471245
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1531462389309721620, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_Name
+      value: KillCollider
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 6.7202344
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -10.216793
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 31.754017
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648968374324915034, guid: a640f0eb841441546bb15c902772f807, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a640f0eb841441546bb15c902772f807, type: 3}
 --- !u!1 &1372581273
 GameObject:
   m_ObjectHideFlags: 0
@@ -17213,7 +17270,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 225764473}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.9999383
+  m_Size: 0.99994165
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -18601,6 +18658,9 @@ MonoBehaviour:
   cheerOnApproach: 1
   triggerClear: 1
   clearDelay: 1
+  bubbleFromStart: 1
+  hideBubbleOnApproach: 1
+  bubbleFloatAmount: 0.08
   bubbleText: "\u304A\u75B2\u308C\u69D8!"
   bubbleOffset: {x: 0, y: 2.2}
   bubbleFontSize: 5
@@ -18611,6 +18671,21 @@ MonoBehaviour:
   bubbleFont: {fileID: 0}
   bubblePopSeconds: 0.25
   bubbleSortingOrder: 600
+  randomDanceOnClear: 1
+  danceMotions: 0200000003000000040000000500000006000000
+  fireworksEnabled: 1
+  fireworkFirstDelay: 0.1
+  fireworkInterval: 0.45
+  fireworkDuration: 0
+  fireworkRocketSeconds: 0.8
+  fireworkAimOffset: {x: 0, y: 3.2}
+  fireworkAimSpread: 1.6
+  fireworkSparkCount: 24
+  fireworkSparkSpeed: 4.5
+  fireworkSparkLife: 1.2
+  fireworkSparkSize: 0.18
+  fireworkGravity: 3
+  fireworkSortingOrder: 700
   confettiEnabled: 1
   confettiPerSecond: 12
   confettiOffset: {x: 0, y: 4.5}
@@ -21434,3 +21509,4 @@ SceneRoots:
   - {fileID: 672542299}
   - {fileID: 1009305848}
   - {fileID: 1569165532}
+  - {fileID: 1371471245}
