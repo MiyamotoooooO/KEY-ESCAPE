@@ -43,6 +43,9 @@ public class KeyConfigUI : MonoBehaviour
     [Tooltip("任意。画面を開いた時の演出（看板が落ちてくる／線が左から表示される）を管理するスクリプト。割り当てておくと、Open()から自動で再生される。")]
     public KeyConfigIntroAnimator introAnimator;
 
+    [Header("キーを設定したときの演出（火花・キーキャップがはずむ・キーの一言）")]
+    public KeyBindEffectSettings bindEffect = new KeyBindEffectSettings();
+
     [Header("アクション行（Chapter 1の各アクションにつき1つ、手動配置）")]
     public List<ActionBindingRow> rows = new List<ActionBindingRow>();
 
@@ -353,6 +356,8 @@ public class KeyConfigUI : MonoBehaviour
             PlayActionPreview(action);
             // キーの割り当てに成功した時の効果音（SoundEffectsアセットのKey Bindに割り当てた音）。
             SoundEffects.Play(SEId.KeyBind);
+            // 効果音に合わせて、火花・キーキャップのはずみ・キーの一言を出す。
+            KeyBindEffect.Play(FindRow(action), key, action, bindEffect);
             // 注意：ここでRefreshKeyList()を呼んではいけない（RefreshAll()も同様）。
             // この関数はActionBindingRow.OnDrop経由、つまりドラッグ中のタイル
             // （KeyGridButtonUI）のOnEndDragがまだ発火していない状態で呼ばれている。

@@ -192,7 +192,7 @@ public class ReturnToTitleButton : MonoBehaviour
             // 拠点へ。途中でやめるので、クリア扱いにはしない。再開位置の記録も消す。
             // キーの仕組みは、ステージクリアで戻る時と同じく、リセットしない。
             CheckpointManager.Clear();
-            SceneManager.LoadScene(targetScene);
+            LoadingScreen.Load(targetScene);
             return;
         }
 

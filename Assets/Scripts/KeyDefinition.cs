@@ -40,6 +40,9 @@ public class KeyDefinition : ScriptableObject
     [TextArea]
     public string flavorText;
 
+    [Tooltip("キーを設定したときに、このキーがしゃべる一言。複数入れると、ランダムに選ぶ。空なら、性格ごとの共通のセリフを使う。")]
+    public string[] bindQuips;
+
 #if UNITY_EDITOR
     private void OnValidate()
     {

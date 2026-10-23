@@ -108,6 +108,8 @@ public class GimmickIntroUI : MonoBehaviour
     {
         if (spacePrompt != null)
             spacePrompt.SetActive(false);
+        if (_keyPrompt != null)
+            _keyPrompt.SetActive(false);
         if (panel != null)
             panel.SetActive(true);
         _time = 0f;
@@ -161,6 +163,60 @@ public class GimmickIntroUI : MonoBehaviour
             spacePrompt.SetActive(visible);
     }
 
+    private GameObject _keyPrompt;
+    private TMP_Text _keyPromptText;
+
+    /// <summary>
+    /// 「このキーを押して」の案内を出す・隠す（Spaceキーの絵の代わりに、同じ場所に、キーの名前を出す）。
+    /// label は、押してほしいキーの名前（例：F）。
+    /// </summary>
+    public void SetKeyPromptVisible(bool visible, string label)
+    {
+        if (visible && _keyPrompt == null)
+            CreateKeyPrompt();
+        if (_keyPrompt == null)
+            return;
+        if (visible && _keyPromptText != null && _keyPromptText.text != label)
+            _keyPromptText.text = label;
+        if (_keyPrompt.activeSelf != visible)
+            _keyPrompt.SetActive(visible);
+    }
+
+    private void CreateKeyPrompt()
+    {
+        if (spacePrompt == null)
+            return;
+        RectTransform src = spacePrompt.GetComponent<RectTransform>();
+        if (src == null || src.parent == null)
+            return;
+
+        GameObject go = new GameObject("KeyPrompt", typeof(RectTransform));
+        go.transform.SetParent(src.parent, false);
+        RectTransform r = go.GetComponent<RectTransform>();
+        r.anchorMin = src.anchorMin;
+        r.anchorMax = src.anchorMax;
+        r.pivot = src.pivot;
+        r.anchoredPosition = src.anchoredPosition;
+        r.sizeDelta = src.sizeDelta;
+
+        TextMeshProUGUI t = go.AddComponent<TextMeshProUGUI>();
+        if (messageText != null)
+            t.font = messageText.font;
+        t.alignment = TextAlignmentOptions.Center;
+        t.color = new Color(0.95f, 0.95f, 0.9f, 1f);
+        t.enableAutoSizing = true;
+        t.fontSizeMin = 20f;
+        t.fontSizeMax = 72f;
+        t.enableWordWrapping = false;
+        t.raycastTarget = false;
+        t.outlineWidth = 0.2f;
+        t.outlineColor = new Color(0f, 0f, 0f, 0.9f);
+        go.AddComponent<BlinkingPrompt>();
+
+        _keyPrompt = go;
+        _keyPromptText = t;
+    }
+
     public void Hide()
     {
         _showing = false;
@@ -168,6 +224,7 @@ public class GimmickIntroUI : MonoBehaviour
         if (_rig != null)
             _rig.SetMotion(LimbRig.KeyMotion.None);
         if (spacePrompt != null) spacePrompt.SetActive(false);
+        if (_keyPrompt != null) _keyPrompt.SetActive(false);
         if (panel != null) panel.SetActive(false);
     }
 

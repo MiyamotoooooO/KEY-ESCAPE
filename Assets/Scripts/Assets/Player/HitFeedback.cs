@@ -335,7 +335,7 @@ public class HitFeedback : MonoBehaviour
             yield return null;
         }
         SetImageAlpha(_fade, 1f);
-        SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex);
+        LoadingScreen.Reload();
     }
 
     // ================= シーン読み込み後 =================

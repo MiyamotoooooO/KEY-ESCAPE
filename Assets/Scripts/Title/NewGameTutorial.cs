@@ -39,6 +39,17 @@ public class NewGameTutorialSettings
     [Tooltip("5：画面を閉じて、少し歩いたとき。Spaceで閉じる。")]
     public string walkedMessage = "うん、上手に歩けてる！";
 
+    [Header("文字の見た目（ヒントの説明パネル）")]
+    [Tooltip("セリフの文字の大きさ。0なら、パネル（GimmickIntroUI）に設定してある大きさのまま。")]
+    public float textSize = 0f;
+    [Tooltip("ONなら、下の Text Color をセリフの色にする。OFFなら、パネルのままの色。")]
+    public bool overrideTextColor = false;
+    public Color textColor = Color.white;
+    [Tooltip("セリフが1秒間に出る文字数。0なら、パネルに設定してある速さのまま。")]
+    public float charsPerSecond = 0f;
+    [Tooltip("セリフの行の間隔（0がふつう。大きくすると、広がる）。")]
+    public float lineSpacing = 0f;
+
     [Header("ズーム（キーコンフィグ画面）")]
     [Tooltip("左の「持っているキーの一覧」へ寄る倍率。1以下ならズームしない。")]
     public float ownedZoom = 1.3f;
@@ -202,6 +213,7 @@ public class NewGameTutorial : MonoBehaviour
 
         Hold(true);
         _ui = Instantiate(_s.hintUiPrefab);
+        ApplyTextStyle();
         SoundEffects.Play(SEId.DialogueOpen);
 
         // 1. 「Tabを押して」
@@ -280,6 +292,27 @@ public class NewGameTutorial : MonoBehaviour
                 stable++;
             yield return null;
         }
+    }
+
+    /// <summary>設定した文字の大きさ・色・速さを、説明パネルに反映する（0・OFFの項目は、パネルのまま）。</summary>
+    private void ApplyTextStyle()
+    {
+        if (_ui == null)
+            return;
+        if (_s.charsPerSecond > 0f)
+            _ui.charsPerSecond = _s.charsPerSecond;
+        TMP_Text tx = _ui.messageText;
+        if (tx == null)
+            return;
+        if (_s.textSize > 0f)
+        {
+            tx.enableAutoSizing = false;
+            tx.fontSize = _s.textSize;
+        }
+        if (_s.overrideTextColor)
+            tx.color = _s.textColor;
+        if (!Mathf.Approximately(_s.lineSpacing, 0f))
+            tx.lineSpacing = _s.lineSpacing;
     }
 
     private IEnumerator WaitReal(float seconds)

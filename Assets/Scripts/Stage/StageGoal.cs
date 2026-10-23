@@ -254,6 +254,6 @@ public class StageGoal : MonoBehaviour
             Debug.LogWarning("[StageGoal] 拠点のシーン「" + hub + "」を読み込めません。StageCatalogのHub Scene Nameと、Build Settingsを確認してください。");
             yield break;
         }
-        SceneManager.LoadScene(hub);
+        LoadingScreen.Load(hub);
     }
 }

@@ -77,6 +77,7 @@ public class StageSelectNPC : MonoBehaviour
     private void Update()
     {
         bool blocked = StageSelectUI.IsOpen
+                       || GamePause.IsPaused
                        || SettingsUI.IsOpen
                        || (_keyConfigUI != null && _keyConfigUI.IsOpen);
 

@@ -36,6 +36,36 @@ public class StageSelectUI : MonoBehaviour
 
     private static StageSelectUI _instance;
 
+    private static bool _backLocked;
+
+    /// <summary>
+    /// ONの間は、ステージ選択画面を閉じられない（戻るボタンも、Escキーも効かない）。ステージを選んで出発するまで、確実に挑戦させたいときに使う。
+    /// 確認の画面（「挑戦しますか？」）の「いいえ」やEscは、これまでどおり効く。出発するとき、画面が破棄されるときは、自動でOFFに戻る。
+    /// </summary>
+    public static bool BackLocked
+    {
+        get { return _backLocked; }
+        set
+        {
+            _backLocked = value;
+            if (_instance != null)
+                _instance.ApplyBackButton();
+        }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        _backLocked = false;
+    }
+
+    /// <summary>戻れないときは、「戻る」ボタンも隠す。</summary>
+    private void ApplyBackButton()
+    {
+        if (backButton != null)
+            backButton.gameObject.SetActive(!_backLocked);
+    }
+
     /// <summary>
     /// 「戻る」操作（Escキー）で呼ばれる。確認の画面が出ていれば、それだけを閉じる。
     /// 出ていなければ、ステージ選択の画面を閉じる。
@@ -161,7 +191,10 @@ public class StageSelectUI : MonoBehaviour
     private void OnDestroy()
     {
         if (_instance == this)
+        {
             _instance = null;
+            _backLocked = false;
+        }
 
         if (IsOpen)
         {
@@ -189,6 +222,7 @@ public class StageSelectUI : MonoBehaviour
         _openFrame = Time.frameCount;
         if (panelRoot != null)
             panelRoot.SetActive(true);
+        ApplyBackButton();
         if (confirmPanel != null)
             confirmPanel.SetActive(false);
         HideLockedMessage();
@@ -243,6 +277,8 @@ public class StageSelectUI : MonoBehaviour
     {
         if (!IsOpen)
             return;
+        if (_backLocked)
+            return;   // 戻れない間は、閉じない（戻るボタン・Esc）
         IsOpen = false;
 
         HideLockedMessage();
@@ -747,8 +783,9 @@ public class StageSelectUI : MonoBehaviour
 
         MarkSeen(_selected); // 決定したステージは、見たことにする。
 
-        // 止めていた時間とカーソルの状態を戻してから、シーンを切り替える。
+        // 止めていた時間とカーソルの状態を戻してから、シーンを切り替える。（出発するときは、戻れない設定もOFFに戻す）
+        BackLocked = false;
         Close();
-        SceneManager.LoadScene(entry.sceneName);
+        LoadingScreen.Load(entry.sceneName);
     }
 }

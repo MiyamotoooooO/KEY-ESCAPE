@@ -16,8 +16,8 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 60cf4d2e3c8635c4e861cdef5357c32f, type: 3}
     volume: 0.639
   keyBind:
-    clip: {fileID: 8300000, guid: 500b60e6f2b2eb64484dd05d2e162a53, type: 3}
-    volume: 1
+    clip: {fileID: 8300000, guid: 1690ad84937a0264bab527e3a2181799, type: 3}
+    volume: 0.752
   dialogueOpen:
     clip: {fileID: 8300000, guid: 0ea5e0eff0e0ef647be743bda21a3727, type: 3}
     volume: 0.85

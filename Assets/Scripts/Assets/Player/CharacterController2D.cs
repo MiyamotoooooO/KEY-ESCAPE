@@ -401,6 +401,6 @@ public class CharacterController2D : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.8f);
         m_Rigidbody2D.velocity = new Vector2(0, m_Rigidbody2D.velocity.y);
         yield return new WaitForSecondsRealtime(1.1f);
-        SceneManager.LoadSceneAsync(SceneManager.GetActiveScene().buildIndex);
+        LoadingScreen.Reload();
     }
 }

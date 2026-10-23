@@ -228,7 +228,7 @@ public class TitleMenu : MonoBehaviour
             openingMovie.PrepareNewGameIntro(sceneName);
 
         _loading = true;
-        SceneManager.LoadScene(sceneName);
+        LoadingScreen.Load(sceneName);
         return true;
     }
 
