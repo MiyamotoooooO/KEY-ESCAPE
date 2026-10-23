@@ -148,7 +148,6 @@ public class StageSelectUI : MonoBehaviour
     private float _lastMouseMoveTime = -10f;
     private StageNodeButton _selected;
     private bool _silentSelect; // ページをめくる時の選び直しで、カードを動かした音を鳴らさないため
-    private StageNodeButton _autoNode; // 画面を開いた時に、自動で選んだカード（「新しい」の吹き出しの判定に使う）
     private Coroutine _lockedMessageRoutine;
 
     private float _prevTimeScale = 1f;
@@ -248,9 +247,8 @@ public class StageSelectUI : MonoBehaviour
             _page = 0;
         }
 
-        // 前に選んでいたカードは、覚えておかない（「新しい」の吹き出しの判定が、狂わないように）。
+        // 前に選んでいたカードは、覚えておかない。
         _selected = null;
-        _autoNode = null;
 
         RefreshNodes(catalog);
 
@@ -423,7 +421,6 @@ public class StageSelectUI : MonoBehaviour
             bool unlocked = entry != null && StageProgress.IsUnlocked(node.stageId);
             bool cleared = entry != null && StageProgress.IsCleared(node.stageId);
             node.Setup(entry, unlocked, cleared, this);
-            node.SetNew(unlocked && !StageProgress.IsSeen(node.stageId));
 
             if (unlocked)
             {
@@ -435,8 +432,7 @@ public class StageSelectUI : MonoBehaviour
         }
 
         // 全部クリア済みなら、最後に解放されたステージを選んでおく。
-        _autoNode = defaultNode != null ? defaultNode : lastUnlocked;
-        Select(_autoNode);
+        Select(defaultNode != null ? defaultNode : lastUnlocked);
     }
 
     /// <summary>ステージを選んで、情報欄を更新する（確認の画面は出さない）。</summary>
@@ -447,13 +443,6 @@ public class StageSelectUI : MonoBehaviour
 
         if (!_silentSelect && previous != null && node != null && previous != node)
             SoundEffects.Play(SEId.StageSelectMove);
-
-        // 「新しい」の吹き出し：カーソルを当てたステージは、見たことにして、吹き出しを消す。
-        // 画面を開いた時に、最初から選ばれているカードは、そこからカーソルが離れるまでは数えない。
-        if (previous != null && previous != node)
-            MarkSeen(previous);
-        if (node != null && node != _autoNode)
-            MarkSeen(node);
 
         foreach (StageNodeButton n in _nodes)
         {
@@ -752,15 +741,6 @@ public class StageSelectUI : MonoBehaviour
             OnLockedNodeClicked(_selected);
     }
 
-    /// <summary>ステージを「見た」ことにして、「新しい」の吹き出しを消す（解放済みのステージだけ）。</summary>
-    private void MarkSeen(StageNodeButton node)
-    {
-        if (node == null || !node.IsUnlocked)
-            return;
-        StageProgress.MarkSeen(node.stageId);
-        node.SetNew(false);
-    }
-
     // ---- 出発 ---------------------------------------------------
 
     private void Depart()
@@ -780,8 +760,6 @@ public class StageSelectUI : MonoBehaviour
             Debug.LogWarning("[StageSelectUI] シーン「" + entry.sceneName + "」を読み込めません。File > Build Settingsに、このシーンを追加してください。");
             return;
         }
-
-        MarkSeen(_selected); // 決定したステージは、見たことにする。
 
         // 止めていた時間とカーソルの状態を戻してから、シーンを切り替える。（出発するときは、戻れない設定もOFFに戻す）
         BackLocked = false;

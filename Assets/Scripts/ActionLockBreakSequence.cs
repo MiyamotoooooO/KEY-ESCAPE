@@ -2,6 +2,43 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+
+/// <summary>
+/// アクション解放のあとに出る説明（ヒント）の設定。ActionLockBreakSequence の Hint に並ぶ。
+/// </summary>
+[System.Serializable]
+public class ActionUnlockHintSettings
+{
+    [Tooltip("OFFなら、説明を出さない。")]
+    public bool enabled = true;
+    [Tooltip("ONなら、最初にアクションが解放されたときだけ出す（セーブデータに「見た」と記録する）。OFFなら、アクションが解放されるたびに出す。")]
+    public bool onlyOnce = true;
+    [Tooltip("説明のパネル（Assets/Prefab/GimmickIntroUI）。空なら、シーンにあるヒントのゾーン（GimmickIntroZone）のパネルを借りる。それも無いときは、説明は出ない。")]
+    public GimmickIntroUI hintUiPrefab;
+    [Tooltip("セリフが出てから、Spaceを受け付けるまでの秒数（うっかり飛ばさないため）。")]
+    public float inputDelay = 0.5f;
+
+    [Header("セリフ（上から順に出る。Spaceで次へ）")]
+    [TextArea(2, 4)]
+    [Tooltip("{action} と書くと、いま解放されたアクションの名前（例：ジャンプ）に置きかわる。複数のときは「・」でつなぐ。全角スペースと、「〜」は、フォントによって表示されないので使わない。")]
+    public string[] messages = new string[]
+    {
+        "これはアクション解放！ 特定のステージをクリアすると、新しいアクションを解放できるんだ!!",
+        "「{action}」が使えるようになったよ。Tabで開くキーコンフィグで、キーを割り当ててみよう！",
+    };
+
+    [Header("文字の見た目")]
+    [Tooltip("セリフの文字の大きさ。0なら、パネルに設定してある大きさのまま。")]
+    public float textSize = 0f;
+    [Tooltip("ONなら、下の Text Color をセリフの色にする。OFFなら、パネルのままの色。")]
+    public bool overrideTextColor = false;
+    public Color textColor = Color.white;
+    [Tooltip("セリフが1秒間に出る文字数。0なら、パネルに設定してある速さのまま。")]
+    public float charsPerSecond = 0f;
+    [Tooltip("セリフの行の間隔（0がふつう。大きくすると、広がる）。")]
+    public float lineSpacing = 0f;
+}
 
 /// <summary>
 /// KEY ESCAPE - アクション解放の演出。ステージクリアで新しく使えるようになったアクションの「ロック」を、
@@ -111,6 +148,10 @@ public class ActionLockBreakSequence : MonoBehaviour
     [Tooltip("演出が始まってから、スキップを受け付けない秒数（結果画面を閉じたキーが、そのままスキップにならないように）。")]
     public float skipGuardTime = 0.3f;
 
+    [Header("解放のヒント（ロックを壊したあとに出る説明）")]
+    public ActionUnlockHintSettings hint = new ActionUnlockHintSettings();
+
+    private const string HintSeenId = "ActionUnlockHint";
     private const float StageY = -10000f;
     private const float IntroWaitMax = 4f;
     private const float FootPivot = 0.08f; // 撮影場所の映像で、足元がある高さ（下から）
@@ -121,6 +162,8 @@ public class ActionLockBreakSequence : MonoBehaviour
     private GameObject _skipPromptObj;
     private float _startTime;
     private bool _lockedPlayer;
+    private bool _hintShowing;      // 説明を出している最中（このときのSpaceは、説明が使う）
+    private List<GameAction> _actions;
     private PlayerMovement _player;
     private ResultCharacterStage _stage;
     private GameObject _runner;
@@ -197,14 +240,17 @@ public class ActionLockBreakSequence : MonoBehaviour
         }
 
         _startTime = Time.unscaledTime;
-        SetSkipPrompt(true);
+        SetSkipPrompt(!HintPending());   // 説明が出る回は、「SPACEでスキップ」の案内も出さない
         StartCoroutine(Run(config, list));
         return true;
     }
 
     private void Update()
     {
-        if (!_running || Time.unscaledTime - _startTime < skipGuardTime)
+        // 説明が出る回（最初の解放）は、飛ばせない。説明を出している間のSpaceも、説明が使う。
+        if (!_running || _hintShowing || Time.unscaledTime - _startTime < skipGuardTime)
+            return;
+        if (HintPending())
             return;
         if (Input.GetKeyDown(KeyCode.Space))
             Skip();
@@ -238,6 +284,7 @@ public class ActionLockBreakSequence : MonoBehaviour
     {
         if (!_running)
             return;
+
         StopAllCoroutines();
         Cleanup();
     }
@@ -258,6 +305,7 @@ public class ActionLockBreakSequence : MonoBehaviour
 
     private IEnumerator Run(KeyConfigUI config, List<GameAction> actions)
     {
+        _actions = actions;
         try
         {
             // 解放するアクションの行を、ロック中の見た目のまま、画面を開く。
@@ -293,6 +341,10 @@ public class ActionLockBreakSequence : MonoBehaviour
                     yield return WaitReal(betweenActions);
             }
 
+            // 最初の解放なら、説明を出す。
+            if (HintPending())
+                yield return ShowHint();
+
             yield return WaitReal(endWait);
         }
         finally
@@ -306,11 +358,8 @@ public class ActionLockBreakSequence : MonoBehaviour
     /// 揺れを戻し、キャラクター・破片・撮影場所を消し、ロック表示の固定を外して、キーコンフィグ画面を閉じ、
     /// ゲームの停止と操作のロックを解除する。2回呼ばれても、2回目は何もしない。
     /// </summary>
-    private void Cleanup()
+    private void CleanupVisuals()
     {
-        if (!_running)
-            return;
-
         if (_zoomCoroutine != null)
             StopCoroutine(_zoomCoroutine);
         _zoomCoroutine = null;
@@ -343,6 +392,14 @@ public class ActionLockBreakSequence : MonoBehaviour
         _stage = null;
 
         SetSkipPrompt(false);
+    }
+
+    private void Cleanup()
+    {
+        if (!_running)
+            return;
+
+        CleanupVisuals();
 
         if (_config != null)
         {
@@ -357,6 +414,117 @@ public class ActionLockBreakSequence : MonoBehaviour
         _lockedPlayer = false;
         GamePause.Release(this);
         _running = false;
+    }
+
+    // ---- 解放の説明（ヒント） ---------------------------------------------
+
+    private bool HintPending()
+    {
+        if (hint == null || !hint.enabled || hint.messages == null || hint.messages.Length == 0)
+            return false;
+        if (hint.onlyOnce && SaveManager.Data != null && SaveManager.Data.seenIntros != null
+            && SaveManager.Data.seenIntros.Contains(HintSeenId))
+            return false;
+        return ResolveHintPrefab() != null;
+    }
+
+    private GimmickIntroUI ResolveHintPrefab()
+    {
+        if (hint.hintUiPrefab != null)
+            return hint.hintUiPrefab;
+        GimmickIntroZone zone = FindObjectOfType<GimmickIntroZone>(true);
+        return zone != null ? zone.uiPrefab : null;
+    }
+
+    private string ActionNames()
+    {
+        if (_actions == null || _actions.Count == 0)
+            return "";
+        List<string> names = new List<string>();
+        for (int i = 0; i < _actions.Count; i++)
+            names.Add(GameActionLabel.Get(_actions[i]));
+        return string.Join("・", names.ToArray());
+    }
+
+    /// <summary>説明のパネルで、セリフを順に出す（Spaceで次へ。文字が出ている間のSpaceは、全文を出す）。</summary>
+    private IEnumerator ShowHint()
+    {
+        GimmickIntroUI prefab = ResolveHintPrefab();
+        if (prefab == null)
+            yield break;
+
+        _hintShowing = true;
+        SetSkipPrompt(false);
+
+        // 「見た」と記録する（途中で閉じられても、次から出さない）。
+        if (SaveManager.Data != null && SaveManager.Data.seenIntros != null
+            && !SaveManager.Data.seenIntros.Contains(HintSeenId))
+        {
+            SaveManager.Data.seenIntros.Add(HintSeenId);
+            SaveManager.Save();
+        }
+
+        GimmickIntroUI ui = Instantiate(prefab);
+        try
+        {
+            ApplyHintStyle(ui);
+            SoundEffects.Play(SEId.DialogueOpen);
+            string names = ActionNames();
+
+            for (int i = 0; i < hint.messages.Length; i++)
+            {
+                string msg = hint.messages[i];
+                if (string.IsNullOrEmpty(msg))
+                    continue;
+                msg = msg.Replace("{action}", names).Replace('　', ' ');
+
+                ui.Show(msg);
+                float t = 0f;
+                while (true)
+                {
+                    t += Time.unscaledDeltaTime;
+                    bool typing = ui.IsTyping;
+                    ui.SetPromptVisible(!typing && t >= hint.inputDelay);
+                    if (t >= hint.inputDelay && Input.GetKeyDown(KeyCode.Space))
+                    {
+                        if (typing)
+                            ui.CompleteText();
+                        else
+                            break;
+                    }
+                    yield return null;
+                }
+                SoundEffects.Play(SEId.DialogueAdvance);
+                ui.Hide();
+            }
+        }
+        finally
+        {
+            if (ui != null)
+                Destroy(ui.gameObject);
+            _hintShowing = false;
+        }
+    }
+
+    /// <summary>設定した文字の大きさ・色・速さを、説明パネルに反映する（0・OFFの項目は、パネルのまま）。</summary>
+    private void ApplyHintStyle(GimmickIntroUI ui)
+    {
+        if (ui == null)
+            return;
+        if (hint.charsPerSecond > 0f)
+            ui.charsPerSecond = hint.charsPerSecond;
+        TMP_Text tx = ui.messageText;
+        if (tx == null)
+            return;
+        if (hint.textSize > 0f)
+        {
+            tx.enableAutoSizing = false;
+            tx.fontSize = hint.textSize;
+        }
+        if (hint.overrideTextColor)
+            tx.color = hint.textColor;
+        if (!Mathf.Approximately(hint.lineSpacing, 0f))
+            tx.lineSpacing = hint.lineSpacing;
     }
 
     // ---- 1つのロックを壊す -------------------------------------------------

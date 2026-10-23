@@ -23,21 +23,6 @@ public static class StageProgress
         SaveManager.Save();
     }
 
-    /// <summary>ステージ選択画面で、一度でもカーソルを当てたか（「新しい」の吹き出しを出すかどうかに使う）。</summary>
-    public static bool IsSeen(string id)
-    {
-        return !string.IsNullOrEmpty(id) && SaveManager.Data.seenStages.Contains(id);
-    }
-
-    /// <summary>ステージを「見た」ことにして、すぐ保存する。</summary>
-    public static void MarkSeen(string id)
-    {
-        if (string.IsNullOrEmpty(id) || IsSeen(id))
-            return;
-        SaveManager.Data.seenStages.Add(id);
-        SaveManager.Save();
-    }
-
     /// <summary>ステージのベストタイム（秒）。記録が無ければ、false。</summary>
     public static bool TryGetBestTime(string id, out float seconds)
     {

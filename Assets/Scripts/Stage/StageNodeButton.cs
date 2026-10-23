@@ -30,7 +30,7 @@ public class StageNodeButton : MonoBehaviour, IPointerClickHandler, IPointerEnte
     public GameObject clearedMark;
     [Tooltip("選択中の時に表示する枠。")]
     public GameObject selectedFrame;
-    [Tooltip("カード用。解放されたばかりで、まだカーソルを当てていないステージに出す吹き出し。一度カーソルを当てると消える（記録はセーブされる）。")]
+    [Tooltip("使われていない（「新しい」の吹き出しは廃止した）。入っていても、常に非表示になる。シーンのこのオブジェクトは、削除してよい。")]
     public GameObject newBadge;
 
     [Header("カード用の見た目")]
@@ -48,6 +48,9 @@ public class StageNodeButton : MonoBehaviour, IPointerClickHandler, IPointerEnte
 
     private void Awake()
     {
+        // 廃止した「新しい」の吹き出しは、常に隠す。
+        if (newBadge != null)
+            newBadge.SetActive(false);
         EnsureInitialized();
     }
 
@@ -116,13 +119,6 @@ public class StageNodeButton : MonoBehaviour, IPointerClickHandler, IPointerEnte
             clearedMark.SetActive(unlocked && cleared);
         if (selectedFrame != null)
             selectedFrame.SetActive(false);
-    }
-
-    /// <summary>「新しい」の吹き出しを、出す／消す。</summary>
-    public void SetNew(bool isNew)
-    {
-        if (newBadge != null)
-            newBadge.SetActive(isNew);
     }
 
     public void SetSelected(bool selected)

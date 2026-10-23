@@ -17,6 +17,7 @@ using UnityEngine;
 public static class ActionLockBreakSetup
 {
     private const string KeyPrefabPath = "Assets/Prefab/Mob/Enemy/KeyNPC_Visual.prefab";
+    private const string HintUiPrefabPath = "Assets/Prefab/GimmickIntroUI.prefab";
 
     [MenuItem("Tools/KEY ESCAPE/ロック解除演出/シーンに追加する")]
     public static void Setup()
@@ -61,6 +62,9 @@ public static class ActionLockBreakSetup
             if (other != null)
                 seq.skipPrompt = other.skipPrompt;
         }
+
+        if (seq.hint != null && seq.hint.hintUiPrefab == null)
+            seq.hint.hintUiPrefab = AssetDatabase.LoadAssetAtPath<GimmickIntroUI>(HintUiPrefabPath);
 
         EditorUtility.SetDirty(seq);
         EditorSceneManager.MarkSceneDirty(host.scene);
