@@ -22,9 +22,9 @@ MonoBehaviour:
     sceneName: Tutorial
     rewards: 06000000
   - id: Stage1
-    displayName: "\u98DB\u3073\u8D8A\u3048\u308D"
+    displayName: "\u65B0\u305F\u306A\u51FA\u4F1A\u3044"
     stageNumber: 1-1
     thumbnail: {fileID: 21300000, guid: 65eeaaeba3ad3774a80bf0362f665fda, type: 3}
     description: 
     sceneName: Stage1
-    rewards: 
+    rewards: 04000000
