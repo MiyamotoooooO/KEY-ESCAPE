@@ -14,6 +14,7 @@ using UnityEngine.UI;
 ///       - フォント         : シーンの中の文字から借りる
 ///       - 絵               : キー素材・DoorImage（ドア枠）・DoorUtigawaImage（ドア）・キーボード背景・モニター・moveBG（部屋の地面）・ゲームの Ground / Grass
 ///       - タイトルの部品   : ロゴ（シーンの中の dasda_0）・メニューのボタン
+///       - モニター正面     : Assets/sprite/UI/モニター正面.png（「はじめから」のムービーの、モニターのアップ。空の欄にだけ入る）
 ///       - Kキー            : Assets/KeyDefinition/Key_K.asset（「はじめから」のあと、拠点で仲間になる）
 ///   ・TitleMenu の「Opening Movie」に、割り当てる。
 ///   ・何回実行しても、同じ結果になる。
@@ -110,6 +111,9 @@ public static class OpeningMovieSetup
         AssignSprite(ref movie.keyboardSprite, "Assets/sprite/UI/キーボード背景.png", ref report);
         AssignSprite(ref movie.monitorSprite, "Assets/sprite/UI/モニター.png", ref report);
         AssignSprite(ref movie.roomGroundSprite, "Assets/sprite/UI/moveBG.png", ref report);
+        // 「はじめから」のムービーの、モニターのアップ（空の欄にだけ入る。自分で入れた絵は、そのまま残る）
+        if (movie.introMonitorSprite == null)
+            AssignSprite(ref movie.introMonitorSprite, "Assets/sprite/UI/モニター正面.png", ref report);
         AssignSprite(ref movie.groundSprite, "Assets/MetroidvaniaController/Sprites/Ground.png", ref report);
         AssignSprite(ref movie.grassSprite, "Assets/MetroidvaniaController/Sprites/Grass.png", ref report);
 
@@ -131,6 +135,16 @@ public static class OpeningMovieSetup
                 movie.introKey = keyK;
             else
                 report += "\n・Kキー（Assets/KeyDefinition/Key_K.asset）が見つかりません。OpeningMovie の Intro Key に、Key_K を入れてください。";
+        }
+
+        // 会話のあとのヒント（Tabでキーコンフィグ）の説明パネル（空の欄にだけ入る）
+        if (movie.introTalk != null && movie.introTalk.tutorial != null && movie.introTalk.tutorial.hintUiPrefab == null)
+        {
+            GimmickIntroUI hintUi = AssetDatabase.LoadAssetAtPath<GimmickIntroUI>("Assets/Prefab/GimmickIntroUI.prefab");
+            if (hintUi != null)
+                movie.introTalk.tutorial.hintUiPrefab = hintUi;
+            else
+                report += "\n・ヒントの説明パネル（Assets/Prefab/GimmickIntroUI.prefab）が見つかりません。OpeningMovie の Intro Talk > Tutorial > Hint Ui Prefab に入れてください。";
         }
 
         // 音（空の欄にだけ入る。Collapse Se は、まだ決まっていないので、空のまま）

@@ -2963,7 +2963,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 39.000015, y: -145.456}
+  m_AnchoredPosition: {x: 39.000015, y: -0.000015258789}
   m_SizeDelta: {x: -64.99997, y: 0}
   m_Pivot: {x: 0.4, y: 0.8}
 --- !u!114 &292901696
@@ -8316,6 +8316,29 @@ MonoBehaviour:
   lockPlayerWhileShowing: 1
   playerMovement: {fileID: 0}
   pauseGameWhileShowing: 1
+  keyCharacterPrefab: {fileID: 0}
+  characterView: {fileID: 0}
+  characterScale: 1
+  characterViewHeight: 2.2
+  characterFacesRight: 0
+  keyMotion:
+    randomMotion: 1
+    motions: 0200000003000000040000000500000006000000
+    intervalMin: 2
+    intervalMax: 4
+  commentText: {fileID: 0}
+  playShowSound: 1
+  confettiLayer: {fileID: 0}
+  confettiSprites: []
+  confettiPerSecond: 9
+  confettiSizeMin: 40
+  confettiSizeMax: 80
+  confettiFallMin: 220
+  confettiFallMax: 420
+  muteBgmWhileShowing: 1
+  bgmFadeOutTime: 0.4
+  bgmFadeInTime: 0.5
+  unlockSequence: {fileID: 0}
 --- !u!1 &953406394
 GameObject:
   m_ObjectHideFlags: 0
@@ -15038,9 +15061,15 @@ MonoBehaviour:
   confettiSize: 40
   clearBgm: {fileID: 8300000, guid: 861efab67329bc04196c512e73ebfb14, type: 3}
   clearBgmLoop: 1
+  clearBgmVolume: 1
   keyPrefab: {fileID: 6788922781978684695, guid: af009bf518c95344e96534e88bfde0bf, type: 3}
   keyFacesRight: 0
   keyScale: 1
+  keyMotion:
+    randomMotion: 1
+    motions: 0200000003000000040000000500000006000000
+    intervalMin: 2
+    intervalMax: 4
   cheerEmotePrefabs:
   - {fileID: 5186375431679222622, guid: 7c7322edeef3f9b4cba30fa1c0c88dae, type: 3}
   - {fileID: 5513734163778149615, guid: 875e8b9cec2c5424d9262b2d297b9b6b, type: 3}
@@ -15618,6 +15647,7 @@ MonoBehaviour:
   modifierStatusText: {fileID: 2095441702}
   keyGridContent: {fileID: 292901695}
   keyGridButtonPrefab: {fileID: 268545480929545936, guid: bdc28803694f2a84eae3419dd84df1a8, type: 3}
+  keyListScrollSensitivity: 40
   currentFilter: 0
   filterTabs: {fileID: 0}
   infoPanel: {fileID: 1698226046}
@@ -15646,11 +15676,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f11c2991a4998c440996b5c79e5f1a94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  startingKeys:
-  - {fileID: 11400000, guid: c9740522cc74a52449248c0afaedd203, type: 2}
-  - {fileID: 11400000, guid: 536048a786a296e49bdaba3a441bd88d, type: 2}
-  - {fileID: 11400000, guid: e73eb4669b0f23e47a05616f9e7823f0, type: 2}
-  - {fileID: 11400000, guid: 21f78bb7ce116c441b43a99a9891c1db, type: 2}
+  startingKeys: []
   allKeyDefinitions:
   - {fileID: 11400000, guid: c9740522cc74a52449248c0afaedd203, type: 2}
   - {fileID: 11400000, guid: 8523badd6e7a3ea45a2a27776628cd78, type: 2}
@@ -15695,16 +15721,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   defaultBindings:
   - action: 0
-    key: {fileID: 11400000, guid: c9740522cc74a52449248c0afaedd203, type: 2}
+    key: {fileID: 0}
     unlockedFromStart: 1
   - action: 1
-    key: {fileID: 11400000, guid: 536048a786a296e49bdaba3a441bd88d, type: 2}
+    key: {fileID: 0}
     unlockedFromStart: 1
   - action: 2
-    key: {fileID: 11400000, guid: 21f78bb7ce116c441b43a99a9891c1db, type: 2}
+    key: {fileID: 0}
     unlockedFromStart: 1
   - action: 3
-    key: {fileID: 11400000, guid: e73eb4669b0f23e47a05616f9e7823f0, type: 2}
+    key: {fileID: 0}
     unlockedFromStart: 1
   - action: 4
     key: {fileID: 0}
@@ -16036,7 +16062,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 225764473}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.99997014
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

@@ -149,20 +149,20 @@ public class OpeningMovie : MonoBehaviour
     public bool introSkippable = false;
     [Tooltip("モニターの検索欄に出る言葉。（全角の空白は、フォントに無いので、半角の空白に置きかわる）")]
     public string introSearchText = "逃亡 仕方 バレる？";
-    [Tooltip("モニターのアップの絵（正面から見た、モニター全体）。空なら、コードで描いた仮のモニター。\n絵を入れたときは、検索欄の言葉だけが、下の設定で重なって出る。")]
+    [Tooltip("モニターのアップの絵（正面から見た、モニター全体）。空なら、コードで描いた仮のモニター。\n絵を入れたときは、絵の中の「画面」の部分に、検索のページと言葉が重なって出る。")]
     public Sprite introMonitorSprite;
     [Tooltip("モニターの絵の、横の長さ（画面の横いっぱいが、約18）。縦は、絵の縦横比で決まる。")]
     public float introMonitorWidth = 15.6f;
-    [Tooltip("モニターの絵を使うとき：検索欄の言葉を出す位置（絵の中心からのずれ。右が＋、上が＋）。")]
-    public Vector2 introTextOffset = new Vector2(0f, 0.7f);
-    [Tooltip("モニターの絵を使うとき：言葉の文字の大きさ。")]
-    public float introTextSize = 0.62f;
-    [Tooltip("モニターの絵を使うとき：言葉の色。")]
-    public Color introTextColor = new Color(0.14f, 0.14f, 0.2f);
-    [Tooltip("モニターの絵を使うとき：ONなら、言葉の左はしを、上の位置にそろえる。OFFなら、位置を中心にする。")]
-    public bool introTextLeftAligned = true;
+    [Tooltip("モニターの絵の中の「画面」の位置と大きさ。絵全体を 0〜1 として、左下が原点（X, Y = 画面の左下、Width, Height = 画面の大きさ）。\n初期値は「モニター正面」の絵に合わせてある。")]
+    public Rect introMonitorScreen = new Rect(0.055f, 0.266f, 0.890f, 0.619f);
     [Tooltip("OFFにすると、検索欄の言葉を出さない（絵に、はじめから言葉が描いてあるとき）。")]
     public bool introShowSearchText = true;
+
+    [Header("「はじめから」前半の、「…？」「…！？」の吹き出し")]
+    [Tooltip("位置のずれ（右が＋、上が＋）。")]
+    public Vector2 introPopOffset = Vector2.zero;
+    [Tooltip("文字の大きさの倍率。1＝そのまま。")]
+    public float introPopScale = 1f;
 
     [Header("「はじめから」を押したあとのBGM")]
     [Tooltip("「はじめから」を押した瞬間に切り替わるBGM。空なら、BGMはそのまま。")]
@@ -171,8 +171,8 @@ public class OpeningMovie : MonoBehaviour
     public float introBgmVolume = 1f;
     [Tooltip("切り替えるときの、クロスフェードの秒数。")]
     public float introBgmFade = 0.8f;
-    [Tooltip("ONなら、拠点でKキーと話している間も、このBGMを流す（話が終わると、拠点のBGMに切り替わる）。OFFなら、拠点に着いた時点で、拠点のBGMに切り替わる。")]
-    public bool introBgmContinuesToTalk = true;
+    [Tooltip("ONなら、拠点でKキーと話している間も、このBGMを流す（話が終わると、拠点のBGMに切り替わる）。OFF（初期値）なら、拠点に着いた時点で、拠点のBGMに切り替わる。")]
+    public bool introBgmKeepDuringTalk = false;
 
     [Header("「はじめから」のあとの会話（拠点で流れる）")]
     [Tooltip("Kキーとの会話のセリフ・名前・枠の絵・文字の見た目。")]
@@ -2577,7 +2577,7 @@ public class OpeningMovie : MonoBehaviour
     public void PrepareNewGameIntro(string hubScene)
     {
         TMP_FontAsset f = _font != null ? _font : (font != null ? font : FindSceneFont());
-        NewGameIntro.Prepare(hubScene, keyCharacterPrefab, introKey, f, introTalk, introBgm != null && introBgmContinuesToTalk);
+        NewGameIntro.Prepare(hubScene, keyCharacterPrefab, introKey, f, introTalk, introBgm != null && introBgmKeepDuringTalk);
     }
 
     private void FinishIntro()
@@ -2649,11 +2649,11 @@ public class OpeningMovie : MonoBehaviour
         StartCoroutine(Tween(5.0f, k => _camSize = Mathf.Lerp(5.4f, 5.1f, k)));
         yield return Wait(1.6f);
 
-        StartCoroutine(PopText(rt, "…？", new Vector2(0.2f, 1.0f), 2.2f, new Color(1f, 0.95f, 0.78f), 1.2f, -4f));
+        StartCoroutine(PopText(rt, "…？", new Vector2(0.2f, 1.0f) + introPopOffset, 2.2f * introPopScale, new Color(1f, 0.95f, 0.78f), 1.2f, -4f));
         yield return Wait(1.6f);
 
         Shake(0.25f, 0.4f);
-        StartCoroutine(PopText(rt, "…！？", new Vector2(-0.3f, 0.8f), 2.6f, new Color(1f, 0.9f, 0.7f), 1.1f, 5f));
+        StartCoroutine(PopText(rt, "…！？", new Vector2(-0.3f, 0.8f) + introPopOffset, 2.6f * introPopScale, new Color(1f, 0.9f, 0.7f), 1.1f, 5f));
         yield return Wait(1.9f);
 
         // 左上のモニターへ、目を向ける
@@ -2671,7 +2671,7 @@ public class OpeningMovie : MonoBehaviour
         Destroy(root);
     }
 
-    /// <summary>前半その2：モニターのアップ。検索欄に、「逃亡　仕方　バレる？」と残っている。</summary>
+    /// <summary>前半その2：モニターのアップ。検索欄に、「逃亡 仕方 バレる？」と残っている。</summary>
     private IEnumerator IntroMonitor()
     {
         GameObject root = NewRoot("Intro_Monitor");
@@ -2687,88 +2687,83 @@ public class OpeningMovie : MonoBehaviour
         SpriteRenderer halo = Spr(rt, "Halo", _glow, new Vector2(0f, 0.4f), new Vector2(26f, 16f), new Color(0.62f, 0.80f, 1f, 0f), 1);
 
         bool customMon = introMonitorSprite != null;
-        Color screenOff = new Color(0.04f, 0.04f, 0.06f);
-        Color screenOn = new Color(0.94f, 0.96f, 0.99f);
-        Color artOff = new Color(0.16f, 0.16f, 0.2f);
-        SpriteRenderer screen = null;
+        Color screenOn = new Color(0.94f, 0.96f, 0.99f, 1f);
+        Color screenOff = customMon ? new Color(0.94f, 0.96f, 0.99f, 0f) : new Color(0.04f, 0.04f, 0.06f, 1f);
+        Color artOff = new Color(0.45f, 0.45f, 0.5f);
+        SpriteRenderer screen;
         SpriteRenderer monArt = null;
 
-        // 画面の中身（ブラウザの検索ページ、または、検索欄の言葉）。画面がつくまで、隠しておく
-        GameObject ui = new GameObject("Ui");
-        ui.transform.SetParent(rt, false);
-        Transform u = ui.transform;
-
-        float textSizeH;
-        Vector2 textPos;
-        TextAlignmentOptions textAlign;
-        float textRectW;
-        Color textCol;
-        float camEndY;
-        float camEndSize;
+        // 画面の位置と大きさ（ワールド座標）
+        Vector2 sc;
+        float sw;
+        float sh;
 
         if (customMon)
         {
-            // 自分で用意した、モニターの絵（まっ正面から）。言葉だけ、重ねて出す
+            // 自分で用意した、モニターの絵（まっ正面から）。絵の中の画面の部分に、検索のページを重ねる
             Vector2 ms = introMonitorSprite.bounds.size;
             float mw = Mathf.Max(1f, introMonitorWidth);
             float mh = mw * ms.y / Mathf.Max(0.0001f, ms.x);
-            monArt = Spr(rt, "MonitorArt", introMonitorSprite, new Vector2(0f, 0.4f), new Vector2(mw, mh), artOff, 4);
+            Vector2 mc = new Vector2(0f, 0.4f);
+            monArt = Spr(rt, "MonitorArt", introMonitorSprite, mc, new Vector2(mw, mh), artOff, 3);
 
-            textSizeH = introTextSize;
-            textRectW = 12f;
-            textAlign = introTextLeftAligned ? TextAlignmentOptions.Left : TextAlignmentOptions.Center;
-            textPos = new Vector2(introTextOffset.x + (introTextLeftAligned ? textRectW * 0.5f : 0f), 0.4f + introTextOffset.y);
-            textCol = introTextColor;
-            camEndY = 0.4f + introTextOffset.y * 0.5f;
-            camEndSize = 4.4f;
+            Rect r = introMonitorScreen;
+            sw = mw * r.width;
+            sh = mh * r.height;
+            sc = new Vector2(mc.x + mw * (r.x + r.width * 0.5f - 0.5f), mc.y + mh * (r.y + r.height * 0.5f - 0.5f));
         }
         else
         {
-            // モニター（まっ正面から。台つき）
+            // 仮のモニター（まっ正面から。台つき）
             Spr(rt, "Neck", _sq, new Vector2(0f, -4.2f), new Vector2(1.6f, 1.4f), new Color(0.13f, 0.13f, 0.16f), 2);
             Spr(rt, "Base", _round, new Vector2(0f, -4.95f), new Vector2(6.0f, 0.7f), new Color(0.15f, 0.15f, 0.18f), 2);
             Spr(rt, "Bezel", _round, new Vector2(0f, 0.4f), new Vector2(15.6f, 8.9f), new Color(0.11f, 0.11f, 0.14f), 3);
-            screen = Spr(rt, "Screen", _sq, new Vector2(0f, 0.45f), new Vector2(14.6f, 7.9f), screenOff, 4);
-
-            Spr(u, "TabBar", _sq, new Vector2(0f, 4.0f), new Vector2(14.6f, 0.7f), new Color(0.80f, 0.83f, 0.88f), 5);
-            Spr(u, "Tab", _round, new Vector2(-5.4f, 4.0f), new Vector2(3.8f, 0.6f), new Color(0.97f, 0.98f, 1f), 6);
-            Txt(u, "検索", new Vector2(-5.4f, 4.0f), 0.34f, new Color(0.3f, 0.32f, 0.38f), 8, false);
-            Spr(u, "ToolBar", _sq, new Vector2(0f, 3.25f), new Vector2(14.6f, 0.85f), new Color(0.93f, 0.95f, 0.98f), 5);
-            Spr(u, "AddressBar", _round, new Vector2(0f, 3.25f), new Vector2(11.4f, 0.55f), new Color(0.86f, 0.89f, 0.94f), 6);
-
-            Txt(u, "検索", new Vector2(0f, 2.15f), 1.3f, new Color(0.28f, 0.42f, 0.78f), 8, false);
-
-            Spr(u, "BoxLine", _round, new Vector2(0f, 0.7f), new Vector2(9.9f, 1.3f), new Color(0.70f, 0.74f, 0.82f), 6);
-            Spr(u, "Box", _round, new Vector2(0f, 0.7f), new Vector2(9.6f, 1.1f), Color.white, 7);
-            // 虫めがねのマーク
-            Spr(u, "IconRing", _circle, new Vector2(-4.3f, 0.72f), new Vector2(0.4f, 0.4f), new Color(0.45f, 0.5f, 0.58f), 8);
-            Spr(u, "IconHole", _circle, new Vector2(-4.3f, 0.72f), new Vector2(0.24f, 0.24f), Color.white, 9);
-            SpriteRenderer handle = Spr(u, "IconHandle", _sq, new Vector2(-4.08f, 0.5f), new Vector2(0.26f, 0.07f), new Color(0.45f, 0.5f, 0.58f), 8);
-            handle.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-
-            textSizeH = 0.62f;
-            textRectW = 8.2f;
-            textAlign = TextAlignmentOptions.Left;
-            textPos = new Vector2(0.35f, 0.7f);
-            textCol = new Color(0.14f, 0.14f, 0.2f);
-            camEndY = 0.8f;
-            camEndSize = 4.0f;
-            Spr(u, "Button", _round, new Vector2(0f, -0.55f), new Vector2(3.0f, 0.8f), new Color(0.92f, 0.94f, 0.97f), 7);
-            Txt(u, "検索", new Vector2(0f, -0.55f), 0.4f, new Color(0.3f, 0.32f, 0.38f), 9, false);
+            sw = 14.6f;
+            sh = 7.9f;
+            sc = new Vector2(0f, 0.45f);
         }
+        screen = Spr(rt, "Screen", _sq, sc, new Vector2(sw, sh), screenOff, 4);
+
+        // 画面の中身（ブラウザの検索ページ）。画面の大きさに合わせて、まとめて拡大・縮小する。画面がつくまで、隠しておく
+        float s = Mathf.Min(sw / 14.6f, sh / 7.9f);
+        float pw = sw / s;   // ページの横の長さ（ページの座標で）
+        GameObject ui = new GameObject("Ui");
+        ui.transform.SetParent(rt, false);
+        ui.transform.localPosition = new Vector3(sc.x, sc.y - 0.45f * s, 0f);
+        ui.transform.localScale = new Vector3(s, s, 1f);
+        Transform u = ui.transform;
+
+        Spr(u, "TabBar", _sq, new Vector2(0f, 4.0f), new Vector2(pw, 0.7f), new Color(0.80f, 0.83f, 0.88f), 5);
+        Spr(u, "Tab", _round, new Vector2(-pw * 0.5f + 1.9f, 4.0f), new Vector2(3.8f, 0.6f), new Color(0.97f, 0.98f, 1f), 6);
+        Txt(u, "検索", new Vector2(-pw * 0.5f + 1.9f, 4.0f), 0.34f, new Color(0.3f, 0.32f, 0.38f), 8, false);
+        Spr(u, "ToolBar", _sq, new Vector2(0f, 3.25f), new Vector2(pw, 0.85f), new Color(0.93f, 0.95f, 0.98f), 5);
+        Spr(u, "AddressBar", _round, new Vector2(0f, 3.25f), new Vector2(Mathf.Min(11.4f, pw - 3.2f), 0.55f), new Color(0.86f, 0.89f, 0.94f), 6);
+
+        Txt(u, "検索", new Vector2(0f, 2.15f), 1.3f, new Color(0.28f, 0.42f, 0.78f), 8, false);
+
+        Spr(u, "BoxLine", _round, new Vector2(0f, 0.7f), new Vector2(9.9f, 1.3f), new Color(0.70f, 0.74f, 0.82f), 6);
+        Spr(u, "Box", _round, new Vector2(0f, 0.7f), new Vector2(9.6f, 1.1f), Color.white, 7);
+        // 虫めがねのマーク
+        Spr(u, "IconRing", _circle, new Vector2(-4.3f, 0.72f), new Vector2(0.4f, 0.4f), new Color(0.45f, 0.5f, 0.58f), 8);
+        Spr(u, "IconHole", _circle, new Vector2(-4.3f, 0.72f), new Vector2(0.24f, 0.24f), Color.white, 9);
+        SpriteRenderer handle = Spr(u, "IconHandle", _sq, new Vector2(-4.08f, 0.5f), new Vector2(0.26f, 0.07f), new Color(0.45f, 0.5f, 0.58f), 8);
+        handle.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+        Spr(u, "Button", _round, new Vector2(0f, -0.55f), new Vector2(3.0f, 0.8f), new Color(0.92f, 0.94f, 0.97f), 7);
+        Txt(u, "検索", new Vector2(0f, -0.55f), 0.4f, new Color(0.3f, 0.32f, 0.38f), 9, false);
 
         // 検索欄の言葉（左から並ぶ）と、点滅するカーソル
         SpriteRenderer cursor = null;
         if (introShowSearchText)
         {
-            TextMeshPro q = Txt(u, introSearchText, textPos, textSizeH, textCol, 9, false);
-            q.alignment = textAlign;
-            q.rectTransform.sizeDelta = new Vector2(textRectW, 1f);
+            Color textCol = new Color(0.14f, 0.14f, 0.2f);
+            TextMeshPro q = Txt(u, introSearchText, new Vector2(0.35f, 0.7f), 0.62f, textCol, 9, false);
+            q.alignment = TextAlignmentOptions.Left;
+            q.rectTransform.sizeDelta = new Vector2(8.2f, 1f);
             q.ForceMeshUpdate();
             Bounds qb = q.textBounds;
             Vector3 endWorld = q.transform.TransformPoint(new Vector3(qb.max.x, qb.center.y, 0f));
             Vector3 endLocal = u.InverseTransformPoint(endWorld);
-            cursor = Spr(u, "Cursor", _sq, new Vector2(endLocal.x + 0.1f, textPos.y), new Vector2(0.05f, textSizeH * 1.1f), textCol, 9);
+            cursor = Spr(u, "Cursor", _sq, new Vector2(endLocal.x + 0.1f, 0.7f), new Vector2(0.05f, 0.68f), textCol, 9);
         }
         ui.SetActive(false);
 
@@ -2781,7 +2776,7 @@ public class OpeningMovie : MonoBehaviour
         yield return Tween(0.6f, k =>
         {
             float e = Smooth(k);
-            if (screen != null) screen.color = Color.Lerp(screenOff, screenOn, e);
+            screen.color = Color.Lerp(screenOff, screenOn, e);
             if (monArt != null) monArt.color = Color.Lerp(artOff, Color.white, e);
             halo.color = new Color(0.62f, 0.80f, 1f, 0.5f * e);
         });
@@ -2789,6 +2784,8 @@ public class OpeningMovie : MonoBehaviour
         StartCoroutine(CursorBlink(cursor));
 
         // 検索欄を、じっと見つめる（ゆっくり寄る）
+        float camEndSize = 4.0f * Mathf.Clamp(s, 0.7f, 1f);
+        float camEndY = sc.y + 0.35f * s;
         yield return Tween(4.2f, k =>
         {
             float e = Smooth(k);

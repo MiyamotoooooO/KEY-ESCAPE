@@ -52,6 +52,8 @@ public class KeyConfigUI : MonoBehaviour
     [Header("キー一覧（左：所持＋未入手を全部表示）")]
     public Transform keyGridContent;
     public GameObject keyGridButtonPrefab;
+    [Tooltip("キー一覧のスクロールの速さ（マウスホイール1目盛りで動く量）。大きいほど速い。0以下なら、シーンに設定されている値のまま。")]
+    public float keyListScrollSensitivity = 40f;
 
     [Header("絞り込みタブ（すべて／まじめ／ぶきよう／非情／らんぼう／おくびょう／きまぐれ／特殊／未入手）")]
     public KeyConfigFilter currentFilter = KeyConfigFilter.All;
@@ -88,6 +90,12 @@ public class KeyConfigUI : MonoBehaviour
     private bool _hadPanel; // 開始時にpanelRootが割り当てられていたか（あとで消えたかを見分けるため）
     /// <summary>キー設定画面が開いているか。設定画面（SettingsUI）が、Escを無視するかの判断に使う。</summary>
     public bool IsOpen => _isOpen;
+
+    /// <summary>ONの間は、画面を閉じられない（Close()を呼んでも閉じず、CloseBlocked が呼ばれる）。ヒントの説明で、使う。</summary>
+    public bool CloseLocked { get; set; }
+
+    /// <summary>CloseLocked のせいで、閉じられなかったときに呼ばれる（閉じるボタンや、Tabキー）。</summary>
+    public event System.Action CloseBlocked;
     // プロジェクト内の別のスクリプト（おそらく遠距離攻撃の照準ロジック）が、
     // 通常のゲームプレイ中にマウスカーソルを隠す/ロックしている。プレイ中は
     // それで問題ないが、そのままだとこの画面のボタンをクリックしようとしても
@@ -100,6 +108,14 @@ public class KeyConfigUI : MonoBehaviour
     private void Start()
     {
         _hadPanel = panelRoot != null;
+
+        // キー一覧のスクロールが遅いので、速さをここで決める（シーンの設定は、触らなくていい）
+        if (keyListScrollSensitivity > 0f && keyGridContent != null)
+        {
+            ScrollRect keyListScroll = keyGridContent.GetComponentInParent<ScrollRect>();
+            if (keyListScroll != null)
+                keyListScroll.scrollSensitivity = keyListScrollSensitivity;
+        }
 
         if (KeyBindingManager.Instance != null)
             KeyBindingManager.Instance.OnBindingsChanged += RefreshBindingsOnly;
@@ -187,10 +203,59 @@ public class KeyConfigUI : MonoBehaviour
         // レイアウト計算後の値を使うため、ここが一番安全なタイミング）。
         if (introAnimator != null)
             introAnimator.PlayIntro();
+
+        // キー一覧は、いつも一番上から見せる（前に下までスクロールしていても、キーが見えなくならないように）
+        ScrollKeyListToTop();
+    }
+
+    /// <summary>キー一覧を、一番上（左上）に戻す。レイアウトが確定してから戻すため、すぐと次のフレームの2回やる。</summary>
+    private void ScrollKeyListToTop()
+    {
+        ApplyScrollTop();
+        if (isActiveAndEnabled)
+            StartCoroutine(ScrollKeyListToTopNextFrame());
+    }
+
+    private System.Collections.IEnumerator ScrollKeyListToTopNextFrame()
+    {
+        yield return null;   // 作り直したタイルのレイアウトが決まるのを待つ（時間が止まっていても、フレームは進む）
+        ApplyScrollTop();
+    }
+
+    private void ApplyScrollTop()
+    {
+        if (keyGridContent == null)
+            return;
+        ScrollRect sr = keyGridContent.GetComponentInParent<ScrollRect>();
+        if (sr == null)
+            return;
+        RectTransform contentRt = keyGridContent as RectTransform;
+        if (contentRt != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRt);
+        Canvas.ForceUpdateCanvases();
+        sr.StopMovement();
+        if (sr.vertical)
+            sr.verticalNormalizedPosition = 1f;
+        if (sr.horizontal)
+            sr.horizontalNormalizedPosition = 0f;
+    }
+
+    /// <summary>CloseLocked を無視して、閉じる。</summary>
+    public void ForceClose()
+    {
+        bool prev = CloseLocked;
+        CloseLocked = false;
+        Close();
+        CloseLocked = prev;
     }
 
     public void Close()
     {
+        if (CloseLocked)
+        {
+            CloseBlocked?.Invoke();
+            return;
+        }
         // ドラッグ中に画面を閉じても、ドロップ先の背景が残らないように、ドラッグ状態を解除する。
         KeyDragState.Set(false);
         _isOpen = false;
@@ -224,6 +289,7 @@ public class KeyConfigUI : MonoBehaviour
     {
         currentFilter = filter;
         RefreshKeyList();
+        ScrollKeyListToTop();   // タブを切りかえたときも、一番上から
         if (filterTabs != null)
             filterTabs.Refresh(currentFilter);
     }
@@ -360,6 +426,8 @@ public class KeyConfigUI : MonoBehaviour
 
         var mgr = KeyBindingManager.Instance;
         string name = mgr.ModifierKeyDefinition != null ? mgr.ModifierKeyDefinition.displayName : "(未設定)";
+        // 特殊キー（Ctrl）を入手するまでは、表示を隠す（入手前の人には、意味が伝わらないため）
+        modifierStatusText.gameObject.SetActive(mgr.IsModifierUnlocked);
         modifierStatusText.text = mgr.IsModifierUnlocked ? $"特殊キー：{name}（使用可能）" : $"特殊キー：{name}（未解放）";
     }
 

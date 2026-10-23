@@ -30,10 +30,24 @@ public class NewGameIntroSettings
         public GameObject emote;
         [Tooltip("エモートを出している秒数。0なら、このセリフが終わるまで出し続ける。")]
         public float emoteSeconds = 0f;
+        [Tooltip("このセリフのエモートだけ、位置をずらす（共通の Emote Offset に、足される）。右が＋、上が＋。")]
+        public Vector2 emoteOffset = Vector2.zero;
+        [Tooltip("このセリフのエモートだけ、大きさを変える（共通の Emote Scale に、掛けられる）。1＝そのまま。")]
+        public float emoteScale = 1f;
+        [Tooltip("このセリフだけ、文字の大きさを変える。0なら、共通の Text Size を使う。")]
+        public float textSize = 0f;
 
         public Line() { }
         public Line(Speaker speaker, string text) { this.speaker = speaker; this.text = text; }
     }
+
+    [Header("Kキーの位置・主人公の歩き（「Kキーの位置の目印」を置いていないときに使う）")]
+    [Tooltip("主人公が出てきた場所から、右へ何ユニットの所にKキーを置くか。家の前に置きたいので、小さめ。大きくするほど、右へ遠くなる。")]
+    public float keyOffsetX = 3.0f;
+    [Tooltip("話すときの、2人の間の距離。")]
+    public float talkGap = 1.6f;
+    [Tooltip("主人公が、Kキーへ歩く速さ。")]
+    public float walkSpeed = 3.0f;
 
     [Header("セリフ（上から順に流れる）")]
     public Line[] lines = new Line[]
@@ -54,11 +68,25 @@ public class NewGameIntroSettings
     [Tooltip("ONなら、Escで、会話をぜんぶ飛ばせる。OFFなら、飛ばせない（Spaceは、セリフを送るだけ）。")]
     public bool skippable = false;
 
+    [Header("会話のあとのヒント（キーコンフィグの説明）")]
+    public NewGameTutorialSettings tutorial = new NewGameTutorialSettings();
+
     [Header("映画のような黒い帯（画面の上と下）")]
     public bool letterbox = true;
     [Tooltip("帯の高さ（画面の高さに対する割合）。0.125 = 12.5%")]
     [Range(0f, 0.3f)]
     public float letterboxRatio = 0.125f;
+
+    [Header("カメラ（会話が始まると、Kキーに視点が移る）")]
+    [Tooltip("ONなら、会話が始まるときに、カメラがKキーに移る。会話が終わると、主人公にもどる。")]
+    public bool focusOnKey = true;
+    [Tooltip("Kキーに寄るときの、画面の広さの割合。0.8なら、2割寄る（拡大）。1なら、寄らない。")]
+    [Range(0.4f, 1f)]
+    public float focusZoom = 0.8f;
+    [Tooltip("寄る秒数。")]
+    public float focusZoomSeconds = 1.2f;
+    [Tooltip("カメラが見る場所の、Kキーの体の中心からのずれ（右が＋、上が＋）。会話の枠が下にあるので、少し下を見ると、Kキーが上に映る。")]
+    public Vector2 focusOffset = new Vector2(0f, -0.3f);
 
     [Header("エモート")]
     [Tooltip("Kキーの足元から、エモートまでの距離（ワールド単位）。頭の上に来るように。")]
@@ -185,10 +213,6 @@ public class NewGameIntro : MonoBehaviour
 
     // ================= 調整できる数字 =================
 
-    private const float KeyAheadMin = 5f;       // 主人公から、Kキーまでの距離（画面の広さに合わせて、この間で決まる）
-    private const float KeyAheadMax = 9f;
-    private const float TalkGap = 2.6f;         // 話すときの、2人の間の距離
-    private const float WalkSpeed = 4.0f;       // 主人公が、Kキーへ歩く速さ
     private const float CharInterval = 0.04f;   // 1文字ずつ出る間隔
 
     // ================= 状態 =================
@@ -209,6 +233,11 @@ public class NewGameIntro : MonoBehaviour
     private RectTransform _barTop;
     private RectTransform _barBottom;
     private float _barPx;
+
+    private CameraFollow _camFollow;
+    private Transform _camOldTarget;
+    private GameObject _focusPoint;
+    private bool _focused;
 
     private GameObject _emoteAnchor;
     private GameObject _emote;
@@ -235,6 +264,7 @@ public class NewGameIntro : MonoBehaviour
             {
                 all[i].enabled = false;   // Startが呼ばれないので、BGMは切り替わらない
                 _heldBgm.Add(all[i]);
+                Debug.Log("[NewGameIntro] 拠点のBGM（" + (all[i].clip != null ? all[i].clip.name : "Clipが空") + "）を、話が終わるまで止めておきます");
             }
         }
     }
@@ -245,7 +275,11 @@ public class NewGameIntro : MonoBehaviour
         for (int i = 0; i < _heldBgm.Count; i++)
         {
             if (_heldBgm[i] != null)
+            {
                 _heldBgm[i].enabled = true;
+                _heldBgm[i].Play();   // Startを待たずに、いま切り替える（同じ曲がすでに鳴っていれば、何も起きない）
+                Debug.Log("[NewGameIntro] 拠点のBGMに切り替えました：" + (_heldBgm[i].clip != null ? _heldBgm[i].clip.name : "Clipが空（BGMに触れません）"));
+            }
         }
         _heldBgm.Clear();
     }
@@ -270,11 +304,15 @@ public class NewGameIntro : MonoBehaviour
     {
         IsPlaying = false;
         ReleaseSceneBgm();
+        UnfocusKey();
         if (_emoteAnchor != null)
             Destroy(_emoteAnchor);
         if (_canvasGo != null)
             Destroy(_canvasGo);
     }
+
+    private Vector2 _emoteLineOffset = Vector2.zero;   // 今のセリフ用の、足すずれ
+    private float _emoteLineScale = 1f;                // 今のセリフ用の、掛ける拡大率
 
     private void Update()
     {
@@ -285,8 +323,8 @@ public class NewGameIntro : MonoBehaviour
         if (_emoteAnchor != null)
         {
             if (_keyGo != null)
-                _emoteAnchor.transform.position = _keyGo.transform.position + (Vector3)S.emoteOffset;
-            _emoteAnchor.transform.localScale = Vector3.one * S.emoteScale;
+                _emoteAnchor.transform.position = _keyGo.transform.position + (Vector3)(S.emoteOffset + _emoteLineOffset);
+            _emoteAnchor.transform.localScale = Vector3.one * (S.emoteScale * _emoteLineScale);
             if (_emote != null && _emoteTimed)
             {
                 _emoteTimer -= Time.deltaTime;
@@ -294,6 +332,53 @@ public class NewGameIntro : MonoBehaviour
                     ClearEmote();
             }
         }
+    }
+
+    /// <summary>カメラを、Kキーに移して、少し寄る。</summary>
+    private void FocusOnKey()
+    {
+        if (_focused || !S.focusOnKey || _keyGo == null || _cam == null)
+            return;
+        _camFollow = _cam.GetComponentInParent<CameraFollow>();
+        if (_camFollow == null)
+            return;
+
+        // Kキーの体の中心あたり
+        Vector3 kp = _keyGo.transform.position;
+        float h = 1f;
+        Renderer[] rs = _keyGo.GetComponentsInChildren<Renderer>(true);
+        if (rs.Length > 0)
+        {
+            Bounds b = rs[0].bounds;
+            for (int i = 1; i < rs.Length; i++)
+                b.Encapsulate(rs[i].bounds);
+            h = Mathf.Max(0.5f, b.max.y - kp.y);
+        }
+        _focusPoint = new GameObject("NewGameIntro_CameraFocus");
+        _focusPoint.transform.position = kp + new Vector3(S.focusOffset.x, h * 0.5f + S.focusOffset.y, 0f);
+
+        _camOldTarget = _camFollow.Target;
+        _camFollow.Target = _focusPoint.transform;
+        if (S.focusZoom < 0.999f)
+            _camFollow.ZoomTo(S.focusZoom, Mathf.Max(0.05f, S.focusZoomSeconds));
+        _focused = true;
+    }
+
+    /// <summary>カメラを、主人公にもどす。</summary>
+    private void UnfocusKey()
+    {
+        if (!_focused)
+            return;
+        _focused = false;
+        if (_camFollow != null)
+        {
+            _camFollow.Target = _camOldTarget != null ? _camOldTarget : (_player != null ? _player.transform : null);
+            if (S.focusZoom < 0.999f)
+                _camFollow.ZoomTo(1f, Mathf.Max(0.05f, S.focusZoomSeconds * 0.7f));
+        }
+        if (_focusPoint != null)
+            Destroy(_focusPoint);
+        _focusPoint = null;
     }
 
     private void ShowEmote(NewGameIntroSettings.Line line)
@@ -304,8 +389,10 @@ public class NewGameIntro : MonoBehaviour
 
         if (_emoteAnchor == null)
             _emoteAnchor = new GameObject("NewGameIntro_EmoteAnchor");
-        _emoteAnchor.transform.position = _keyGo.transform.position + (Vector3)S.emoteOffset;
-        _emoteAnchor.transform.localScale = Vector3.one * S.emoteScale;
+        _emoteLineOffset = line.emoteOffset;
+        _emoteLineScale = Mathf.Approximately(line.emoteScale, 0f) ? 1f : line.emoteScale;
+        _emoteAnchor.transform.position = _keyGo.transform.position + (Vector3)(S.emoteOffset + _emoteLineOffset);
+        _emoteAnchor.transform.localScale = Vector3.one * (S.emoteScale * _emoteLineScale);
 
         _emote = Instantiate(line.emote, _emoteAnchor.transform);
         _emote.transform.localPosition = Vector3.zero;   // プレハブに残っている位置は使わない
@@ -343,7 +430,7 @@ public class NewGameIntro : MonoBehaviour
 
         if (_player == null || s_keyPrefab == null)
         {
-            Debug.LogWarning("[NewGameIntro] プレイヤー（Playerタグ）か、キーキャラクターのプレハブが見つからないので、お話を飛ばして、Kキーを渡します。");
+            Debug.LogWarning("[NewGameIntro] プレイヤー（Playerタグ）か、キーキャラクターのプレハブが見つからないので、お話を飛ばして、Kキーを渡します。 プレイヤー=" + (_player != null) + "  Kキーのプレハブ=" + (s_keyPrefab != null));
             _black.color = new Color(0f, 0f, 0f, 0f);
             yield return Finish();
             yield break;
@@ -360,9 +447,10 @@ public class NewGameIntro : MonoBehaviour
         yield return WalkPlayerTo(_keyGo.transform.position.x);
         yield return Wait(0.3f);
 
-        // 人影が、こちらに気づく
+        // 人影が、こちらに気づく（カメラが、Kキーに移る）
         if (!_skip)
         {
+            FocusOnKey();
             yield return Reveal();
             yield return Wait(0.3f);
         }
@@ -412,15 +500,23 @@ public class NewGameIntro : MonoBehaviour
             }
         }
 
-        // 黒い帯を、しまう
+        // カメラを主人公にもどして、黒い帯をしまう
+        UnfocusKey();
         yield return Bars(0f, 0.6f);
+
+        // 話が終わったので、先に拠点のBGMに切り替える。
+        // （キーを入手した演出は、そのとき鳴っている曲を覚えて、終わるとその曲に戻す。
+        //   先にキーを渡すと、ムービーのBGMに戻ってしまうため）
+        ReleaseSceneBgm();
+        yield return null;
+        yield return null;   // SceneBGM の Start が呼ばれて、拠点のBGMが鳴りはじめるまで待つ
 
         // 操作を戻してから、キーを渡す（キーを入手した演出が、もう一度止めるため）
         LockPlayer(false);
         GiveKey();
 
-        // 話が終わったので、拠点のBGMに切り替える
-        ReleaseSceneBgm();
+        // キーを入手した演出が全部終わったら、ヒント（Tabでキーコンフィグ）が始まる
+        NewGameTutorial.Begin(S.tutorial, _givenKey);
 
         if (_black != null && _black.color.a > 0.01f)
             yield return Fade(0f, 0.35f);
@@ -428,6 +524,8 @@ public class NewGameIntro : MonoBehaviour
         IsPlaying = false;
         Destroy(gameObject);
     }
+
+    private KeyDefinition _givenKey;   // 仲間になったキー（ヒントを始めるときに渡す）
 
     private void GiveKey()
     {
@@ -454,21 +552,47 @@ public class NewGameIntro : MonoBehaviour
             Debug.LogWarning("[NewGameIntro] KeyInventory（Bootstrap）がシーンにありません。Kキーを渡せませんでした。");
             return;
         }
+        _givenKey = k;
         if (!KeyInventory.Instance.Owns(k))
             KeyInventory.Instance.AddKey(k);
     }
 
     // ================= 主人公 =================
 
+    /// <summary>
+    /// 本物の主人公。「Player」タグのついたものは、本物のほかに、キーコンフィグ画面のプレビュー用キャラ（PreviewChar：
+    /// 遠く離れた (1000, 1000) にある）もいる。タグだけで探すと、プレビュー用のほうを拾ってしまうので、本物だけを選ぶ。
+    /// 見つからなければ null。
+    /// </summary>
+    public static GameObject FindMainPlayerObject()
+    {
+        GameObject[] all = GameObject.FindGameObjectsWithTag("Player");
+        for (int i = 0; i < all.Length; i++)
+        {
+            GameObject g = all[i];
+            if (g == null || !g.activeInHierarchy)
+                continue;
+            if (g.GetComponentInChildren<KeyConfigPreviewPlayer>(true) != null || g.GetComponentInParent<KeyConfigPreviewPlayer>() != null)
+                continue;   // プレビュー用
+            if (g.GetComponent<PlayerMovement>() == null)
+                continue;
+            Vector3 gp = g.transform.position;
+            if (Mathf.Abs(gp.x) > 500f || Mathf.Abs(gp.y) > 500f)
+                continue;   // 遠くにあるのは、プレビュー用の置き場
+            return g;
+        }
+        return null;
+    }
+
     private void FindPlayer()
     {
         if (_player != null)
             return;
-        GameObject p = GameObject.FindGameObjectWithTag("Player");
-        if (p == null)
-            return;
-        _player = p;
-        _pm = p.GetComponent<PlayerMovement>();
+        GameObject best = FindMainPlayerObject();
+        if (best == null)
+            return;   // 見つからなければ、次の機会にもう一度探す
+        _player = best;
+        _pm = best.GetComponent<PlayerMovement>();
     }
 
     private void LockPlayer(bool locked)
@@ -495,11 +619,11 @@ public class NewGameIntro : MonoBehaviour
     private IEnumerator WalkPlayerTo(float keyX)
     {
         float px = _player.transform.position.x;
-        if (Mathf.Abs(keyX - px) <= TalkGap + 0.1f)
+        if (Mathf.Abs(keyX - px) <= S.talkGap + 0.1f)
             yield break;
 
         float dir = keyX > px ? 1f : -1f;
-        float targetX = keyX - dir * TalkGap;
+        float targetX = keyX - dir * S.talkGap;
 
         Rigidbody2D rb = _player.GetComponent<Rigidbody2D>();
         Animator an = PlayerAnimator();
@@ -515,7 +639,7 @@ public class NewGameIntro : MonoBehaviour
         while (!_skip && (dir > 0f ? _player.transform.position.x < targetX : _player.transform.position.x > targetX))
         {
             yield return new WaitForFixedUpdate();
-            float step = dir * WalkSpeed * Time.fixedDeltaTime;
+            float step = dir * S.walkSpeed * Time.fixedDeltaTime;
             if (rb != null)
                 rb.position = rb.position + new Vector2(step, 0f);
             else
@@ -559,10 +683,8 @@ public class NewGameIntro : MonoBehaviour
         }
         else
         {
-            // 目印が無いときは、主人公の右の、少し先
-            float halfW = (_cam != null && _cam.orthographic) ? _cam.orthographicSize * _cam.aspect : 9f;
-            float ahead = Mathf.Clamp(halfW * 0.62f, KeyAheadMin, KeyAheadMax);
-            kx = pp.x + ahead;
+            // 目印が無いときは、主人公（家の扉）の、すぐ右の、家の前
+            kx = pp.x + Mathf.Max(0.5f, S.keyOffsetX);
 
             footY = pp.y;
             Collider2D pc = _player.GetComponent<Collider2D>();
@@ -587,6 +709,24 @@ public class NewGameIntro : MonoBehaviour
             label.textOverride = letter;
             label.Refresh();
         }
+
+        // 描く順番：主人公と同じ層・同じ順番を土台にして、背景の後ろに隠れないようにする（Kキーの部品の順番は、そのまま足す）
+        int baseLayer = 0;
+        int baseOrder = 0;
+        SpriteRenderer psr = _player.GetComponentInChildren<SpriteRenderer>();
+        if (psr != null)
+        {
+            baseLayer = psr.sortingLayerID;
+            baseOrder = psr.sortingOrder;
+        }
+        Renderer[] krs = _keyGo.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < krs.Length; i++)
+        {
+            krs[i].sortingLayerID = baseLayer;
+            krs[i].sortingOrder = baseOrder + krs[i].sortingOrder;
+        }
+
+        Debug.Log("[NewGameIntro] Kキーを出しました：位置 (" + kx.ToString("F2") + ", " + footY.ToString("F2") + ")  目印=" + (point != null ? "あり" : "なし（主人公の右 " + S.keyOffsetX.ToString("F1") + "）") + "  描く順番=" + baseOrder);
 
         _rig = _keyGo.GetComponent<LimbRig>();
         if (_rig != null)
@@ -706,6 +846,7 @@ public class NewGameIntro : MonoBehaviour
         // Kキーは、ずっと怪我で動けないまま。このセリフ用のエモートがあれば、出す（無ければ、出さない）
         ShowEmote(line);
 
+        _body.fontSize = line.textSize > 0f ? line.textSize : S.textSize;
         _body.text = Clean(line.text);
         _body.maxVisibleCharacters = 0;
         _body.ForceMeshUpdate();
