@@ -29,6 +29,7 @@ public class LimbRig : MonoBehaviour
         Hop,    // ぴょんぴょん（リズムよく連続ジャンプ）
         Wave,   // 手を振る
         Disco,  // ディスコ（腕を交互に上下、体を斜めに傾ける）
+        Injured, // 怪我（地面に座り込んで、脚を前に投げ出し、ときどき痛みにびくっとする）
     }
 
     [Header("パーツ（メニューのプレハブ作成で自動設定される）")]
@@ -107,6 +108,16 @@ public class LimbRig : MonoBehaviour
     public float danceIntensity = 1f;
     [Tooltip("踊りの速さ。1が標準")]
     public float danceSpeed = 1f;
+
+    [Header("怪我（SetMotion で Injured にしたとき。座り込んで動けない）")]
+    [Tooltip("座り込むときに、体を下げる量（ローカル単位）。脚の長さに合わせる。大きいと地面に沈み、小さいと浮く")]
+    public float hurtSit = 0.4f;
+    [Tooltip("前に投げ出した脚の角度（度）。90で真横")]
+    public float hurtLegAngle = 78f;
+    [Tooltip("体を後ろへ反らす角度（度）")]
+    public float hurtTilt = 9f;
+    [Tooltip("痛みにびくっとする間隔（秒）")]
+    public float hurtFlinchInterval = 3.2f;
 
     [Header("鎮静（倒れる）")]
     [Tooltip("倒れる角度（度）")]
@@ -290,7 +301,8 @@ public class LimbRig : MonoBehaviour
         _talk = motion == KeyMotion.Talk;
         _cheer = motion == KeyMotion.Cheer;
         _extraMotion = (motion == KeyMotion.Sway || motion == KeyMotion.Hop
-                        || motion == KeyMotion.Wave || motion == KeyMotion.Disco) ? motion : KeyMotion.None;
+                        || motion == KeyMotion.Wave || motion == KeyMotion.Disco
+                        || motion == KeyMotion.Injured) ? motion : KeyMotion.None;
     }
 
     /// <summary>手足（腕・脚）だけを、duration秒かけて透明にする。キーの本体は、そのまま残る。</summary>
@@ -466,6 +478,21 @@ public class LimbRig : MonoBehaviour
                     tArmL = -(armRest + 4f);
                     tTilt = 5f * k * Mathf.Sin(dt2 * 3f);
                     tLift = 0.02f * k * Mathf.Abs(Mathf.Sin(dt2 * 3f));
+                    break;
+                }
+                case KeyMotion.Injured:
+                {
+                    // 怪我：座り込んで、脚を前に投げ出す（片脚は曲げる）。ゆっくり息をして、ときどき痛みにびくっとする
+                    float breath = Mathf.Sin(time * 1.8f);
+                    float cyc = Mathf.Repeat(time, Mathf.Max(0.5f, hurtFlinchInterval));
+                    float fl = cyc < 0.35f ? Mathf.Sin(cyc / 0.35f * Mathf.PI) : 0f;
+                    tLegL = hurtLegAngle - 6f * fl;
+                    tLegR = hurtLegAngle * 0.55f + 14f * fl;
+                    tArmR = 32f + 8f * fl + 3f * breath;
+                    tArmL = -(18f + 3f * breath);
+                    tTilt = hurtTilt + 1.5f * breath - 6f * fl;
+                    tLift = -hurtSit + 0.01f * breath + 0.03f * fl;
+                    tSquash = 1f + 0.02f * breath - 0.04f * fl;
                     break;
                 }
                 default: // Disco

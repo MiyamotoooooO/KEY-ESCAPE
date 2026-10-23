@@ -12,8 +12,9 @@ using UnityEngine.UI;
 ///   ・「OpeningMovie」というオブジェクトを作って（すでにあれば、それを使う）、次を自動で入れる:
 ///       - キーキャラクター : Assets/Prefab/Mob/Enemy/KeyNPC_Visual.prefab
 ///       - フォント         : シーンの中の文字から借りる
-///       - 絵               : キー素材・DoorImage（ドア枠）・DoorUtigawaImage（ドア）・moveBG（部屋の地面）・ゲームの Ground / Grass
+///       - 絵               : キー素材・DoorImage（ドア枠）・DoorUtigawaImage（ドア）・キーボード背景・モニター・moveBG（部屋の地面）・ゲームの Ground / Grass
 ///       - タイトルの部品   : ロゴ（シーンの中の dasda_0）・メニューのボタン
+///       - Kキー            : Assets/KeyDefinition/Key_K.asset（「はじめから」のあと、拠点で仲間になる）
 ///   ・TitleMenu の「Opening Movie」に、割り当てる。
 ///   ・何回実行しても、同じ結果になる。
 /// </summary>
@@ -26,6 +27,20 @@ public static class OpeningMovieSetup
         if (current != null)
             return current;
         return GameObject.Find(objName);
+    }
+
+    private const string MovieSoundDir = "Assets/8Bit Music - 062022/ムービ用/";
+
+    /// <summary>音の欄が空のときだけ、音を入れる（自分で入れた音は、そのまま残る）。</summary>
+    private static void AssignClip(ref AudioClip target, string fileName, ref string report)
+    {
+        if (target != null)
+            return;
+        AudioClip c = AssetDatabase.LoadAssetAtPath<AudioClip>(MovieSoundDir + fileName);
+        if (c != null)
+            target = c;
+        else
+            report += "\n・音が見つかりません（" + MovieSoundDir + fileName + "）。";
     }
 
     private static void AssignSprite(ref Sprite target, string path, ref string report)
@@ -92,9 +107,48 @@ public static class OpeningMovieSetup
         movie.fingerSprite = null;   // 指は、はじめの仮の絵（肌色の指）を使う
         AssignSprite(ref movie.doorFrameSprite, "Assets/sprite/UI/DoorImage.png", ref report);
         AssignSprite(ref movie.doorSprite, "Assets/sprite/UI/DoorUtigawaImage.png", ref report);
+        AssignSprite(ref movie.keyboardSprite, "Assets/sprite/UI/キーボード背景.png", ref report);
+        AssignSprite(ref movie.monitorSprite, "Assets/sprite/UI/モニター.png", ref report);
         AssignSprite(ref movie.roomGroundSprite, "Assets/sprite/UI/moveBG.png", ref report);
         AssignSprite(ref movie.groundSprite, "Assets/MetroidvaniaController/Sprites/Ground.png", ref report);
         AssignSprite(ref movie.grassSprite, "Assets/MetroidvaniaController/Sprites/Grass.png", ref report);
+
+        // プレイヤー（キーたちを追いかける。空の欄にだけ入る）
+        if (movie.playerPrefab == null)
+        {
+            GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefab/Mob/Player/DrawCharacter.prefab");
+            if (playerPrefab != null)
+                movie.playerPrefab = playerPrefab;
+            else
+                report += "\n・プレイヤー（DrawCharacter）のプレハブが見つかりません。OpeningMovie の Player Prefab に入れてください。";
+        }
+
+        // 「はじめから」のあと、拠点で仲間になる、逃げ遅れたキー（Kキー。空の欄にだけ入る）
+        if (movie.introKey == null)
+        {
+            KeyDefinition keyK = AssetDatabase.LoadAssetAtPath<KeyDefinition>("Assets/KeyDefinition/Key_K.asset");
+            if (keyK != null)
+                movie.introKey = keyK;
+            else
+                report += "\n・Kキー（Assets/KeyDefinition/Key_K.asset）が見つかりません。OpeningMovie の Intro Key に、Key_K を入れてください。";
+        }
+
+        // 音（空の欄にだけ入る。Collapse Se は、まだ決まっていないので、空のまま）
+        AssignClip(ref movie.bgm, "BackBGM.mp3", ref report);
+        AssignClip(ref movie.slamSe, "impact-slam-64.wav", ref report);
+        AssignClip(ref movie.hopSe, "retro-game-jump-32.wav", ref report);
+        AssignClip(ref movie.resolveSe, "feedback-success-68.wav", ref report);
+        AssignClip(ref movie.doorSe, "door-open-01.wav", ref report);
+        AssignClip(ref movie.landSe, "jumpland.wav", ref report);
+        AssignClip(ref movie.logoSe, "logo-reveal-03.wav", ref report);
+        if (movie.clackClips == null || movie.clackClips.Length == 0)
+        {
+            AudioClip typeClip = AssetDatabase.LoadAssetAtPath<AudioClip>(MovieSoundDir + "タイプ音.wav");
+            if (typeClip != null)
+                movie.clackClips = new AudioClip[] { typeClip };
+            else
+                report += "\n・音が見つかりません（" + MovieSoundDir + "タイプ音.wav）。";
+        }
 
         // キーの絵が見つからなかったときは、キーキャラクターと同じ KeyBody を使う
         if (movie.keycapSprite == null)

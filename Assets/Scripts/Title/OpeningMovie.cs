@@ -53,8 +53,10 @@ public class OpeningMovie : MonoBehaviour
     public Sprite fingerSprite;
     [Tooltip("シーン1：机の背景。")]
     public Sprite deskBackground;
-    [Tooltip("シーン1：キーボード本体。")]
+    [Tooltip("シーン1：キーボードの背景（キーボード背景）。")]
     public Sprite keyboardSprite;
+    [Tooltip("シーン1：左上のモニター（モニター）。")]
+    public Sprite monitorSprite;
     [Tooltip("シーン2〜5：キーボードの上・部屋の背景。")]
     public Sprite roomBackground;
     [Tooltip("シーン5：開くドアの板（内側。DoorUtigawaImage）。向かって右に開く。")]
@@ -78,15 +80,34 @@ public class OpeningMovie : MonoBehaviour
     [Tooltip("メニューのボタン（はじめから・つづきから・設定・終わる）。ロゴのあと、順番に出る。空なら、TitleMenuから自動で入る。")]
     public Button[] titleButtons;
 
-    [Header("タイトル画面を歩くキーたち")]
-    [Tooltip("実際のタイトル画面の地面を、キーたちが歩く速さ。")]
-    public float titleWalkSpeed = 4.4f;
+    [Header("タイトル画面を走るキーたち・追いかけるプレイヤー")]
+    [Tooltip("実際のタイトル画面の地面を、キーたちとプレイヤーが走る速さ。")]
+    public float titleRunSpeed = 7f;
     [Tooltip("タイトル画面の岩（Rock）を、ぴょんと跳び越える。")]
     public bool hopOverRock = true;
+    [Tooltip("キーたちを後ろから追いかけるプレイヤー（DrawCharacter）。空なら、プレイヤーは出ない。")]
+    public GameObject playerPrefab;
+    [Tooltip("プレイヤーの大きさ。")]
+    public float playerScale = 0.9f;
+    [Tooltip("いちばん後ろのキーと、プレイヤーの間の距離。大きいほど、離れる。")]
+    public float playerGap = 4f;
+
+    [Header("タイトル画面を、ときどき往復するキー")]
+    [Tooltip("全員が画面の外に出たあと、ランダムなキーが、ときどき、右へ→左へと歩いて往復する。")]
+    public bool idleKeysOnTitle = true;
+    [Tooltip("往復が終わってから、次の往復が始まるまでの秒数。")]
+    public float idleInterval = 6f;
+    [Tooltip("往復するときの、歩く速さ。")]
+    public float idleWalkSpeed = 3.6f;
 
     [Header("音（空なら、鳴らさない）")]
     public AudioClip bgm;
     [Range(0f, 1f)] public float bgmVolume = 0.8f;
+    [Tooltip("決意したあと（みんなが跳ねて、「ここから出よう!!」の場面）から、切りかえて流すBGM。空なら、切りかえない。")]
+    public AudioClip resolveBgm;
+    [Range(0f, 1f)] public float resolveBgmVolume = 0.8f;
+    [Tooltip("BGMを切りかえるときの、つなぎ（フェード）の秒数。")]
+    public float resolveBgmFade = 1.0f;
     [Tooltip("キーを押すカタカタ音（複数入れると、ランダムに鳴る）。")]
     public AudioClip[] clackClips;
     [Tooltip("指が叩きつけられる音。")]
@@ -105,11 +126,59 @@ public class OpeningMovie : MonoBehaviour
     public AudioClip logoSe;
     [Range(0f, 1f)] public float seVolume = 1f;
 
+    [Header("音量（効果音ごと。1 が、そのままの大きさ。0 で消える）")]
+    [Range(0f, 2f)] public float clackVolume = 1f;
+    [Range(0f, 2f)] public float slamVolume = 1f;
+    [Range(0f, 2f)] public float hopVolume = 1f;
+    [Range(0f, 2f)] public float collapseVolume = 1f;
+    [Range(0f, 2f)] public float resolveVolume = 1f;
+    [Range(0f, 2f)] public float doorVolume = 1f;
+    [Range(0f, 2f)] public float landVolume = 1f;
+    [Range(0f, 2f)] public float logoVolume = 1f;
+
     [Header("長さ")]
     [Tooltip("シーン1：カタカタ打つ秒数。")]
     public float typingTime = 6f;
     [Tooltip("スキップできるようになるまでの秒数（押した瞬間の連打で、すぐ飛ばないように）。")]
     public float skipGuardTime = 0.5f;
+
+    [Header("「はじめから」のムービー")]
+    [Tooltip("OFFにすると、「はじめから」を押しても、ムービーを流さない（確認用）。")]
+    public bool playNewGameIntro = true;
+    [Tooltip("ONなら、「はじめから」のムービーを、Spaceで飛ばせる。OFF（初期値）なら、飛ばせない。")]
+    public bool introSkippable = false;
+    [Tooltip("モニターの検索欄に出る言葉。（全角の空白は、フォントに無いので、半角の空白に置きかわる）")]
+    public string introSearchText = "逃亡 仕方 バレる？";
+    [Tooltip("モニターのアップの絵（正面から見た、モニター全体）。空なら、コードで描いた仮のモニター。\n絵を入れたときは、検索欄の言葉だけが、下の設定で重なって出る。")]
+    public Sprite introMonitorSprite;
+    [Tooltip("モニターの絵の、横の長さ（画面の横いっぱいが、約18）。縦は、絵の縦横比で決まる。")]
+    public float introMonitorWidth = 15.6f;
+    [Tooltip("モニターの絵を使うとき：検索欄の言葉を出す位置（絵の中心からのずれ。右が＋、上が＋）。")]
+    public Vector2 introTextOffset = new Vector2(0f, 0.7f);
+    [Tooltip("モニターの絵を使うとき：言葉の文字の大きさ。")]
+    public float introTextSize = 0.62f;
+    [Tooltip("モニターの絵を使うとき：言葉の色。")]
+    public Color introTextColor = new Color(0.14f, 0.14f, 0.2f);
+    [Tooltip("モニターの絵を使うとき：ONなら、言葉の左はしを、上の位置にそろえる。OFFなら、位置を中心にする。")]
+    public bool introTextLeftAligned = true;
+    [Tooltip("OFFにすると、検索欄の言葉を出さない（絵に、はじめから言葉が描いてあるとき）。")]
+    public bool introShowSearchText = true;
+
+    [Header("「はじめから」を押したあとのBGM")]
+    [Tooltip("「はじめから」を押した瞬間に切り替わるBGM。空なら、BGMはそのまま。")]
+    public AudioClip introBgm;
+    [Range(0f, 1f)]
+    public float introBgmVolume = 1f;
+    [Tooltip("切り替えるときの、クロスフェードの秒数。")]
+    public float introBgmFade = 0.8f;
+    [Tooltip("ONなら、拠点でKキーと話している間も、このBGMを流す（話が終わると、拠点のBGMに切り替わる）。OFFなら、拠点に着いた時点で、拠点のBGMに切り替わる。")]
+    public bool introBgmContinuesToTalk = true;
+
+    [Header("「はじめから」のあとの会話（拠点で流れる）")]
+    [Tooltip("Kキーとの会話のセリフ・名前・枠の絵・文字の見た目。")]
+    public NewGameIntroSettings introTalk = new NewGameIntroSettings();
+    [Tooltip("お話の最後に仲間になる、逃げ遅れたキー（Key_K）。空なら、読み込まれているものから探す。")]
+    public KeyDefinition introKey;
 
     // ================= 状態 =================
 
@@ -189,7 +258,12 @@ public class OpeningMovie : MonoBehaviour
         bool movie = playMovie && !s_played;
         if (!movie)
         {
-            // ゲームから戻ってきたとき：いつものタイトル画面のまま
+            // ゲームから戻ってきたとき：いつものタイトル画面のまま（ときどき、キーが往復する）
+            if (idleKeysOnTitle && keyCharacterPrefab != null)
+            {
+                BuildSprites();
+                StartCoroutine(IdleKeys(3f));
+            }
             Done();
             return;
         }
@@ -269,6 +343,8 @@ public class OpeningMovie : MonoBehaviour
     {
         if (!_playing || _skipping)
             return;
+        if (_introMode && !introSkippable)
+            return;   // 「はじめから」のムービーは、飛ばせない
         if (Time.unscaledTime - _startTime < skipGuardTime)
             return;
         if (Input.GetKeyDown(KeyCode.Space))
@@ -282,6 +358,11 @@ public class OpeningMovie : MonoBehaviour
         _skipping = true;
         StopAllCoroutines();
         _busy = 0;
+        if (_introMode)
+        {
+            StartCoroutine(IntroSkipRoutine());
+            return;
+        }
         StartCoroutine(SkipRoutine());
     }
 
@@ -297,6 +378,8 @@ public class OpeningMovie : MonoBehaviour
             yield return FadeTo(_fade, 0f, 0.3f);
         DestroyOverlay();
         EndMovie();
+        if (idleKeysOnTitle)
+            StartCoroutine(IdleKeys(3f));
     }
 
     /// <summary>ムービー用の全画面の幕を外す。</summary>
@@ -991,7 +1074,28 @@ public class OpeningMovie : MonoBehaviour
     private void Se(AudioClip clip, float volume = 1f)
     {
         if (clip != null)
-            AudioManager.PlaySE(clip, volume * seVolume);
+            AudioManager.PlaySE(clip, volume * seVolume * GainFor(clip));
+    }
+
+    /// <summary>効果音ごとの音量（上の「音量」の欄）。</summary>
+    private float GainFor(AudioClip clip)
+    {
+        if (clip == slamSe) return slamVolume;
+        if (clip == hopSe) return hopVolume;
+        if (clip == collapseSe) return collapseVolume;
+        if (clip == resolveSe) return resolveVolume;
+        if (clip == doorSe) return doorVolume;
+        if (clip == landSe) return landVolume;
+        if (clip == logoSe) return logoVolume;
+        if (clackClips != null)
+        {
+            for (int i = 0; i < clackClips.Length; i++)
+            {
+                if (clackClips[i] == clip)
+                    return clackVolume;
+            }
+        }
+        return 1f;
     }
 
     private void Clack()
@@ -1039,7 +1143,7 @@ public class OpeningMovie : MonoBehaviour
         g.transform.localPosition = new Vector3(pos.x, pos.y, 0f);
         TextMeshPro t = g.AddComponent<TextMeshPro>();
         if (_font != null) t.font = _font;
-        t.text = text;
+        t.text = string.IsNullOrEmpty(text) ? "" : text.Replace('\u3000', ' ');   // 全角の空白は、フォントに無いので、半角にする
         t.fontSize = height * 10f * textScale;
         t.color = color;
         t.alignment = TextAlignmentOptions.Center;
@@ -1418,19 +1522,173 @@ public class OpeningMovie : MonoBehaviour
         });
     }
 
+    // ================= シーン1：机の上（ななめ上から見た景色）=================
+
+    /// <summary>木目の机の絵（仮の絵）。細い線が、ゆるやかにうねる。</summary>
+    private Sprite MakeWoodSprite()
+    {
+        const int w = 1024;
+        const int h = 576;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Clamp;
+        Color32[] px = new Color32[w * h];
+        Color baseA = new Color(0.60f, 0.42f, 0.28f);
+        Color baseB = new Color(0.52f, 0.35f, 0.23f);
+        Color line = new Color(0.30f, 0.19f, 0.12f);
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                float wy = y + 7f * Mathf.Sin(x * 0.011f + y * 0.004f) + 4f * Mathf.Sin(x * 0.027f + 1.3f) + 2f * Mathf.Sin(x * 0.061f);
+                float band = 0.5f + 0.5f * Mathf.Sin(wy * 0.05f);
+                Color c = Color.Lerp(baseB, baseA, band);
+                float s = Mathf.Sin(wy * 0.27f + Mathf.Sin(x * 0.004f) * 2f);
+                float ln = Mathf.Clamp01((s - 0.86f) / 0.14f);
+                c = Color.Lerp(c, line, ln * 0.85f);
+                px[y * w + x] = new Color32((byte)(c.r * 255f), (byte)(c.g * 255f), (byte)(c.b * 255f), 255);
+            }
+        }
+        tex.SetPixels32(px);
+        tex.Apply();
+        _made.Add(tex);
+        Sprite sp = Sprite.Create(tex, new Rect(0f, 0f, w, h), new Vector2(0.5f, 0.5f), 100f);
+        _made.Add(sp);
+        return sp;
+    }
+
+    /// <summary>コード（ケーブル）。曲線を、細い線のつなぎで描く。</summary>
+    private void Cable(Transform parent, Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float thick, Color col, int order)
+    {
+        const int n = 28;
+        Vector2 prev = p0;
+        for (int i = 1; i <= n; i++)
+        {
+            float t = i / (float)n;
+            float u = 1f - t;
+            Vector2 q = u * u * u * p0 + 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t * p3;
+            Vector2 mid = (prev + q) * 0.5f;
+            float len = (q - prev).magnitude;
+            float ang = Mathf.Atan2(q.y - prev.y, q.x - prev.x) * Mathf.Rad2Deg;
+            SpriteRenderer sr = Spr(parent, "Cable", _sq, mid, new Vector2(len + thick * 0.6f, thick), col, order);
+            sr.transform.localRotation = Quaternion.Euler(0f, 0f, ang);
+            prev = q;
+        }
+    }
+
+    // 「キーボード背景」の絵は、約13度傾けた長方形が、絵の中にある（長方形の大きさは、絵全体との割合）
+    private const float KeyboardArtTilt = 13f;
+    private const float KeyboardArtRectW = 1712f / 1774f;
+    private const float KeyboardArtRectH = 444f / 887f;
+
+    /// <summary>
+    /// 傾いて描かれた絵を、キーボードの面（Board）に、ぴったり合わせて置く。
+    /// 絵の傾きをいったん戻して、横・縦をそれぞれ伸ばして、もう一度、Board の傾きにそろえる（ゆがまない）。
+    /// center, size は、Board の座標で、傾きを戻した長方形の、中心と大きさ。
+    /// </summary>
+    private void AddBoardArt(Transform board, string objName, Sprite s, Vector2 center, Vector2 size, Color color, int order)
+    {
+        GameObject b = new GameObject(objName);
+        b.transform.SetParent(board, false);
+        b.transform.localPosition = new Vector3(center.x, center.y, 0f);
+
+        GameObject c = new GameObject(objName + "Art");
+        c.transform.SetParent(b.transform, false);
+        c.transform.localRotation = Quaternion.Euler(0f, 0f, -KeyboardArtTilt);
+        Vector2 bs = s.bounds.size;
+        float k = size.x / (bs.x * KeyboardArtRectW);
+        c.transform.localScale = new Vector3(k, k, 1f);
+        b.transform.localScale = new Vector3(1f, size.y / (bs.y * KeyboardArtRectH * k), 1f);
+
+        SpriteRenderer sr = c.AddComponent<SpriteRenderer>();
+        sr.sprite = s;
+        sr.color = color;
+        sr.sortingOrder = order;
+    }
+
+    /// <summary>モニターの絵がないときの、仮のモニター（下のふちと、足の丸い台だけが見える）。</summary>
+    private void AddMonitorShapes(Transform board)
+    {
+        // モニター（キーボードと同じ向き。キーボードの座標で置く）
+        Spr(board, "MonShadow", _round, new Vector2(-4.9f, 8.4f), new Vector2(13.4f, 7.2f), new Color(0f, 0f, 0f, 0.25f), 1);
+        Spr(board, "MonBase", _circle, new Vector2(-4.2f, 5.9f), new Vector2(3.0f, 3.0f), new Color(0.18f, 0.18f, 0.21f), 3);
+        Spr(board, "MonBaseTop", _circle, new Vector2(-4.2f, 5.9f), new Vector2(2.1f, 2.1f), new Color(0.25f, 0.25f, 0.29f), 3);
+        Spr(board, "Monitor", _round, new Vector2(-5.5f, 8.7f), new Vector2(13f, 7f), new Color(0.12f, 0.12f, 0.14f), 4);
+        Spr(board, "MonEdge", _sq, new Vector2(-5.5f, 5.3f), new Vector2(12.4f, 0.16f), new Color(0.30f, 0.30f, 0.35f), 5);
+        Spr(board, "Glare1", _sq, new Vector2(-8.4f, 8.2f), new Vector2(1.6f, 9f), new Color(1f, 1f, 1f, 0.07f), 5).transform.localRotation = Quaternion.Euler(0f, 0f, 25f);
+        Spr(board, "Glare2", _sq, new Vector2(-6.0f, 8.2f), new Vector2(0.8f, 9f), new Color(1f, 1f, 1f, 0.05f), 5).transform.localRotation = Quaternion.Euler(0f, 0f, 25f);
+    }
+
+    /// <summary>机の上の小物：左上のモニター（下のふちと、足の丸い台だけが見える）、右下のマウス、コード。</summary>
+    private void BuildDeskItems(Transform rt, Transform board)
+    {
+        // モニター（左上）
+        if (monitorSprite != null)
+        {
+            // 傾いて描かれた絵なので、そのまま、同じ割合で大きさをそろえて置く（足の丸い台も、絵の中にある）
+            const float mw = 12f;
+            Vector2 ms = monitorSprite.bounds.size;
+            float mh = mw * ms.y / ms.x;
+            Spr(rt, "MonShadow", monitorSprite, new Vector2(-4.7f, 4.1f), new Vector2(mw, mh), new Color(0f, 0f, 0f, 0.25f), 1);
+            Spr(rt, "Monitor", monitorSprite, new Vector2(-5.0f, 4.4f), new Vector2(mw, mh), Color.white, 4);
+        }
+        else
+        {
+            AddMonitorShapes(board);
+        }
+
+        // マウス（右下）と、コード
+        // キーボードの右がわの外を回って、上へ伸びる（キーボードの下をくぐらない）
+        Cable(rt, new Vector2(7.4f, -2.6f), new Vector2(8.9f, -2.4f), new Vector2(8.9f, 1.5f), new Vector2(8.0f, 6.0f), 0.07f, new Color(0.12f, 0.1f, 0.1f), 1);
+        GameObject mouse = new GameObject("Mouse");
+        mouse.transform.SetParent(rt, false);
+        mouse.transform.localPosition = new Vector3(7.2f, -3.8f, 0f);
+        mouse.transform.localRotation = Quaternion.Euler(0f, 0f, -10f);
+        Transform mt = mouse.transform;
+        Spr(mt, "MouseShadow", _round, new Vector2(0.15f, -0.15f), new Vector2(1.6f, 2.5f), new Color(0f, 0f, 0f, 0.25f), 1);
+        Spr(mt, "MouseBody", _round, Vector2.zero, new Vector2(1.6f, 2.5f), new Color(0.16f, 0.16f, 0.19f), 2);
+        Spr(mt, "MouseLine", _sq, new Vector2(0f, 0.55f), new Vector2(0.05f, 1.0f), new Color(0.35f, 0.35f, 0.4f), 3);
+        Spr(mt, "MouseWheel", _round, new Vector2(0f, 0.6f), new Vector2(0.2f, 0.5f), new Color(0.55f, 0.55f, 0.6f), 3);
+    }
+
     private IEnumerator Scene1Typing()
     {
         GameObject root = NewRoot("Scene1_Typing");
         Transform rt = root.transform;
-        _cam.backgroundColor = new Color(0.04f, 0.04f, 0.06f);
+        _cam.backgroundColor = new Color(0.30f, 0.20f, 0.13f);
         _camPos = Vector2.zero;
-        _camSize = 5.2f;
+        _camSize = 5.4f;
         SetDim(0f);
 
+        // 机（木目）
         bool customDesk = deskBackground != null;
-        Spr(rt, "Desk", Or(deskBackground, _sq), Vector2.zero, new Vector2(40f, 22f), customDesk ? Color.white : new Color(0.09f, 0.08f, 0.1f), 0);
+        Spr(rt, "Desk", customDesk ? deskBackground : MakeWoodSprite(), Vector2.zero, new Vector2(40f, 22.5f), Color.white, 0);
+
+        // ななめ上から見た机の上：キーボードが少し傾き、左上にモニター、右下にマウス。
+        // キーも指も、キーボードといっしょに傾ける（「Board」の子にする）
+        const float tilt = KeyboardArtTilt;
+        GameObject boardGo = new GameObject("Board");
+        boardGo.transform.SetParent(rt, false);
+        boardGo.transform.localPosition = new Vector3(0.3f, -0.5f, 0f);
+        boardGo.transform.localRotation = Quaternion.Euler(0f, 0f, tilt);
+        boardGo.transform.localScale = new Vector3(0.84f, 0.84f, 1f);
+        Transform board = boardGo.transform;
+
+        BuildDeskItems(rt, board);
+
         bool customKb = keyboardSprite != null;
-        Spr(rt, "Keyboard", Or(keyboardSprite, _round), new Vector2(0f, 0.45f), new Vector2(17.8f, 7.4f), customKb ? Color.white : new Color(0.15f, 0.15f, 0.18f), 2);
+        if (customKb && keyboardSprite.name == "キーボード背景")
+        {
+            AddBoardArt(board, "KbShadow", keyboardSprite, new Vector2(0.3f, 0.1f), new Vector2(17.8f, 7.4f), new Color(0f, 0f, 0f, 0.3f), 1);
+            AddBoardArt(board, "Keyboard", keyboardSprite, new Vector2(0f, 0.45f), new Vector2(17.8f, 7.4f), Color.white, 2);
+        }
+        else
+        {
+            Spr(board, "KbShadow", _round, new Vector2(0.3f, 0.1f), new Vector2(17.8f, 7.4f), new Color(0f, 0f, 0f, 0.3f), 1);
+            Spr(board, "Keyboard", Or(keyboardSprite, _round), new Vector2(0f, 0.45f), new Vector2(17.8f, 7.4f), customKb ? Color.white : new Color(0.17f, 0.17f, 0.20f), 2);
+        }
+        for (int i = 0; i < 3; i++)
+            Spr(board, "Led", _circle, new Vector2(7.6f + i * 0.45f, 3.85f), new Vector2(0.22f, 0.22f), new Color(0.88f, 0.92f, 0.96f), 3);
 
         string[] rows = { "1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" };
         float[] stagger = { 0f, 0.34f, 0.62f, 1.0f };
@@ -1441,25 +1699,25 @@ public class OpeningMovie : MonoBehaviour
             float y = 3.0f - r * 1.3f;
             float x0 = -(row.Length - 1) * 1.62f * 0.5f + stagger[r] - 0.5f;
             for (int c = 0; c < row.Length; c++)
-                caps.Add(AddKeyCap(rt, row[c].ToString(), new Vector2(x0 + c * 1.62f, y), 1.5f, 3));
+                caps.Add(AddKeyCap(board, row[c].ToString(), new Vector2(x0 + c * 1.62f, y), 1.5f, 3));
         }
-        caps.Add(AddKeyCap(rt, "", new Vector2(0f, -2.2f), 6.0f, 3));
+        caps.Add(AddKeyCap(board, "", new Vector2(0f, -2.2f), 6.0f, 3));
 
-        // 指（下の端から、上に向かって出ている。先が指先）
+        // 指（キーボードの手前から、キーボードの上へ向かって出ている。先が指先）
         float[] fx = { -5.6f, -3.8f, -1.9f, 1.9f, 3.8f, 5.6f };
         const float restY = -1.7f;
         Transform[] fingers = new Transform[fx.Length];
         bool[] busy = new bool[fx.Length];
         for (int i = 0; i < fx.Length; i++)
         {
-            GameObject f = MakeFinger(rt, "Finger" + i, 1.45f, 5.5f, 12);
+            GameObject f = MakeFinger(board, "Finger" + i, 1.7f, 6.5f, 12);
             f.transform.localPosition = new Vector3(fx[i], restY, 0f);
             fingers[i] = f.transform;
         }
 
         _fade.color = new Color(0f, 0f, 0f, 1f);
         StartCoroutine(FadeTo(_fade, 0f, 0.6f));
-        StartCoroutine(Tween(typingTime + 1f, k => _camSize = Mathf.Lerp(5.2f, 4.6f, k)));
+        StartCoroutine(Tween(typingTime + 1f, k => _camSize = Mathf.Lerp(5.4f, 4.9f, k)));
         yield return Wait(0.7f);
 
         // だんだん速く、カタカタ打つ
@@ -1488,7 +1746,7 @@ public class OpeningMovie : MonoBehaviour
         yield return Wait(0.3f);
 
         // 最後に、大きな指がドンと押しつぶす
-        GameObject big = MakeFinger(rt, "BigFinger", 3.4f, 11f, 20);
+        GameObject big = MakeFinger(board, "BigFinger", 3.6f, 12f, 20);
         big.transform.localPosition = new Vector3(0f, -7.5f, 0f);
         yield return MoveTransform(big.transform, new Vector3(0f, -7.5f, 0f), new Vector3(0f, 0.2f, 0f), 0.14f);
         Se(slamSe);
@@ -1773,6 +2031,24 @@ public class OpeningMovie : MonoBehaviour
             if (lines[i] != null) Destroy(lines[i].gameObject);
     }
 
+    /// <summary>決意したあとのBGMに切りかえる（入っていなければ、何もしない）。</summary>
+    private void SwitchToResolveBgm()
+    {
+        if (resolveBgm == null)
+            return;
+        if (_bgmPushed)
+        {
+            // いまのBGMは、すでに覚えてあるので、そのまま、次のBGMへ切りかえる
+            AudioManager.PlayBGM(resolveBgm, resolveBgmFade, true, resolveBgmVolume);
+        }
+        else
+        {
+            // ムービーのBGMがなかったときは、いまのBGMを覚えてから、切りかえる
+            AudioManager.PushBGM(resolveBgm, resolveBgmFade, true, resolveBgmVolume);
+            _bgmPushed = true;
+        }
+    }
+
     private IEnumerator Scene4Resolve()
     {
         // うなだれをやめて、まっすぐ立つ（Spaceは、起き上がる）
@@ -1795,7 +2071,8 @@ public class OpeningMovie : MonoBehaviour
             _actors[i].frozen = false;
         yield return Wait(0.3f);
 
-        // みんなで、ぴょんと跳ねて、拳を上げる
+        // みんなで、ぴょんと跳ねて、拳を上げる（BGMも、ここで切りかわる）
+        SwitchToResolveBgm();
         Se(resolveSe);
         for (int i = 0; i < _actors.Count; i++)
             StartCoroutine(Track(HopTo(_actors[i], _actors[i].baseX, 1.0f, 0.4f)));
@@ -1915,9 +2192,12 @@ public class OpeningMovie : MonoBehaviour
         {
             Spr(rt, "Frame", _sq, new Vector2(doorX, doorCy + 0.1f), new Vector2(doorW + 0.4f, doorH + 0.2f), new Color(0.08f, 0.06f, 0.05f), 2);
         }
-        int lightOrder = customFrame ? 1 : 3;   // 枠の絵のときは、光は、地面の板より後ろ
+        int lightOrder = 7;   // 部屋を暗くする幕（6）より手前に出す（暗い部屋の中で、光が明るく見える）
         SpriteRenderer light = Spr(rt, "Light", _sq, new Vector2(doorX, doorCy), new Vector2(doorW, doorH), new Color(1f, 0.97f, 0.82f, 0f), lightOrder);
         SpriteRenderer glow = Spr(rt, "Glow", _glow, new Vector2(doorX - 1.2f, doorCy), new Vector2(13f, 15f), new Color(1f, 0.96f, 0.8f, 0f), lightOrder);
+
+        // 部屋を暗くする幕。光がさす前は暗く、ドアが開くと、少し明るくなる
+        SpriteRenderer shade = Spr(rt, "Shade", _sq, new Vector2(0f, 0.5f), new Vector2(32f, 18f), new Color(0.03f, 0.03f, 0.05f, 0f), 6);
 
         GameObject hinge = new GameObject("Hinge");
         hinge.transform.SetParent(rt, false);
@@ -1941,7 +2221,9 @@ public class OpeningMovie : MonoBehaviour
             Tint(a, Color.white);
         }
 
-        yield return Wait(0.6f);
+        // 部屋が、すっと暗くなる
+        yield return Tween(0.6f, k => shade.color = new Color(0.03f, 0.03f, 0.05f, 0.82f * Smooth(k)));
+        yield return Wait(0.3f);
 
         // ドアが開いて、光があふれる。逆光で、キーたちが黒い影になる
         Se(doorSe);
@@ -1951,6 +2233,7 @@ public class OpeningMovie : MonoBehaviour
             hinge.transform.localScale = new Vector3(Mathf.Lerp(1f, 0.12f, e), 1f, 1f);
             light.color = new Color(1f, 0.97f, 0.82f, e);
             glow.color = new Color(1f, 0.96f, 0.8f, 0.6f * e);
+            shade.color = new Color(0.03f, 0.03f, 0.05f, Mathf.Lerp(0.82f, 0.4f, e));
             Color c = Color.Lerp(Color.white, new Color(0.12f, 0.1f, 0.1f), e);
             for (int i = 0; i < _actors.Count; i++) Tint(_actors[i], c);
         });
@@ -2109,14 +2392,532 @@ public class OpeningMovie : MonoBehaviour
             float margin = 1.1f + 0.6f * (CastWidthOf(a) - 1f);
             float x0 = rockL - margin;
             float x1 = rockR + margin;
-            yield return RunTo(a, x0, titleWalkSpeed);
+            yield return RunTo(a, x0, titleRunSpeed);
             Se(hopSe);
-            yield return JumpTo(a, x1, FloorY, hopH, Mathf.Max(0.65f, (x1 - x0) / titleWalkSpeed));
+            yield return JumpTo(a, x1, FloorY, hopH, Mathf.Max(0.65f, (x1 - x0) / titleRunSpeed));
             Landed(a);
         }
-        yield return RunTo(a, exitX, titleWalkSpeed);
+        yield return RunTo(a, exitX, titleRunSpeed);
         if (a.go != null)
             a.go.SetActive(false);
+    }
+
+    /// <summary>
+    /// プレイヤーが、キーたちを、後ろから追いかける。
+    /// 絵とアニメーションだけを借りて、動きは、このスクリプトで決める（プレイヤー本来のスクリプトは、動かさない）。
+    /// </summary>
+    private IEnumerator TitlePlayerChase(float startX, float exitX, bool hop, float rockL, float rockR, float hopH)
+    {
+        SpriteRenderer srcSr = playerPrefab.GetComponent<SpriteRenderer>();
+        Animator srcAn = playerPrefab.GetComponent<Animator>();
+        if (srcSr == null || srcSr.sprite == null)
+            yield break;
+
+        // 足元（当たりの下のふち）が、地面にそろう高さ
+        CapsuleCollider2D cap = playerPrefab.GetComponent<CapsuleCollider2D>();
+        float foot = cap != null ? (cap.offset.y - cap.size.y * 0.5f) : -1.0f;
+        foot *= playerScale;
+
+        GameObject go = new GameObject("TitlePlayer");
+        go.transform.SetParent(_castRoot.transform, false);
+        go.transform.localScale = new Vector3(playerScale, playerScale, 1f);
+        go.transform.localPosition = new Vector3(startX, FloorY - foot, 0f);
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = srcSr.sprite;
+        sr.sharedMaterial = srcSr.sharedMaterial;
+        sr.sortingOrder = srcSr.sortingOrder + 5;
+        // アニメーションの状態に付いている足音などの処理が、AudioSource を探すので、音の出ない AudioSource を付けておく
+        AudioSource mute = go.AddComponent<AudioSource>();
+        mute.playOnAwake = false;
+        mute.mute = true;
+
+        Animator an = null;
+        if (srcAn != null && srcAn.runtimeAnimatorController != null)
+        {
+            an = go.AddComponent<Animator>();
+            an.runtimeAnimatorController = srcAn.runtimeAnimatorController;
+            an.SetFloat("Speed", 40f);
+        }
+
+        Transform tr = go.transform;
+        float groundY = tr.localPosition.y;
+        float speed = titleRunSpeed;
+        const float margin = 1.0f;
+        bool hopped = !hop;
+        while (tr.localPosition.x < exitX)
+        {
+            Vector3 p = tr.localPosition;
+            if (!hopped && p.x >= rockL - margin)
+            {
+                // 岩を跳び越える
+                hopped = true;
+                float x0 = p.x;
+                float x1 = rockR + margin;
+                float time = Mathf.Max(0.65f, (x1 - x0) / speed);
+                if (an != null) an.SetBool("IsJumping", true);
+                float t = 0f;
+                while (t < time)
+                {
+                    t += Dt();
+                    float k = Mathf.Clamp01(t / time);
+                    p.x = x0 + (x1 - x0) * k;
+                    p.y = groundY + 4f * hopH * k * (1f - k);
+                    tr.localPosition = p;
+                    yield return null;
+                }
+                p.y = groundY;
+                tr.localPosition = p;
+                if (an != null) an.SetBool("IsJumping", false);
+                continue;
+            }
+            p.x += speed * Dt();
+            tr.localPosition = p;
+            yield return null;
+        }
+        go.SetActive(false);
+    }
+
+    // ================= 「はじめから」のムービー（前半：キーの無い机 → モニター）=================
+
+    private bool _introMode;
+
+    /// <summary>「はじめから」のムービーを、流せるか。</summary>
+    public bool CanPlayNewGameIntro
+    {
+        get { return playNewGameIntro && !_playing; }
+    }
+
+    /// <summary>
+    /// 「はじめから」を押したあとのムービーを流す（TitleMenu から呼ぶ）。
+    /// キーが1つも無い机 → 困った主人公がモニターを見る → 検索欄の言葉、の順に流れる。
+    /// 終わると、画面は暗いままで onDone が呼ばれる（そのあと、拠点のシーンへ移る）。
+    /// 飛ばせるかどうかは、introSkippable で決まる（初期値は、飛ばせない）。
+    /// </summary>
+    public void PlayNewGameIntro(System.Action onDone)
+    {
+        if (_playing)
+        {
+            if (onDone != null) onDone();
+            return;
+        }
+
+        // タイトル画面で、ときどき往復していたキーなどを、止めて片づける
+        StopAllCoroutines();
+        _runCos.Clear();
+        DestroyCast();
+        _actors.Clear();
+        _follow = false;
+        _busy = 0;
+        _shake = 0f;
+        _revealing = false;
+        _skipping = false;
+        _onFinished = onDone;
+        _introMode = true;
+
+        if (_font == null)
+            _font = font != null ? font : FindSceneFont();
+        if (_sq == null)
+            BuildSprites();
+
+        if (_world != null && _cam == null)
+        {
+            Destroy(_world);
+            _world = null;
+        }
+        if (_world == null)
+        {
+            BuildStudio();
+        }
+        else
+        {
+            ClearWorld(false);
+            _cam.targetTexture = _rt;
+            _cam.enabled = true;
+            _camPos = Vector2.zero;
+            _camSize = 5f;
+            ApplyCamera(Vector2.zero);
+        }
+
+        _playing = true;
+        _current = this;
+        _startTime = Time.unscaledTime;
+        LockNavigation();
+        BuildOverlay();
+
+        // 飛ばせないときは、「Spaceでスキップ」の表示も消す
+        if (!introSkippable && _canvasGo != null)
+        {
+            Transform skipHint = _canvasGo.transform.Find("SkipHint");
+            if (skipHint != null)
+                skipHint.gameObject.SetActive(false);
+        }
+
+        // 「はじめから」を押した瞬間に、BGMを切り替える
+        if (introBgm != null)
+            AudioManager.PlayBGM(introBgm, introBgmFade, true, introBgmVolume);
+
+        StartCoroutine(IntroRun());
+    }
+
+    /// <summary>
+    /// 「はじめから」のムービーのあと、拠点のシーンを読み込めなかったとき：幕を外して、タイトル画面にもどす。
+    /// </summary>
+    public void AbortIntro()
+    {
+        _introMode = false;
+        DestroyOverlay();
+        HideMovieLayers();
+        ClearWorld(false);
+    }
+
+    /// <summary>
+    /// 「はじめから」のあとの、後半（拠点でKキーと話す）に、タイトル側から渡すものをそろえる。
+    /// TitleMenu が、拠点のシーンを読み込む直前に呼ぶ。
+    /// </summary>
+    public void PrepareNewGameIntro(string hubScene)
+    {
+        TMP_FontAsset f = _font != null ? _font : (font != null ? font : FindSceneFont());
+        NewGameIntro.Prepare(hubScene, keyCharacterPrefab, introKey, f, introTalk, introBgm != null && introBgmContinuesToTalk);
+    }
+
+    private void FinishIntro()
+    {
+        _introMode = false;
+        _playing = false;
+        _skipping = false;
+        if (_current == this)
+            _current = null;
+        // 幕は、暗いまま残す（次のシーンに切り替わるまで、画面がちらつかないように）
+        Done();
+    }
+
+    private IEnumerator IntroSkipRoutine()
+    {
+        if (_overlayAlive && _fade != null)
+            yield return FadeTo(_fade, 1f, 0.25f);
+        ClearWorld(false);
+        FinishIntro();
+    }
+
+    private IEnumerator IntroRun()
+    {
+        yield return IntroEmptyDesk();
+        yield return IntroMonitor();
+        ClearWorld(false);
+        FinishIntro();
+    }
+
+    /// <summary>前半その1：キーが1つも無い、机の上。主人公は、あっけにとられて、モニターのほうを見る。</summary>
+    private IEnumerator IntroEmptyDesk()
+    {
+        GameObject root = NewRoot("Intro_Desk");
+        Transform rt = root.transform;
+        _cam.backgroundColor = new Color(0.30f, 0.20f, 0.13f);
+        _camPos = Vector2.zero;
+        _camSize = 5.4f;
+        SetDim(0f);
+
+        // 机・モニター・マウスは、いちばん最初のムービーと同じ。キーボードだけ、キーも指も無い
+        bool customDesk = deskBackground != null;
+        Spr(rt, "Desk", customDesk ? deskBackground : MakeWoodSprite(), Vector2.zero, new Vector2(40f, 22.5f), Color.white, 0);
+
+        GameObject boardGo = new GameObject("Board");
+        boardGo.transform.SetParent(rt, false);
+        boardGo.transform.localPosition = new Vector3(0.3f, -0.5f, 0f);
+        boardGo.transform.localRotation = Quaternion.Euler(0f, 0f, KeyboardArtTilt);
+        boardGo.transform.localScale = new Vector3(0.84f, 0.84f, 1f);
+        Transform board = boardGo.transform;
+
+        BuildDeskItems(rt, board);
+
+        bool customKb = keyboardSprite != null;
+        if (customKb && keyboardSprite.name == "キーボード背景")
+        {
+            AddBoardArt(board, "KbShadow", keyboardSprite, new Vector2(0.3f, 0.1f), new Vector2(17.8f, 7.4f), new Color(0f, 0f, 0f, 0.3f), 1);
+            AddBoardArt(board, "Keyboard", keyboardSprite, new Vector2(0f, 0.45f), new Vector2(17.8f, 7.4f), Color.white, 2);
+        }
+        else
+        {
+            Spr(board, "KbShadow", _round, new Vector2(0.3f, 0.1f), new Vector2(17.8f, 7.4f), new Color(0f, 0f, 0f, 0.3f), 1);
+            Spr(board, "Keyboard", Or(keyboardSprite, _round), new Vector2(0f, 0.45f), new Vector2(17.8f, 7.4f), customKb ? Color.white : new Color(0.17f, 0.17f, 0.20f), 2);
+        }
+        for (int i = 0; i < 3; i++)
+            Spr(board, "Led", _circle, new Vector2(7.6f + i * 0.45f, 3.85f), new Vector2(0.22f, 0.22f), new Color(0.88f, 0.92f, 0.96f), 3);
+
+        // 暗い画面から、はじまる。しばらく、音もなく、ゆっくり寄っていく
+        StartCoroutine(FadeTo(_fade, 0f, 0.9f));
+        StartCoroutine(Tween(5.0f, k => _camSize = Mathf.Lerp(5.4f, 5.1f, k)));
+        yield return Wait(1.6f);
+
+        StartCoroutine(PopText(rt, "…？", new Vector2(0.2f, 1.0f), 2.2f, new Color(1f, 0.95f, 0.78f), 1.2f, -4f));
+        yield return Wait(1.6f);
+
+        Shake(0.25f, 0.4f);
+        StartCoroutine(PopText(rt, "…！？", new Vector2(-0.3f, 0.8f), 2.6f, new Color(1f, 0.9f, 0.7f), 1.1f, 5f));
+        yield return Wait(1.9f);
+
+        // 左上のモニターへ、目を向ける
+        float s0 = _camSize;
+        Vector2 p0 = _camPos;
+        yield return Tween(1.3f, k =>
+        {
+            float e = Smooth(k);
+            _camSize = Mathf.Lerp(s0, 3.6f, e);
+            _camPos = Vector2.Lerp(p0, new Vector2(-4.8f, 3.6f), e);
+        });
+        yield return Wait(0.5f);
+
+        yield return FadeTo(_fade, 1f, 0.45f);
+        Destroy(root);
+    }
+
+    /// <summary>前半その2：モニターのアップ。検索欄に、「逃亡　仕方　バレる？」と残っている。</summary>
+    private IEnumerator IntroMonitor()
+    {
+        GameObject root = NewRoot("Intro_Monitor");
+        Transform rt = root.transform;
+        _cam.backgroundColor = new Color(0.05f, 0.05f, 0.08f);
+        _camPos = Vector2.zero;
+        _camSize = 5.2f;
+        SetDim(0f);
+
+        // 暗い部屋・机・モニターの光
+        Spr(rt, "Room", _sq, Vector2.zero, new Vector2(40f, 24f), new Color(0.06f, 0.06f, 0.09f), 0);
+        Spr(rt, "DeskEdge", _sq, new Vector2(0f, -5.6f), new Vector2(40f, 3.0f), new Color(0.20f, 0.13f, 0.09f), 1);
+        SpriteRenderer halo = Spr(rt, "Halo", _glow, new Vector2(0f, 0.4f), new Vector2(26f, 16f), new Color(0.62f, 0.80f, 1f, 0f), 1);
+
+        bool customMon = introMonitorSprite != null;
+        Color screenOff = new Color(0.04f, 0.04f, 0.06f);
+        Color screenOn = new Color(0.94f, 0.96f, 0.99f);
+        Color artOff = new Color(0.16f, 0.16f, 0.2f);
+        SpriteRenderer screen = null;
+        SpriteRenderer monArt = null;
+
+        // 画面の中身（ブラウザの検索ページ、または、検索欄の言葉）。画面がつくまで、隠しておく
+        GameObject ui = new GameObject("Ui");
+        ui.transform.SetParent(rt, false);
+        Transform u = ui.transform;
+
+        float textSizeH;
+        Vector2 textPos;
+        TextAlignmentOptions textAlign;
+        float textRectW;
+        Color textCol;
+        float camEndY;
+        float camEndSize;
+
+        if (customMon)
+        {
+            // 自分で用意した、モニターの絵（まっ正面から）。言葉だけ、重ねて出す
+            Vector2 ms = introMonitorSprite.bounds.size;
+            float mw = Mathf.Max(1f, introMonitorWidth);
+            float mh = mw * ms.y / Mathf.Max(0.0001f, ms.x);
+            monArt = Spr(rt, "MonitorArt", introMonitorSprite, new Vector2(0f, 0.4f), new Vector2(mw, mh), artOff, 4);
+
+            textSizeH = introTextSize;
+            textRectW = 12f;
+            textAlign = introTextLeftAligned ? TextAlignmentOptions.Left : TextAlignmentOptions.Center;
+            textPos = new Vector2(introTextOffset.x + (introTextLeftAligned ? textRectW * 0.5f : 0f), 0.4f + introTextOffset.y);
+            textCol = introTextColor;
+            camEndY = 0.4f + introTextOffset.y * 0.5f;
+            camEndSize = 4.4f;
+        }
+        else
+        {
+            // モニター（まっ正面から。台つき）
+            Spr(rt, "Neck", _sq, new Vector2(0f, -4.2f), new Vector2(1.6f, 1.4f), new Color(0.13f, 0.13f, 0.16f), 2);
+            Spr(rt, "Base", _round, new Vector2(0f, -4.95f), new Vector2(6.0f, 0.7f), new Color(0.15f, 0.15f, 0.18f), 2);
+            Spr(rt, "Bezel", _round, new Vector2(0f, 0.4f), new Vector2(15.6f, 8.9f), new Color(0.11f, 0.11f, 0.14f), 3);
+            screen = Spr(rt, "Screen", _sq, new Vector2(0f, 0.45f), new Vector2(14.6f, 7.9f), screenOff, 4);
+
+            Spr(u, "TabBar", _sq, new Vector2(0f, 4.0f), new Vector2(14.6f, 0.7f), new Color(0.80f, 0.83f, 0.88f), 5);
+            Spr(u, "Tab", _round, new Vector2(-5.4f, 4.0f), new Vector2(3.8f, 0.6f), new Color(0.97f, 0.98f, 1f), 6);
+            Txt(u, "検索", new Vector2(-5.4f, 4.0f), 0.34f, new Color(0.3f, 0.32f, 0.38f), 8, false);
+            Spr(u, "ToolBar", _sq, new Vector2(0f, 3.25f), new Vector2(14.6f, 0.85f), new Color(0.93f, 0.95f, 0.98f), 5);
+            Spr(u, "AddressBar", _round, new Vector2(0f, 3.25f), new Vector2(11.4f, 0.55f), new Color(0.86f, 0.89f, 0.94f), 6);
+
+            Txt(u, "検索", new Vector2(0f, 2.15f), 1.3f, new Color(0.28f, 0.42f, 0.78f), 8, false);
+
+            Spr(u, "BoxLine", _round, new Vector2(0f, 0.7f), new Vector2(9.9f, 1.3f), new Color(0.70f, 0.74f, 0.82f), 6);
+            Spr(u, "Box", _round, new Vector2(0f, 0.7f), new Vector2(9.6f, 1.1f), Color.white, 7);
+            // 虫めがねのマーク
+            Spr(u, "IconRing", _circle, new Vector2(-4.3f, 0.72f), new Vector2(0.4f, 0.4f), new Color(0.45f, 0.5f, 0.58f), 8);
+            Spr(u, "IconHole", _circle, new Vector2(-4.3f, 0.72f), new Vector2(0.24f, 0.24f), Color.white, 9);
+            SpriteRenderer handle = Spr(u, "IconHandle", _sq, new Vector2(-4.08f, 0.5f), new Vector2(0.26f, 0.07f), new Color(0.45f, 0.5f, 0.58f), 8);
+            handle.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+
+            textSizeH = 0.62f;
+            textRectW = 8.2f;
+            textAlign = TextAlignmentOptions.Left;
+            textPos = new Vector2(0.35f, 0.7f);
+            textCol = new Color(0.14f, 0.14f, 0.2f);
+            camEndY = 0.8f;
+            camEndSize = 4.0f;
+            Spr(u, "Button", _round, new Vector2(0f, -0.55f), new Vector2(3.0f, 0.8f), new Color(0.92f, 0.94f, 0.97f), 7);
+            Txt(u, "検索", new Vector2(0f, -0.55f), 0.4f, new Color(0.3f, 0.32f, 0.38f), 9, false);
+        }
+
+        // 検索欄の言葉（左から並ぶ）と、点滅するカーソル
+        SpriteRenderer cursor = null;
+        if (introShowSearchText)
+        {
+            TextMeshPro q = Txt(u, introSearchText, textPos, textSizeH, textCol, 9, false);
+            q.alignment = textAlign;
+            q.rectTransform.sizeDelta = new Vector2(textRectW, 1f);
+            q.ForceMeshUpdate();
+            Bounds qb = q.textBounds;
+            Vector3 endWorld = q.transform.TransformPoint(new Vector3(qb.max.x, qb.center.y, 0f));
+            Vector3 endLocal = u.InverseTransformPoint(endWorld);
+            cursor = Spr(u, "Cursor", _sq, new Vector2(endLocal.x + 0.1f, textPos.y), new Vector2(0.05f, textSizeH * 1.1f), textCol, 9);
+        }
+        ui.SetActive(false);
+
+        // 暗いなかから、はじまる
+        yield return FadeTo(_fade, 0f, 0.7f);
+        yield return Wait(0.7f);
+
+        // モニターの画面が、ぱっとつく
+        Shake(0.08f, 0.2f);
+        yield return Tween(0.6f, k =>
+        {
+            float e = Smooth(k);
+            if (screen != null) screen.color = Color.Lerp(screenOff, screenOn, e);
+            if (monArt != null) monArt.color = Color.Lerp(artOff, Color.white, e);
+            halo.color = new Color(0.62f, 0.80f, 1f, 0.5f * e);
+        });
+        ui.SetActive(true);
+        StartCoroutine(CursorBlink(cursor));
+
+        // 検索欄を、じっと見つめる（ゆっくり寄る）
+        yield return Tween(4.2f, k =>
+        {
+            float e = Smooth(k);
+            _camSize = Mathf.Lerp(5.2f, camEndSize, e);
+            _camPos = Vector2.Lerp(Vector2.zero, new Vector2(0f, camEndY), e);
+        });
+        yield return Wait(0.6f);
+
+        yield return FadeTo(_fade, 1f, 0.8f);
+        Destroy(root);
+    }
+
+    private IEnumerator CursorBlink(SpriteRenderer c)
+    {
+        while (c != null)
+        {
+            c.enabled = !c.enabled;
+            yield return Wait(0.5f);
+        }
+    }
+
+    // ================= タイトル画面で、ときどき往復するキー =================
+
+    private float _gTop;
+    private float _gLeft;
+    private float _gRight;
+    private bool _gHasRock;
+    private float _gRockL;
+    private float _gRockR;
+    private float _gHopH = 1.6f;
+
+    /// <summary>タイトル画面の、地面の高さ・画面のはし・岩の位置を調べる。</summary>
+    private void ComputeTitleGeometry()
+    {
+        Camera tc = TitleCamera();
+        float camX = tc != null ? tc.transform.position.x : 0f;
+        float halfW = (tc != null && tc.orthographic) ? tc.orthographicSize * tc.aspect : 9f;
+        _gLeft = camX - halfW;
+        _gRight = camX + halfW;
+        _gTop = TitleGroundTop();
+        _gHasRock = false;
+        _gHopH = 1.6f;
+        if (hopOverRock)
+        {
+            Transform rock = FindTitleObject("Rock");
+            SpriteRenderer rsr = rock != null ? rock.GetComponent<SpriteRenderer>() : null;
+            if (rsr != null)
+            {
+                _gHasRock = true;
+                _gRockL = rsr.bounds.min.x;
+                _gRockR = rsr.bounds.max.x;
+                float rockH = Mathf.Max(0.3f, rsr.bounds.max.y - _gTop);
+                _gHopH = Mathf.Max(1.4f, (rockH + 0.4f) / 0.85f);
+            }
+        }
+    }
+
+    /// <summary>着地のほこり（音なし）。</summary>
+    private void LandedQuiet(Actor a)
+    {
+        if (a.go == null) return;
+        Vector3 p = a.go.transform.localPosition;
+        StartCoroutine(Puff(a.go.transform.parent, new Vector2(p.x, FloorY + 0.15f), new Color(0.85f, 0.78f, 0.62f, 0.7f), 0.8f, 0.4f, 0.5f, 20));
+    }
+
+    /// <summary>画面を、右へ（または左へ）歩いて通りすぎる。岩は、ぴょんと跳び越える。</summary>
+    private IEnumerator IdleWalk(Actor a, bool toRight, float endX)
+    {
+        if (_gHasRock)
+        {
+            float margin = 1.1f + 0.6f * (CastWidthOf(a) - 1f);
+            float x0 = toRight ? _gRockL - margin : _gRockR + margin;
+            float x1 = toRight ? _gRockR + margin : _gRockL - margin;
+            yield return RunTo(a, x0, idleWalkSpeed);
+            yield return JumpTo(a, x1, FloorY, _gHopH, Mathf.Max(0.65f, Mathf.Abs(x1 - x0) / idleWalkSpeed));
+            LandedQuiet(a);
+        }
+        yield return RunTo(a, endX, idleWalkSpeed);
+    }
+
+    /// <summary>ランダムなキーが、左から右へ、そのあと、右から左へ、往復する。</summary>
+    private IEnumerator IdleTrip(Actor a)
+    {
+        for (int leg = 0; leg < 2; leg++)
+        {
+            bool toRight = leg == 0;
+            float startX = toRight ? _gLeft - 1.5f : _gRight + 1.5f;
+            float endX = toRight ? _gRight + 2.5f : _gLeft - 2.5f;
+            a.go.SetActive(true);
+            a.go.transform.localEulerAngles = Vector3.zero;
+            a.go.transform.localPosition = new Vector3(startX, FloorY, 0f);
+            Tint(a, Color.white);
+            Face(a, toRight);
+            Stop(a);
+            if (a.rig != null)
+                a.rig.SetMotion(LimbRig.KeyMotion.None);
+            yield return IdleWalk(a, toRight, endX);
+            a.go.SetActive(false);
+            if (leg == 0)
+                yield return Wait(Random.Range(1.0f, 2.5f));
+        }
+    }
+
+    /// <summary>一定の間をおいて、ランダムなキーが、往復する。</summary>
+    private IEnumerator IdleKeys(float firstDelay)
+    {
+        ComputeTitleGeometry();
+        if (_castRoot == null)
+        {
+            _castRoot = new GameObject("TitleCast");
+            _castRoot.transform.position = new Vector3(0f, _gTop - FloorY, 0f);
+        }
+        if (_actors.Count == 0)
+        {
+            for (int i = 0; i < CastLetters.Length; i++)
+            {
+                Actor a = SpawnActor(_castRoot.transform, CastLetters[i], 0f, CastWidths[i], 10 + i * 5);
+                a.go.SetActive(false);
+            }
+        }
+
+        yield return Wait(firstDelay);
+        while (true)
+        {
+            Actor pick = _actors[Random.Range(0, _actors.Count)];
+            if (pick.go != null)
+                yield return IdleTrip(pick);
+            yield return Wait(Mathf.Max(0.5f, idleInterval));
+        }
     }
 
     private IEnumerator Scene7Title()
@@ -2196,15 +2997,23 @@ public class OpeningMovie : MonoBehaviour
         _busy = 0;
         for (int i = 0; i < _actors.Count; i++)
             StartCoroutine(Track(TitleWalk(_actors[i], exitX, hasRock, rockL, rockR, hopH)));
+
+        // 走るキーたちを、後ろから、プレイヤーが追いかける
+        if (playerPrefab != null)
+        {
+            float lastKeyX = startX - WalkOffsets[Mathf.Min(_actors.Count - 1, WalkOffsets.Length - 1)];
+            StartCoroutine(Track(TitlePlayerChase(lastKeyX - playerGap, exitX, hasRock, rockL, rockR, hopH)));
+        }
         yield return FadeTo(_fade, 0f, 0.5f);
 
         // 全員が、画面の右へ去るまで、歩く
         yield return WaitBusy();
         yield return Wait(0.5f);
 
-        // 歩き終わったので、ロゴ → メニューの順に出す
-        DestroyCast();
+        // 走り終わったので、ロゴ → メニューの順に出す（そのあと、ときどき、キーが往復する）
         DestroyOverlay();
+        if (idleKeysOnTitle)
+            StartCoroutine(IdleKeys(4f));
         yield return RevealUi();
     }
 }

@@ -681,11 +681,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 52bbb95b65902cd4b881ca54de31dfea, type: 3}
---- !u!4 &571987280 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4567782686879236, guid: 061600cc71b08b947a704a7416146101, type: 3}
-  m_PrefabInstance: {fileID: 1245897360}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &575587915 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5032107752576006603, guid: 7ee76d09d538a5c41816b553a64d3b73, type: 3}
@@ -731,7 +726,6 @@ Transform:
   - {fileID: 1264144620}
   - {fileID: 2018243381}
   - {fileID: 1951051708}
-  - {fileID: 571987280}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &598014639
@@ -2020,63 +2014,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
---- !u!1001 &1245897360
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 579926039}
-    m_Modifications:
-    - target: {fileID: 1458107173046890, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_Name
-      value: EnemySimple (8)
-      objectReference: {fileID: 0}
-    - target: {fileID: 4567782686879236, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_RootOrder
-      value: 17
-      objectReference: {fileID: 0}
-    - target: {fileID: 4567782686879236, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -1.5688308
-      objectReference: {fileID: 0}
-    - target: {fileID: 4567782686879236, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: -2.024734
-      objectReference: {fileID: 0}
-    - target: {fileID: 4567782686879236, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 9.944718
-      objectReference: {fileID: 0}
-    - target: {fileID: 4567782686879236, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4567782686879236, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4567782686879236, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4567782686879236, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 114841737010993260, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: turnLayerMask.m_Bits
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 212746456417141244, guid: 061600cc71b08b947a704a7416146101, type: 3}
-      propertyPath: m_Materials.Array.data[0]
-      value: 
-      objectReference: {fileID: 10306, guid: 0000000000000000f000000000000000, type: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 061600cc71b08b947a704a7416146101, type: 3}
 --- !u!4 &1264144620 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3637721012927612213, guid: 52bbb95b65902cd4b881ca54de31dfea, type: 3}
@@ -2428,8 +2365,9 @@ MonoBehaviour:
   textScale: 1
   fingerSprite: {fileID: 0}
   deskBackground: {fileID: 0}
-  keyboardSprite: {fileID: 0}
-  roomBackground: {fileID: 0}
+  keyboardSprite: {fileID: 21300000, guid: 6ea467a1fe77b0245a05a0f5eed592d1, type: 3}
+  monitorSprite: {fileID: 21300000, guid: 43efa34f82833f8448bdc0e971a3a471, type: 3}
+  roomBackground: {fileID: 21300000, guid: 093c16abd76a73848a8c707992999f0d, type: 3}
   doorSprite: {fileID: 21300000, guid: 56e5672397c2b37469460a6d406ddfd2, type: 3}
   doorFrameSprite: {fileID: 21300000, guid: 8144738cc2dbf7748a22cba7394dcd83, type: 3}
   roomGroundSprite: {fileID: 21300000, guid: fb9427d0ee10ec245b38ee9bf85c5b95, type: 3}
@@ -2443,21 +2381,42 @@ MonoBehaviour:
   - {fileID: 1312561203}
   - {fileID: 1777965136}
   - {fileID: 1068125163}
-  titleWalkSpeed: 4.4
+  titleRunSpeed: 7
   hopOverRock: 1
-  bgm: {fileID: 0}
-  bgmVolume: 0.8
-  clackClips: []
-  slamSe: {fileID: 0}
-  hopSe: {fileID: 0}
-  collapseSe: {fileID: 0}
-  resolveSe: {fileID: 0}
-  doorSe: {fileID: 0}
-  landSe: {fileID: 0}
-  logoSe: {fileID: 0}
+  playerPrefab: {fileID: 646343980418524358, guid: 3b7f6d73330b30546b20525526cc8285, type: 3}
+  playerScale: 0.9
+  playerGap: 4
+  idleKeysOnTitle: 1
+  idleInterval: 6
+  idleWalkSpeed: 3.6
+  bgm: {fileID: 8300000, guid: 31b6e17e6659dc447adc89ab8da9333b, type: 3}
+  bgmVolume: 0.808
+  resolveBgm: {fileID: 8300000, guid: bcd1556f61d5b7b4b8abd30303d547a4, type: 3}
+  resolveBgmVolume: 0.822
+  resolveBgmFade: 1
+  clackClips:
+  - {fileID: 8300000, guid: 8438ebd2c63ad0847b8e181504cc195c, type: 3}
+  slamSe: {fileID: 8300000, guid: d4a6073932e707148b24cfd90cfc7333, type: 3}
+  hopSe: {fileID: 8300000, guid: c80ed1d3cf61a8e40bd69e1bccea6936, type: 3}
+  collapseSe: {fileID: 8300000, guid: 366061fe9e2b5cc478ea785d37984bcd, type: 3}
+  resolveSe: {fileID: 8300000, guid: dabc2bb54685ac546973de21c22a2329, type: 3}
+  doorSe: {fileID: 8300000, guid: da8ea2e886f46fd4888d09df25b9bea1, type: 3}
+  landSe: {fileID: 8300000, guid: ace435d4b6d8dba4ca861c76afa6f452, type: 3}
+  logoSe: {fileID: 8300000, guid: ecebea24f0c6bc94c8242b98913d5d50, type: 3}
   seVolume: 1
+  clackVolume: 1
+  slamVolume: 1.43
+  hopVolume: 0.299
+  collapseVolume: 1.533
+  resolveVolume: 1.738
+  doorVolume: 1.907
+  landVolume: 1.636
+  logoVolume: 1.879
   typingTime: 6
   skipGuardTime: 0.5
+  playNewGameIntro: 1
+  introSearchText: "\u9003\u4EA1\u3000\u4ED5\u65B9\u3000\u30D0\u30EC\u308B\uFF1F"
+  introKey: {fileID: 11400000, guid: 4417e8bd0f87406d8c76ed27bde1b00f, type: 2}
 --- !u!4 &1462676499
 Transform:
   m_ObjectHideFlags: 0

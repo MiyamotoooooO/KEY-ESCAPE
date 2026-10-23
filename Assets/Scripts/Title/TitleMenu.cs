@@ -190,10 +190,27 @@ public class TitleMenu : MonoBehaviour
         if (_loading)
             return;
         SaveManager.DeleteSave();
+        if (confirmPanel != null)
+            confirmPanel.SetActive(false);
+
+        // 「はじめから」のムービー（キーの無い机→モニター）を流してから、拠点へ進む
+        if (openingMovie != null && openingMovie.CanPlayNewGameIntro)
+        {
+            _loading = true;
+            openingMovie.PlayNewGameIntro(OnNewGameIntroFinished);
+            return;
+        }
         LoadHub();
     }
 
-    private void LoadHub()
+    private void OnNewGameIntroFinished()
+    {
+        _loading = false;
+        if (!LoadHub(true) && openingMovie != null)
+            openingMovie.AbortIntro();
+    }
+
+    private bool LoadHub(bool newGameIntro = false)
     {
         StageCatalog catalog = StageCatalog.Instance;
         string sceneName = (catalog != null && !string.IsNullOrEmpty(catalog.hubSceneName))
@@ -203,11 +220,16 @@ public class TitleMenu : MonoBehaviour
         if (!Application.CanStreamedLevelBeLoaded(sceneName))
         {
             Debug.LogWarning("[TitleMenu] シーン「" + sceneName + "」を読み込めません。File > Build Settingsに、このシーンを追加してください。");
-            return;
+            return false;
         }
+
+        // 「はじめから」のあとは、拠点で、Kキーとの会話が始まる
+        if (newGameIntro && openingMovie != null)
+            openingMovie.PrepareNewGameIntro(sceneName);
 
         _loading = true;
         SceneManager.LoadScene(sceneName);
+        return true;
     }
 
     private static void SelectButton(Button b)
