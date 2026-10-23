@@ -42,6 +42,9 @@ public class StageGoal : MonoBehaviour
     public StageClearDirector director;
 
     private bool _done;
+
+    /// <summary>クリアになったあと（ゴールしたあと）true。ゴールの紙吹雪などが、止まるのに使う。</summary>
+    public bool IsDone { get { return _done; } }
     private bool _bossSeen;
     // 今回のクリアで、新しく解放されたアクション（結果画面のあとに、ロックを壊す演出で見せる）
     private readonly List<GameAction> _newActions = new List<GameAction>();

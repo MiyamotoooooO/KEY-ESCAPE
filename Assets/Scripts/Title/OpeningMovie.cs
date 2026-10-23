@@ -2607,6 +2607,53 @@ public class OpeningMovie : MonoBehaviour
         FinishIntro();
     }
 
+    /// <summary>
+    /// キーが1つも無いキーボード：1つ目のムービー（Scene1Typing）でキーが付いていた場所すべてに、からっぽの土台（へこみ＋スイッチの軸）を置く。
+    /// 「キーが抜け落ちたあと」だと分かるように、ほこりも少し散らす。board の座標で置く（キーボードといっしょに傾く）。
+    /// </summary>
+    private void AddEmptyKeySockets(Transform board)
+    {
+        string[] rows = { "1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" };
+        float[] stagger = { 0f, 0.34f, 0.62f, 1.0f };
+        for (int r = 0; r < rows.Length; r++)
+        {
+            float y = 3.0f - r * 1.3f;
+            float x0 = -(rows[r].Length - 1) * 1.62f * 0.5f + stagger[r] - 0.5f;
+            for (int c = 0; c < rows[r].Length; c++)
+                AddKeySocket(board, new Vector2(x0 + c * 1.62f, y), 1.5f, 1.2f, false);
+        }
+        AddKeySocket(board, new Vector2(0f, -2.2f), 6.0f, 1.2f, true);
+
+        // ほこり・くず（毎回同じ形になるように、種を決めておく）
+        System.Random rng = new System.Random(11);
+        for (int i = 0; i < 14; i++)
+        {
+            float x = (float)(rng.NextDouble() * 16.0 - 8.0);
+            float y = (float)(rng.NextDouble() * 6.5 - 2.9);
+            float s = 0.04f + (float)rng.NextDouble() * 0.06f;
+            float g = 0.38f + (float)rng.NextDouble() * 0.18f;
+            SpriteRenderer d = Spr(board, "Dust", _sq, new Vector2(x, y), new Vector2(s, s), new Color(g, g, g), 7);
+            d.transform.localRotation = Quaternion.Euler(0f, 0f, (float)(rng.NextDouble() * 90.0));
+        }
+    }
+
+    /// <summary>キーが外れた、1つ分の土台：明るいふち・暗いへこみ・底・中央のスイッチの軸（十字）。wide が true なら、スペースキー（軸が3つ）。</summary>
+    private void AddKeySocket(Transform board, Vector2 pos, float w, float h, bool wide)
+    {
+        Spr(board, "SocketRim", _round, pos + new Vector2(0f, -0.05f), new Vector2(w + 0.14f, h + 0.14f), new Color(0.33f, 0.33f, 0.36f), 3);
+        Spr(board, "SocketWell", _round, pos, new Vector2(w + 0.08f, h + 0.06f), new Color(0.07f, 0.07f, 0.08f), 4);
+        Spr(board, "SocketFloor", _round, pos + new Vector2(0f, -0.05f), new Vector2(w - 0.02f, h - 0.06f), new Color(0.13f, 0.13f, 0.14f), 5);
+
+        float[] stems = wide ? new float[] { -2.3f, 0f, 2.3f } : new float[] { 0f };
+        Color stemColor = new Color(0.31f, 0.31f, 0.34f);
+        for (int i = 0; i < stems.Length; i++)
+        {
+            Vector2 p = pos + new Vector2(stems[i], -0.03f);
+            Spr(board, "SocketStemH", _sq, p, new Vector2(0.5f, 0.13f), stemColor, 6);
+            Spr(board, "SocketStemV", _sq, p, new Vector2(0.13f, 0.5f), stemColor, 6);
+        }
+    }
+
     /// <summary>前半その1：キーが1つも無い、机の上。主人公は、あっけにとられて、モニターのほうを見る。</summary>
     private IEnumerator IntroEmptyDesk()
     {
@@ -2643,6 +2690,9 @@ public class OpeningMovie : MonoBehaviour
         }
         for (int i = 0; i < 3; i++)
             Spr(board, "Led", _circle, new Vector2(7.6f + i * 0.45f, 3.85f), new Vector2(0.22f, 0.22f), new Color(0.88f, 0.92f, 0.96f), 3);
+
+        // キーが抜け落ちたあと：キーが付いていた場所に、からっぽの土台（キーの穴）が並ぶ
+        AddEmptyKeySockets(board);
 
         // 暗い画面から、はじまる。しばらく、音もなく、ゆっくり寄っていく
         StartCoroutine(FadeTo(_fade, 0f, 0.9f));

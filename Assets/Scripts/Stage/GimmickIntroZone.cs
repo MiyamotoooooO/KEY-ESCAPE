@@ -53,6 +53,14 @@ public class GimmickIntroZone : MonoBehaviour
     [Tooltip("説明パネルのプレハブ（Assets/Prefab/GimmickIntroUI）。")]
     public GimmickIntroUI uiPrefab;
 
+    [Header("シーンが始まったとき、自動で出す（拠点に戻ったときなど）")]
+    [Tooltip("ONなら、プレイヤーが範囲に入らなくても、シーンが始まって（ロード画面が消えて）少ししたら、自動で出す。この場合、このゾーンの範囲（コライダー）は使わない（自動でOFFになる）。")]
+    public bool playOnSceneStart = false;
+    [Tooltip("空でなければ、このステージ（StageCatalogのid。例：Tutorial）をクリア済みのときだけ出す。Show Once がONなら、最初に出したあとは出ない。")]
+    public string requiredClearedStageId = "";
+    [Tooltip("ロード画面が消えてから、出すまでの秒数。")]
+    public float autoStartDelay = 0.6f;
+
     [Header("止まる位置（掲示板の前などで、確実に止めたいとき）")]
     [Tooltip("入れると、範囲に入ったあと、プレイヤーが自動でこの場所まで歩いて止まり、そこで会話が始まる（範囲の端で止まらない）。この場所より右にいたときは、左へ戻る。空なら、範囲に入ったその場で止まる。")]
     public Transform standPoint;
@@ -132,6 +140,47 @@ public class GimmickIntroZone : MonoBehaviour
             // 紹介は見たけれど、左上のヒントの場所に、まだ着いていないとき：もう一度、左上に出す
             ActivateObjectives();
         }
+        else if (playOnSceneStart)
+        {
+            // 範囲に入ったときではなく、シーンが始まったときに出す（範囲は使わない）
+            Collider2D col = GetComponent<Collider2D>();
+            if (col != null)
+                col.enabled = false;
+            StartCoroutine(AutoStart());
+        }
+    }
+
+    /// <summary>シーンが始まったら、条件（クリア済みのステージ）を見て、ロード画面が消えるのを待ってから、紹介を始める。</summary>
+    private IEnumerator AutoStart()
+    {
+        if (steps == null || steps.Length == 0)
+            yield break;
+        if (!string.IsNullOrEmpty(requiredClearedStageId) && !StageProgress.IsCleared(requiredClearedStageId))
+            yield break;
+
+        yield return null;
+        while (LoadingScreen.IsLoading)
+            yield return null;
+        yield return new WaitForSeconds(Mathf.Max(0f, autoStartDelay));
+
+        // プレイヤーを探す（キーコンフィグのプレビュー用は除く）
+        PlayerMovement pm = null;
+        float waited = 0f;
+        while (pm == null && waited < 3f)
+        {
+            GameObject g = NewGameIntro.FindMainPlayerObject();
+            if (g != null)
+                pm = g.GetComponent<PlayerMovement>();
+            if (pm == null)
+            {
+                waited += Time.deltaTime;
+                yield return null;
+            }
+        }
+
+        if (_running || _done)
+            yield break;
+        StartCoroutine(Run(pm));
     }
 
     private void OnTriggerEnter2D(Collider2D other)

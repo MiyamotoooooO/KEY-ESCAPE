@@ -21,7 +21,7 @@ public class DestructibleObject : MonoBehaviour
 
 	void Awake()
 	{
-		initialPosition = transform.position;
+		initialPosition = transform.localPosition; // ローカル座標で覚える（UpdateはlocalPositionに戻すため。親が動いていると、ワールド座標だとずれる）
 	}
 
 	void Start()
