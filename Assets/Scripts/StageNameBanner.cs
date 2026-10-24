@@ -1,13 +1,17 @@
 ﻿using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
 /// KEY ESCAPE - ステージの名前を、画面の右上に出す部品。
 ///
 /// 使い方：ステージのシーンに空のオブジェクト（名前は「StageName」など）を作り、このスクリプトを付ける。
-/// Inspector の「Stage Name」に、表示したい文字（例：1-1　草原のはじまり）を書く。
+/// 表示する文字は、StageCatalog から自動で決まる（「Use Catalog Name」がオンのとき）。
+///   いま開いているシーンの名前と、StageCatalog の「Scene Name」が同じステージを探し、「番号 名前」（例：1-1 新たな出会い）を出す。
+///   → シーンを複製して新しいステージを作っても、StageCatalog に登録するだけで、正しい名前が出る。
+/// StageCatalog に見つからないとき（またはオフのとき）は、Inspector の「Stage Name」に書いた文字を出す。
 /// 「Banner Sprite」に、背景の画像（Assets/Art/StageName/StageNameBanner.png）を入れる。
 /// （空のときは、Resources/StageName/StageNameBanner を探す）
 ///
@@ -19,8 +23,10 @@ using UnityEngine.UI;
 public class StageNameBanner : MonoBehaviour
 {
     [Header("表示する文字")]
-    [Tooltip("ステージの名前。例：1-1　草原のはじまり")]
-    public string stageName = "1-1　ステージの名前";
+    [Tooltip("ONなら、StageCatalog から、このシーンのステージの「番号 名前」を自動で取ってくる（シーンを複製しても、直さなくてよい）。見つからないときは、下の Stage Name を使う。")]
+    public bool useCatalogName = true;
+    [Tooltip("ステージの名前。例：1-1 草原のはじまり（全角の空白は、文字化けすることがあるので、半角の空白にする）。Use Catalog Name がOFFのとき、または StageCatalog に見つからないときに出す。")]
+    public string stageName = "1-1 ステージの名前";
 
     [Header("見た目（どちらも任意）")]
     [Tooltip("背景の画像。空なら Resources/StageName/StageNameBanner を探す。")]
@@ -67,10 +73,11 @@ public class StageNameBanner : MonoBehaviour
             Debug.LogWarning("[StageNameBanner] 背景の画像がありません。Banner Sprite に StageNameBanner を入れてください。", this);
             return;
         }
-        if (string.IsNullOrEmpty(stageName))
+        string title = ResolveTitle();
+        if (string.IsNullOrEmpty(title))
             return;
 
-        Build(sprite);
+        Build(sprite, title);
         StartCoroutine(Play());
     }
 
@@ -78,6 +85,34 @@ public class StageNameBanner : MonoBehaviour
     {
         if (_canvasObj != null)
             Destroy(_canvasObj);
+    }
+
+    /// <summary>出す文字を決める。StageCatalog に、このシーンのステージがあれば「番号 名前」。なければ Stage Name。</summary>
+    private string ResolveTitle()
+    {
+        string title = stageName;
+        if (useCatalogName)
+        {
+            StageCatalog catalog = StageCatalog.Instance;
+            if (catalog != null)
+            {
+                string scene = SceneManager.GetActiveScene().name;
+                for (int i = 0; i < catalog.stages.Count; i++)
+                {
+                    StageCatalog.Entry e = catalog.stages[i];
+                    if (e == null || e.sceneName != scene)
+                        continue;
+                    string number = (e.stageNumber ?? "").Trim();
+                    string name = (e.displayName ?? "").Trim();
+                    string t = number.Length > 0 && name.Length > 0 ? number + " " + name : number + name;
+                    if (t.Length > 0)
+                        title = t;
+                    break;
+                }
+            }
+        }
+        // 全角の空白は、文字化けすることがあるので、半角にする。
+        return title != null ? title.Replace('\u3000', ' ') : title;
     }
 
     // ================= 動き =================
@@ -133,7 +168,7 @@ public class StageNameBanner : MonoBehaviour
 
     // ================= 画面の部品を作る =================
 
-    private void Build(Sprite sprite)
+    private void Build(Sprite sprite, string title)
     {
         _canvasObj = new GameObject("StageNameBannerCanvas");
         _canvasObj.transform.SetParent(transform, false);
@@ -174,7 +209,7 @@ public class StageNameBanner : MonoBehaviour
         TMP_FontAsset useFont = font != null ? font : FindSceneFont();
         if (useFont != null)
             text.font = useFont;
-        text.text = stageName;
+        text.text = title;
         text.color = textColor;
         text.alignment = TextAlignmentOptions.Center;
         text.enableWordWrapping = false;
