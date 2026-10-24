@@ -28,3 +28,10 @@ MonoBehaviour:
     description: 
     sceneName: Stage1
     rewards: 04000000
+  - id: Stage2
+    displayName: "\u8D85\u3048\u3066\u884C\u3051"
+    stageNumber: 1-2
+    thumbnail: {fileID: 21300000, guid: 65eeaaeba3ad3774a80bf0362f665fda, type: 3}
+    description: 
+    sceneName: Stage2
+    rewards: 05000000

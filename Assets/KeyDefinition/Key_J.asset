@@ -18,4 +18,5 @@ MonoBehaviour:
   rank: 2
   personality: 3
   isSpecialKey: 0
-  flavorText: "\u90AA\u9B54\u306A\u5974\u306F\u3001\u307E\u3068\u3081\u3066\u5439\u3063\u98DB\u3070\u3059\uFF01"
+  flavorText: "\u3058\u3083\u307E\u306A\u5974\u306F\u3001\u307E\u3068\u3081\u3066\u5439\u3063\u98DB\u3070\u3059\uFF01"
+  bindQuips: []
