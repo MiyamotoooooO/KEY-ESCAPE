@@ -260,8 +260,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.31329346, y: -18.638397}
-  m_SizeDelta: {x: -31.3646, y: 209.3616}
+  m_AnchoredPosition: {x: -0.31329346, y: -19.043915}
+  m_SizeDelta: {x: -31.3646, y: 290.2421}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &4575633041061959239
 CanvasRenderer:
@@ -2091,6 +2091,7 @@ MonoBehaviour:
     floatValue: 0
     facing: 0
   playerActionInterval: {x: 0.8, y: 1.8}
+  playerPlaysSounds: 0
   timePanel: {fileID: 6273606906067289500}
   timeText: {fileID: 7573733670872544417}
   bestTimeText: {fileID: 5511562559710078173}
@@ -2111,6 +2112,9 @@ MonoBehaviour:
     photo: {fileID: 508265527612112983}
     comment: {fileID: 3859730339685594640}
   noDeathObject: {fileID: 5419049853056703991}
+  photoZoom: 1
+  photoClipSpeed: 1
+  photoClipHold: 0.9
   commentsFall:
   - "\u3053\u3053\u3067\u843D\u3061\u308B\uFF1F\uFF1F\uFF1F"
   - "\u305D\u3053\u3001\u7A74\u3060\u3088\uFF1F"
@@ -2150,6 +2154,16 @@ MonoBehaviour:
   keyCharacterScale: 1
   keyViewHeight: 1.9
   keyCheerDelay: 0.15
+  keyMotion:
+    randomMotion: 1
+    motions: 0200000003000000040000000500000006000000
+    intervalMin: 2
+    intervalMax: 4
+  rewardPanel: {fileID: 0}
+  rewardText: {fileID: 0}
+  rewardFormat: "\u899A\u3048\u305F\uFF01 {0}"
+  rewardFallbackPos: {x: -520, y: -448}
+  rewardFallbackSize: {x: 620, y: 92}
   returnButton: {fileID: 6921799332612016356}
 --- !u!1 &6466642861961881992
 GameObject:
@@ -2261,7 +2275,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: -0.9714966, y: -17.5887}
-  m_SizeDelta: {x: -31.064, y: 210.4113}
+  m_SizeDelta: {x: -31.064, y: 291.6973}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &4394882186090872185
 CanvasRenderer:
@@ -3336,7 +3350,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: -1.0323029, y: -17.5887}
-  m_SizeDelta: {x: -29.3756, y: 210.4113}
+  m_SizeDelta: {x: -29.3756, y: 291.6973}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &6626405165095860588
 CanvasRenderer:

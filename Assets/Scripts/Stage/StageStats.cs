@@ -20,6 +20,8 @@ public enum DeathCause
 ///   ・写真は、死んだ瞬間のゲーム画面だけ（HPゲージやフラッシュは写らない）を、メモリに持つ。最大 MaxPhotos 枚。
 ///     プレイヤーのまわりだけを切り抜いて撮る。1回の死につき、死んだ瞬間から約 ClipSeconds 秒のあいだ、
 ///     FrameInterval 秒ごとに撮り続けて、「倒れるまでの動き」（連続写真）にする。結果画面は、これを繰り返し再生する。
+///     ふだんの挑戦中も、直近の PreRollSeconds 秒ぶんを、小さな画像でつねに持っておき（古いものから上書き）、
+///     死んだときは、その少し前から再生を始める（「なぜ死んだか」が分かるように）。
 /// どこにも付けなくてよい。
 /// </summary>
 public static class StageStats
@@ -38,13 +40,15 @@ public static class StageStats
         public DeathCause cause;
     }
 
-    const int   MaxPhotos   = 8;     // 持っておく死亡の最大数（古いものから捨てる）。1回の死が、連続写真の数だけ画像を持つ
+    const int   MaxPhotos   = 6;     // 持っておく死亡の最大数（古いものから捨てる）。1回の死が、連続写真の数だけ画像を持つ
     const int   OutWidth    = 336;   // 写真1枚の大きさ（ピクセル）。結果画面の枠の縦横比に近くしておく
     const int   OutHeight   = 270;
     const float ViewScale   = 0.5f;  // 死んだ瞬間のカメラの高さの、何割を写すか（小さいほど、プレイヤーに寄る。以前は0.7）
     const float FrameInterval = 0.12f; // 連続写真の間隔（実時間の秒）
     const float ClipSeconds = 1.4f;  // 死んでから、連続写真を撮り続ける秒数（実時間）
-    const int   MaxFrames   = 12;    // 連続写真の、最大の枚数
+    const int   MaxFrames   = 22;    // 連続写真の、最大の枚数（死ぬ前の分も含む）
+    const float PreRollSeconds = 1.0f; // 死ぬ何秒前から再生するか。0にすると、死んだ瞬間から（ふだんの撮影もしない）
+    const int   RingSize    = 10;    // ふだんから持っておく写真の数（FrameInterval × この数が、さかのぼれる最大の長さ）
     const float MaxStep     = 0.1f;  // 1フレームで数える最大の秒数（読み込み直後の長いフレーム対策）
 
     /// <summary>いま記録しているステージのID。空なら、記録していない。</summary>
@@ -57,6 +61,13 @@ public static class StageStats
     public static int DeathCount { get; private set; }
 
     private static readonly List<DeathPhoto> _photos = new List<DeathPhoto>();
+
+    // 死ぬ前の様子を持っておく、輪っか状の入れ物（古いものから上書きする。画像はGPUの上に持つ）
+    private static RenderTexture[] _ring;
+    private static float[] _ringTime;
+    private static int _ringHead;
+    private static int _ringCount;
+    private static bool _ringLocked;
     private static bool _running;
     private static Ticker _ticker;
 
@@ -72,6 +83,11 @@ public static class StageStats
         _photos.Clear();
         _running = false;
         _ticker = null;
+        _ring = null;
+        _ringTime = null;
+        _ringHead = 0;
+        _ringCount = 0;
+        _ringLocked = false;
     }
 
     // ================= StageRun / StageGoal から呼ぶ =================
@@ -103,6 +119,7 @@ public static class StageStats
     {
         if (_ticker != null)
             _ticker.StopClip();
+        ReleaseRing();
         for (int i = 0; i < _photos.Count; i++)
             DestroyPhoto(_photos[i]);
         _photos.Clear();
@@ -133,6 +150,14 @@ public static class StageStats
         }
         if (photo == null)
             return;
+
+        // 死ぬ少し前からの様子を、先頭に足す。
+        List<Texture2D> pre = TakePreRoll();
+        if (pre.Count > 0)
+        {
+            photo.frames.InsertRange(0, pre);
+            photo.texture = photo.frames[0];
+        }
 
         _photos.Add(photo);
         while (_photos.Count > MaxPhotos)
@@ -247,6 +272,43 @@ public static class StageStats
     /// </summary>
     private static Texture2D CaptureFrame(Camera cam, Transform player, float worldH, out Vector2 view, out bool inView)
     {
+        RenderTexture crop = RenderTexture.GetTemporary(OutWidth, OutHeight, 0, RenderTextureFormat.ARGB32);
+        Texture2D tex = null;
+        try
+        {
+            RenderCrop(cam, player, worldH, crop, out view, out inView);
+            tex = ReadTexture(crop);
+        }
+        finally
+        {
+            RenderTexture.ReleaseTemporary(crop);
+        }
+        return tex;
+    }
+
+    /// <summary>RenderTextureの中身を、画像（Texture2D）にして取り出す。</summary>
+    private static Texture2D ReadTexture(RenderTexture rt)
+    {
+        RenderTexture prevActive = RenderTexture.active;
+        Texture2D tex = new Texture2D(OutWidth, OutHeight, TextureFormat.RGB24, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        try
+        {
+            RenderTexture.active = rt;
+            tex.ReadPixels(new Rect(0, 0, OutWidth, OutHeight), 0, 0);
+            tex.Apply();
+        }
+        finally
+        {
+            RenderTexture.active = prevActive;
+        }
+        return tex;
+    }
+
+    /// <summary>カメラに映っているものを、プレイヤーを真ん中にして切り抜き、dst（OutWidth x OutHeight）に描く。</summary>
+    private static void RenderCrop(Camera cam, Transform player, float worldH, RenderTexture dst, out Vector2 view, out bool inView)
+    {
         view = new Vector2(0.5f, 0.5f);
         inView = true;
 
@@ -281,31 +343,102 @@ public static class StageStats
         int rtW = Mathf.Max(16, Mathf.RoundToInt(rtH * aspect));
 
         RenderTexture full = RenderTexture.GetTemporary(rtW, rtH, 24, RenderTextureFormat.ARGB32);
-        RenderTexture crop = RenderTexture.GetTemporary(OutWidth, OutHeight, 0, RenderTextureFormat.ARGB32);
         RenderTexture prevTarget = cam.targetTexture;
-        RenderTexture prevActive = RenderTexture.active;
-
-        Texture2D tex = new Texture2D(OutWidth, OutHeight, TextureFormat.RGB24, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        tex.filterMode = FilterMode.Bilinear;
         try
         {
             cam.targetTexture = full;
             cam.Render();
             cam.targetTexture = prevTarget;
-            Graphics.Blit(full, crop, new Vector2(fw, fh), new Vector2(x0, y0));
-            RenderTexture.active = crop;
-            tex.ReadPixels(new Rect(0, 0, OutWidth, OutHeight), 0, 0);
-            tex.Apply();
+            Graphics.Blit(full, dst, new Vector2(fw, fh), new Vector2(x0, y0));
         }
         finally
         {
             cam.targetTexture = prevTarget;
-            RenderTexture.active = prevActive;
             RenderTexture.ReleaseTemporary(full);
-            RenderTexture.ReleaseTemporary(crop);
         }
-        return tex;
+    }
+
+    // ================= 死ぬ前の様子（輪っか状の入れ物） =================
+
+    /// <summary>ふだんの挑戦中に、1枚撮って、輪っかに入れる（古いものは上書き）。Tickerから、FrameInterval秒ごとに呼ぶ。</summary>
+    private static void RingAdd(Camera cam, Transform player, float worldH)
+    {
+        if (_ring == null)
+        {
+            _ring = new RenderTexture[RingSize];
+            _ringTime = new float[RingSize];
+            _ringHead = 0;
+            _ringCount = 0;
+        }
+        int idx = _ringHead;
+        if (_ring[idx] == null)
+        {
+            _ring[idx] = new RenderTexture(OutWidth, OutHeight, 0, RenderTextureFormat.ARGB32);
+            _ring[idx].wrapMode = TextureWrapMode.Clamp;
+            _ring[idx].filterMode = FilterMode.Bilinear;
+            _ring[idx].Create();
+        }
+        Vector2 view;
+        bool inView;
+        RenderCrop(cam, player, worldH, _ring[idx], out view, out inView);
+        _ringTime[idx] = Time.unscaledTime;
+        _ringHead = (idx + 1) % RingSize;
+        _ringCount = Mathf.Min(_ringCount + 1, RingSize);
+    }
+
+    /// <summary>輪っかに入っている、死ぬ PreRollSeconds 秒前からの写真を、古い順に取り出す。取り出したら、輪っかは止める。</summary>
+    private static List<Texture2D> TakePreRoll()
+    {
+        List<Texture2D> result = new List<Texture2D>();
+        _ringLocked = true;   // 死んだあとは、撮らない（シーンが読み直されたら、また始める）
+        if (_ring == null || _ringCount <= 0 || PreRollSeconds <= 0f)
+            return result;
+
+        float now = Time.unscaledTime;
+        // 新しいほうから、さかのぼる
+        for (int k = 0; k < _ringCount; k++)
+        {
+            int idx = (_ringHead - 1 - k + RingSize * 2) % RingSize;
+            if (_ring[idx] == null || now - _ringTime[idx] > PreRollSeconds)
+                break;
+            try
+            {
+                result.Insert(0, ReadTexture(_ring[idx]));
+            }
+            catch (System.Exception)
+            {
+                break;
+            }
+        }
+        _ringCount = 0;
+        return result;
+    }
+
+    /// <summary>輪っかを空にして、また撮れる状態にする（シーンが読み込まれた時）。</summary>
+    private static void ResetRing()
+    {
+        _ringCount = 0;
+        _ringHead = 0;
+        _ringLocked = false;
+    }
+
+    private static void ReleaseRing()
+    {
+        if (_ring != null)
+        {
+            for (int i = 0; i < _ring.Length; i++)
+            {
+                if (_ring[i] != null)
+                {
+                    _ring[i].Release();
+                    Object.Destroy(_ring[i]);
+                    _ring[i] = null;
+                }
+            }
+        }
+        _ring = null;
+        _ringTime = null;
+        ResetRing();
     }
 
     // ================= 時間を数える =================
@@ -329,6 +462,12 @@ public static class StageStats
         private float _acc;
         private float _elapsed;
 
+        // 死ぬ前の様子を、ふだんから撮っておくための
+        private float _ringAcc;
+        private Camera _ringCam;
+        private Transform _ringPlayer;
+        private float _ringFindTimer;
+
         private void OnEnable()
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -344,6 +483,47 @@ public static class StageStats
         {
             _clip = null;
             _player = null;
+            ResetRing();
+            _ringCam = null;
+            _ringPlayer = null;
+            _ringAcc = 0f;
+        }
+
+        /// <summary>ふだんの挑戦中、FrameInterval秒ごとに、プレイヤーのまわりを1枚撮っておく（死んだとき、少し前から見せるため）。</summary>
+        private void StepRing()
+        {
+            if (PreRollSeconds <= 0f || _ringLocked || !_running)
+                return;
+            // ポーズ中・スロー中・やられている最中は、撮らない
+            if (GamePause.IsPaused || Time.timeScale < 0.5f || HitFeedback.IsDying)
+                return;
+
+            _ringAcc += Mathf.Min(Time.deltaTime, MaxStep);
+            if (_ringAcc < FrameInterval)
+                return;
+            _ringAcc -= FrameInterval;
+
+            if (_ringCam == null)
+                _ringCam = FindCamera();
+            if (_ringPlayer == null && Time.unscaledTime >= _ringFindTimer)
+            {
+                _ringFindTimer = Time.unscaledTime + 0.5f;
+                CharacterController2D ctl = Object.FindObjectOfType<CharacterController2D>();
+                if (ctl != null)
+                    _ringPlayer = ctl.transform;
+            }
+            if (_ringCam == null || _ringPlayer == null)
+                return;
+
+            try
+            {
+                float worldH = _ringCam.orthographic ? _ringCam.orthographicSize * 2f * ViewScale : 0f;
+                RingAdd(_ringCam, _ringPlayer, worldH);
+            }
+            catch (System.Exception)
+            {
+                // 撮れなくても、ゲームは止めない
+            }
         }
 
         public void StopClip()
@@ -418,6 +598,7 @@ public static class StageStats
         private void Update()
         {
             RecordClip();
+            StepRing();
 
             if (!_running)
                 return;
