@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>死因。結果画面の一言コメントを選ぶのに使う。</summary>
 public enum DeathCause
@@ -17,6 +18,8 @@ public enum DeathCause
 ///   ・ゴールすると、止める（StageGoalから）。
 ///   ・拠点に戻ると、記録を消す（StageRunから）。
 ///   ・写真は、死んだ瞬間のゲーム画面だけ（HPゲージやフラッシュは写らない）を、メモリに持つ。最大 MaxPhotos 枚。
+///     プレイヤーのまわりだけを切り抜いて撮る。1回の死につき、死んだ瞬間から約 ClipSeconds 秒のあいだ、
+///     FrameInterval 秒ごとに撮り続けて、「倒れるまでの動き」（連続写真）にする。結果画面は、これを繰り返し再生する。
 /// どこにも付けなくてよい。
 /// </summary>
 public static class StageStats
@@ -24,14 +27,24 @@ public static class StageStats
     /// <summary>死んだ瞬間の写真1枚分。</summary>
     public class DeathPhoto
     {
+        /// <summary>死んだ瞬間の1枚目（frames[0]と同じもの）。</summary>
         public Texture2D texture;
+        /// <summary>死んだ瞬間から、倒れるまでの連続写真（古い順）。1枚だけのこともある。</summary>
+        public List<Texture2D> frames = new List<Texture2D>();
+        /// <summary>連続写真の、1枚と1枚の間の秒数。</summary>
+        public float frameInterval = FrameInterval;
         /// <summary>プレイヤーが、写真のどこにいるか（0〜1。左下が0,0）。写真を切り抜く中心に使う。</summary>
         public Vector2 playerView = new Vector2(0.5f, 0.5f);
         public DeathCause cause;
     }
 
-    const int   MaxPhotos   = 12;    // 持っておく写真の最大数（古いものから捨てる）
-    const int   PhotoHeight = 360;   // 写真の高さ（ピクセル）。幅は画面の比率に合わせる
+    const int   MaxPhotos   = 8;     // 持っておく死亡の最大数（古いものから捨てる）。1回の死が、連続写真の数だけ画像を持つ
+    const int   OutWidth    = 336;   // 写真1枚の大きさ（ピクセル）。結果画面の枠の縦横比に近くしておく
+    const int   OutHeight   = 270;
+    const float ViewScale   = 0.5f;  // 死んだ瞬間のカメラの高さの、何割を写すか（小さいほど、プレイヤーに寄る。以前は0.7）
+    const float FrameInterval = 0.12f; // 連続写真の間隔（実時間の秒）
+    const float ClipSeconds = 1.4f;  // 死んでから、連続写真を撮り続ける秒数（実時間）
+    const int   MaxFrames   = 12;    // 連続写真の、最大の枚数
     const float MaxStep     = 0.1f;  // 1フレームで数える最大の秒数（読み込み直後の長いフレーム対策）
 
     /// <summary>いま記録しているステージのID。空なら、記録していない。</summary>
@@ -88,11 +101,10 @@ public static class StageStats
     /// <summary>記録をすべて消す（拠点に戻った時）。</summary>
     public static void Clear()
     {
+        if (_ticker != null)
+            _ticker.StopClip();
         for (int i = 0; i < _photos.Count; i++)
-        {
-            if (_photos[i] != null && _photos[i].texture != null)
-                Object.Destroy(_photos[i].texture);
-        }
+            DestroyPhoto(_photos[i]);
         _photos.Clear();
         StageId = "";
         ElapsedTime = 0f;
@@ -125,10 +137,32 @@ public static class StageStats
         _photos.Add(photo);
         while (_photos.Count > MaxPhotos)
         {
-            if (_photos[0].texture != null)
-                Object.Destroy(_photos[0].texture);
+            DestroyPhoto(_photos[0]);
             _photos.RemoveAt(0);
         }
+
+        // このあとの動き（倒れるまで）も、続けて撮る。
+        EnsureTicker();
+        if (_ticker != null)
+            _ticker.StartClip(photo);
+    }
+
+    private static void DestroyPhoto(DeathPhoto p)
+    {
+        if (p == null)
+            return;
+        if (p.frames != null)
+        {
+            for (int i = 0; i < p.frames.Count; i++)
+            {
+                if (p.frames[i] != null)
+                    Object.Destroy(p.frames[i]);
+            }
+            p.frames.Clear();
+        }
+        if (p.texture != null)
+            Object.Destroy(p.texture);
+        p.texture = null;
     }
 
     /// <summary>結果画面に出す写真を、最大max枚選ぶ。多い時はランダムで選んで、古い順に並べる。</summary>
@@ -160,8 +194,8 @@ public static class StageStats
         return result;
     }
 
-    /// <summary>カメラに映っているものだけを、画像にする。</summary>
-    private static DeathPhoto Capture(DeathCause cause)
+    /// <summary>ゲームのカメラを探す。</summary>
+    private static Camera FindCamera()
     {
         Camera cam = null;
         CameraFollow follow = Object.FindObjectOfType<CameraFollow>();
@@ -169,45 +203,109 @@ public static class StageStats
             cam = follow.GetComponent<Camera>();
         if (cam == null)
             cam = Camera.main;
+        return cam;
+    }
+
+    /// <summary>プレイヤーの、真ん中あたりの位置（当たり判定があれば、その中心）。</summary>
+    private static Vector3 PlayerCenter(Transform player)
+    {
+        Collider2D col = player.GetComponent<Collider2D>();
+        return col != null ? col.bounds.center : player.position;
+    }
+
+    /// <summary>死んだ瞬間の1枚目を撮る。プレイヤーのまわりだけを切り抜く。</summary>
+    private static DeathPhoto Capture(DeathCause cause)
+    {
+        Camera cam = FindCamera();
         if (cam == null)
             return null;
 
-        int h = PhotoHeight;
-        int w = Mathf.Max(16, Mathf.RoundToInt(h * Mathf.Max(0.5f, cam.aspect)));
+        CharacterController2D playerCtl = Object.FindObjectOfType<CharacterController2D>();
+        Transform player = playerCtl != null ? playerCtl.transform : null;
 
-        RenderTexture rt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32);
+        // 写す高さ（ワールドの長さ）を、ここで決める。連続写真のあいだは、カメラが寄っても、同じ大きさで写す。
+        float worldH = cam.orthographic ? cam.orthographicSize * 2f * ViewScale : 0f;
+
+        Vector2 view;
+        bool inView;
+        Texture2D tex = CaptureFrame(cam, player, worldH, out view, out inView);
+        if (tex == null)
+            return null;
+
+        DeathPhoto photo = new DeathPhoto();
+        photo.texture = tex;
+        photo.frames.Add(tex);
+        photo.cause = cause;
+        photo.playerView = view;
+        return photo;
+    }
+
+    /// <summary>
+    /// カメラに映っているものだけを、プレイヤーを真ん中にして切り抜き、1枚の画像にする。
+    /// worldHは、写すワールドの高さ（0なら、画面の ViewScale 割）。viewは、プレイヤーが画像のどこにいるか（0〜1）。
+    /// inViewは、プレイヤーがまだ画面に映っているか。
+    /// </summary>
+    private static Texture2D CaptureFrame(Camera cam, Transform player, float worldH, out Vector2 view, out bool inView)
+    {
+        view = new Vector2(0.5f, 0.5f);
+        inView = true;
+
+        float aspect = Mathf.Max(0.5f, cam.aspect);
+        float outAspect = OutWidth / (float)OutHeight;
+
+        // 切り抜く範囲（画面全体を1としたときの、縦と横の割合）
+        float fh = ViewScale;
+        if (cam.orthographic && worldH > 0.0001f)
+            fh = Mathf.Clamp(worldH / (cam.orthographicSize * 2f), 0.15f, 1f);
+        float fw = fh * outAspect / aspect;
+        if (fw > 1f)
+        {
+            fw = 1f;
+            fh = Mathf.Min(1f, fw * aspect / outAspect);
+        }
+
+        // 中心：プレイヤー（見つからなければ、画面の真ん中）
+        Vector2 center = new Vector2(0.5f, 0.5f);
+        if (player != null)
+        {
+            Vector3 v = cam.WorldToViewportPoint(PlayerCenter(player));
+            center = new Vector2(v.x, v.y);
+            inView = v.z > 0f && v.x > -0.1f && v.x < 1.1f && v.y > -0.1f && v.y < 1.1f;
+        }
+        float x0 = Mathf.Clamp(center.x - fw * 0.5f, 0f, 1f - fw);
+        float y0 = Mathf.Clamp(center.y - fh * 0.5f, 0f, 1f - fh);
+        view = new Vector2(Mathf.Clamp01((center.x - x0) / fw), Mathf.Clamp01((center.y - y0) / fh));
+
+        // 画面を、切り抜く大きさがちょうどよい細かさになるように描いて、そこから切り抜く。
+        int rtH = Mathf.Clamp(Mathf.RoundToInt(OutHeight / fh), OutHeight, 1080);
+        int rtW = Mathf.Max(16, Mathf.RoundToInt(rtH * aspect));
+
+        RenderTexture full = RenderTexture.GetTemporary(rtW, rtH, 24, RenderTextureFormat.ARGB32);
+        RenderTexture crop = RenderTexture.GetTemporary(OutWidth, OutHeight, 0, RenderTextureFormat.ARGB32);
         RenderTexture prevTarget = cam.targetTexture;
         RenderTexture prevActive = RenderTexture.active;
 
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        Texture2D tex = new Texture2D(OutWidth, OutHeight, TextureFormat.RGB24, false);
         tex.wrapMode = TextureWrapMode.Clamp;
         tex.filterMode = FilterMode.Bilinear;
         try
         {
-            cam.targetTexture = rt;
+            cam.targetTexture = full;
             cam.Render();
-            RenderTexture.active = rt;
-            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            cam.targetTexture = prevTarget;
+            Graphics.Blit(full, crop, new Vector2(fw, fh), new Vector2(x0, y0));
+            RenderTexture.active = crop;
+            tex.ReadPixels(new Rect(0, 0, OutWidth, OutHeight), 0, 0);
             tex.Apply();
         }
         finally
         {
             cam.targetTexture = prevTarget;
             RenderTexture.active = prevActive;
-            RenderTexture.ReleaseTemporary(rt);
+            RenderTexture.ReleaseTemporary(full);
+            RenderTexture.ReleaseTemporary(crop);
         }
-
-        var photo = new DeathPhoto();
-        photo.texture = tex;
-        photo.cause = cause;
-
-        CharacterController2D player = Object.FindObjectOfType<CharacterController2D>();
-        if (player != null)
-        {
-            Vector3 v = cam.WorldToViewportPoint(player.transform.position);
-            photo.playerView = new Vector2(Mathf.Clamp01(v.x), Mathf.Clamp01(v.y));
-        }
-        return photo;
+        return tex;
     }
 
     // ================= 時間を数える =================
@@ -224,8 +322,103 @@ public static class StageStats
 
     private class Ticker : MonoBehaviour
     {
+        // 倒れるまでの連続写真を撮っている最中の、死亡1回分
+        private DeathPhoto _clip;
+        private Transform _player;
+        private float _worldH;
+        private float _acc;
+        private float _elapsed;
+
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        // シーンが読み直されたら、撮るのをやめる。
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            _clip = null;
+            _player = null;
+        }
+
+        public void StopClip()
+        {
+            _clip = null;
+        }
+
+        /// <summary>死んだ瞬間の1枚目を撮ったあと、続きの写真を撮り始める。</summary>
+        public void StartClip(DeathPhoto photo)
+        {
+            _clip = photo;
+            _acc = 0f;
+            _elapsed = 0f;
+
+            Camera cam = FindCamera();
+            CharacterController2D ctl = Object.FindObjectOfType<CharacterController2D>();
+            _player = ctl != null ? ctl.transform : null;
+            _worldH = (cam != null && cam.orthographic) ? cam.orthographicSize * 2f * ViewScale : 0f;
+            if (cam == null || _player == null)
+                _clip = null;
+        }
+
+        private void RecordClip()
+        {
+            if (_clip == null)
+                return;
+            float dt = Mathf.Min(Time.unscaledDeltaTime, MaxStep);
+            _acc += dt;
+            _elapsed += dt;
+            if (_elapsed > ClipSeconds || _clip.frames.Count >= MaxFrames || _player == null)
+            {
+                _clip = null;
+                return;
+            }
+            if (_acc < FrameInterval)
+                return;
+            _acc -= FrameInterval;
+
+            Camera cam = FindCamera();
+            if (cam == null)
+            {
+                _clip = null;
+                return;
+            }
+            Vector2 view;
+            bool inView;
+            Texture2D tex = null;
+            try
+            {
+                tex = CaptureFrame(cam, _player, _worldH, out view, out inView);
+            }
+            catch (System.Exception)
+            {
+                _clip = null;
+                return;
+            }
+            if (tex == null)
+            {
+                _clip = null;
+                return;
+            }
+            // 画面の外へ落ちていったら、そこで終わり（何も無い画面を、撮り続けない）。
+            if (!inView && _clip.frames.Count >= 3)
+            {
+                Object.Destroy(tex);
+                _clip = null;
+                return;
+            }
+            _clip.frames.Add(tex);
+        }
+
         private void Update()
         {
+            RecordClip();
+
             if (!_running)
                 return;
             // ポーズ中（時間が止まっている間）と、やられている最中は、数えない。

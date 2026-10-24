@@ -36,7 +36,6 @@ public class StageResultPanel : MonoBehaviour
     const float PartInterval     = 0.2f;  // 部分と部分の間の秒数
     const float PhotoInterval    = 0.25f; // 写真が1枚ずつ出る間隔
     const float KeyInterval      = 0.12f; // キーが1つずつ出る間隔
-    const float PhotoCropHeight  = 0.7f;  // 写真の切り抜き：画面の高さの何割を使うか（小さいほど、プレイヤーに寄る）
     const float DefaultFrameAspect = 1.2f; // 枠の大きさが分からない時の、縦横比（横/縦）
     const float MaxDt            = 0.05f;
 
@@ -93,11 +92,28 @@ public class StageResultPanel : MonoBehaviour
     public PhotoSlot[] photoSlots;
     [Tooltip("1回も死ななかった時に出す「NO DEATH!」。")]
     public GameObject noDeathObject;
+    [Tooltip("写真をさらに寄せる倍率。1ならそのまま、2なら、中心から半分の広さだけを使う（その分、少しぼやける）。写真に写す広さ自体は、StageStats の ViewScale で決まる。")]
+    public float photoZoom = 1f;
+    [Tooltip("倒れるまでの動き（連続写真）を再生する速さ。1が、撮ったときと同じ速さ。")]
+    public float photoClipSpeed = 1f;
+    [Tooltip("動きの最後（倒れたところ）で、止まっている秒数。そのあと、また最初から繰り返す。")]
+    public float photoClipHold = 0.9f;
 
     [Header("一言コメント（死因ごとのリスト。写真ごとに、ランダムで1つ選ぶ）")]
-    public string[] commentsFall = { "ここで落ちる？？？", "足元、見えてた？", "そこ、穴だよ！", "重力には勝てなかった…" };
-    public string[] commentsEnemy = { "ここで死ぬ？？？", "あと少しだった…！", "油断したね！", "敵のほうが一枚上手だった" };
-    public string[] commentsOther = { "なぜ、ここで…", "惜しい！", "次はいけるよ！" };
+    public string[] commentsFall =
+    {
+        "ここで落ちる？？？", "そこ、穴だよ？", "足元、見えてた？", "重力さん、絶好調！", "空は飛べないよ！",
+        "またそこで落ちる？", "穴「待ってました」", "ジャンプ押した？", "下、気になった？",
+    };
+    public string[] commentsEnemy =
+    {
+        "ここで死ぬ？？？", "あと少しだったね！", "油断したでしょ！", "それ避けられたよ？", "ザコにやられた？",
+        "ここ笑うとこ！", "わざとだよね？", "敵が一枚上手！", "ぷぷっ、やられた！",
+    };
+    public string[] commentsOther =
+    {
+        "なぜ、ここで…", "惜しい！…かな？", "次はいけるよ！たぶん", "ドンマイ！…ホント？", "もう一回見せて！", "ここ、見せ場だよ？",
+    };
 
     [Header("回収したキー")]
     public RectTransform keysPanel;
@@ -492,7 +508,7 @@ public class StageResultPanel : MonoBehaviour
     }
 
     /// <summary>写真を、プレイヤーを中心に、枠の縦横比に合わせて切り抜く。</summary>
-    private static Rect CropRect(StageStats.DeathPhoto p, RawImage image)
+    private Rect CropRect(StageStats.DeathPhoto p, RawImage image)
     {
         if (p.texture == null)
             return new Rect(0f, 0f, 1f, 1f);
@@ -501,7 +517,7 @@ public class StageResultPanel : MonoBehaviour
         float frameAspect = (r.width > 1f && r.height > 1f) ? r.width / r.height : DefaultFrameAspect;
         float texAspect = p.texture.width / (float)Mathf.Max(1, p.texture.height);
 
-        float ch = PhotoCropHeight;
+        float ch = 1f / Mathf.Max(1f, photoZoom);
         float cw = ch * frameAspect / texAspect;
         if (cw > 1f)
         {
@@ -542,6 +558,25 @@ public class StageResultPanel : MonoBehaviour
         return s;
     }
 
+    /// <summary>死んだ瞬間から倒れるまでの連続写真を、枠の中で、繰り返し再生する。</summary>
+    private IEnumerator PlayClip(RawImage image, StageStats.DeathPhoto photo)
+    {
+        yield return Wait(PopTime);
+        float interval = Mathf.Max(0.02f, photo.frameInterval / Mathf.Max(0.1f, photoClipSpeed));
+        while (image != null)
+        {
+            for (int i = 0; i < photo.frames.Count; i++)
+            {
+                if (image == null)
+                    yield break;
+                if (photo.frames[i] != null)
+                    image.texture = photo.frames[i];
+                yield return Wait(interval);
+            }
+            yield return Wait(Mathf.Max(0f, photoClipHold));
+        }
+    }
+
     private IEnumerator RevealPhotos()
     {
         if (photoSlots == null)
@@ -552,6 +587,9 @@ public class StageResultPanel : MonoBehaviour
             if (slot == null || slot.root == null)
                 continue;
             StartCoroutine(Pop(slot.root.transform, Vector3.one));
+            // 倒れるまでの動き（連続写真）があれば、繰り返し再生する。
+            if (slot.photo != null && _shown[i].frames != null && _shown[i].frames.Count > 1)
+                StartCoroutine(PlayClip(slot.photo, _shown[i]));
             yield return Wait(PhotoInterval);
         }
         if (noDeathObject != null && noDeathObject.activeSelf)
