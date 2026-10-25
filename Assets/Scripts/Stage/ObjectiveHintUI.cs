@@ -53,6 +53,7 @@ public class ObjectiveHintUI : MonoBehaviour
     private readonly List<Entry> _entries = new List<Entry>();
     private RectTransform _container;
     private VerticalLayoutGroup _layout;
+    private Vector2 _baseOffset = new Vector2(48f, 150f);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
@@ -151,7 +152,8 @@ public class ObjectiveHintUI : MonoBehaviour
     {
         string body = (style.bullet ?? "") + (text ?? "").Replace('　', ' ');
 
-        _container.anchoredPosition = new Vector2(style.offset.x, -style.offset.y);
+        _baseOffset = style.offset;
+        _container.anchoredPosition = new Vector2(_baseOffset.x, -(_baseOffset.y + ControlGuideUI.ObjectiveOffset));
         _layout.spacing = style.rowGap;
 
         Entry e = Find(id);
@@ -188,6 +190,10 @@ public class ObjectiveHintUI : MonoBehaviour
 
     private void Update()
     {
+        // 左上に操作ガイドが出ているときは、そのぶん下へずらす
+        if (_container != null)
+            _container.anchoredPosition = new Vector2(_baseOffset.x, -(_baseOffset.y + ControlGuideUI.ObjectiveOffset));
+
         for (int i = _entries.Count - 1; i >= 0; i--)
         {
             Entry e = _entries[i];

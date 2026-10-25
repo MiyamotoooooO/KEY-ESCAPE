@@ -85,6 +85,8 @@ public class GoalArrowIndicator : MonoBehaviour
     private Transform _player;
     private StageGoal[] _goals = new StageGoal[0];
     private StageGoalLetters[] _letters = new StageGoalLetters[0];
+    private KeyConfigUI[] _keyConfigs = new KeyConfigUI[0];
+    private float _nextFindUi;
     private float _nextFind;
     private float _born;
     private float _alpha;
@@ -298,6 +300,29 @@ public class GoalArrowIndicator : MonoBehaviour
         _letters = FindObjectsOfType<StageGoalLetters>();
     }
 
+    /// <summary>キーコンフィグ・設定・掲示板（ステージ選択）の画面が開いているか。開いている間は、矢印を出さない。</summary>
+    private bool IsOverlayUiOpen()
+    {
+        if (SettingsUI.IsOpen || StageSelectUI.IsOpen)
+            return true;
+
+        // キーコンフィグ画面は、GamePause を使わず、時間を直接止めているので、画面が開いているかを直接見る
+        if ((_keyConfigs == null || _keyConfigs.Length == 0) && Time.unscaledTime >= _nextFindUi)
+        {
+            _nextFindUi = Time.unscaledTime + 1f;
+            _keyConfigs = FindObjectsOfType<KeyConfigUI>(true);
+        }
+        if (_keyConfigs != null)
+        {
+            for (int i = 0; i < _keyConfigs.Length; i++)
+            {
+                if (_keyConfigs[i] != null && _keyConfigs[i].IsOpen)
+                    return true;
+            }
+        }
+        return false;
+    }
+
     private void LateUpdate()
     {
         if (_canvas == null)
@@ -312,7 +337,8 @@ public class GoalArrowIndicator : MonoBehaviour
             && Time.unscaledTime - _born >= showDelay
             && !GamePause.IsPaused
             && !LoadingScreen.IsLoading
-            && !HitFeedback.IsDying)
+            && !HitFeedback.IsDying
+            && !IsOverlayUiOpen())
         {
             visible = TryGetDirection(out angle, out meters);
         }
