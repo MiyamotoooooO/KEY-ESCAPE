@@ -49,8 +49,25 @@ public class HpGaugeUI : MonoBehaviour
 
     private static HpGaugeUI _instance;
 
+    // 酸素ゲージ：水中にいる間は、赤いHPのマスの代わりに、青いマスを出す（HPそのものは減らない）
+    private static readonly Color OxygenColor = new Color(0.25f, 0.6f, 1f, 1f);
+    private static float s_oxygen = -1f; // 0〜1（残りの割合）。マイナスなら、酸素ゲージは出さない
+
+    /// <summary>酸素ゲージを出す。ratio は残りの割合（0〜1）。PlayerOxygen から呼ぶ。</summary>
+    public static void SetOxygen(float ratio)
+    {
+        s_oxygen = Mathf.Clamp01(ratio);
+    }
+
+    /// <summary>酸素ゲージをやめて、赤いHPゲージに戻す。</summary>
+    public static void ClearOxygen()
+    {
+        s_oxygen = -1f;
+    }
+
     private RectTransform _root;
     private Image[] _red;
+    private Image[] _blue; // 酸素ゲージ（水中にいる間だけ出す）
     private CharacterController2D _player;
     private float _maxLife = 1f;
     private float _shown = 1f;
@@ -60,6 +77,7 @@ public class HpGaugeUI : MonoBehaviour
     private static void ResetStatics()
     {
         _instance = null;
+        s_oxygen = -1f;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -143,6 +161,7 @@ public class HpGaugeUI : MonoBehaviour
         float yMax = 1f - (centerFromTop - cellH * 0.5f);
 
         _red = new Image[CellCount];
+        _blue = new Image[CellCount];
         for (int i = 0; i < CellCount; i++)
         {
             float x0 = InnerLeft + CellPadX + i * (cellW + CellGap);
@@ -156,6 +175,16 @@ public class HpGaugeUI : MonoBehaviour
             r.fillOrigin = (int)Image.OriginHorizontal.Left;
             r.fillAmount = 1f;
             _red[i] = r;
+
+            // 青いマス（酸素）。白いマスの絵に色をつけて、赤の上に重ねる。ふだんは見せない
+            Image b = MakeImage("Cell" + i + "_Blue", _root, white, min, max);
+            b.color = OxygenColor;
+            b.type = Image.Type.Filled;
+            b.fillMethod = Image.FillMethod.Horizontal;
+            b.fillOrigin = (int)Image.OriginHorizontal.Left;
+            b.fillAmount = 0f;
+            b.enabled = false;
+            _blue[i] = b;
         }
 
         // 枠は一番手前（マスの上）に重ねる
@@ -203,7 +232,12 @@ public class HpGaugeUI : MonoBehaviour
         float target = Mathf.Clamp01(life / _maxLife);
         float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
         _shown = Mathf.MoveTowards(_shown, target, GaugeSpeed * dt);
-        Apply(_shown);
+
+        // 水中にいる間は、青い酸素のマス。それ以外は、赤いHPのマス
+        if (s_oxygen >= 0f)
+            ApplyOxygen(s_oxygen);
+        else
+            Apply(_shown);
     }
 
     private void TryBind()
@@ -237,6 +271,23 @@ public class HpGaugeUI : MonoBehaviour
             float fill = Mathf.Clamp01(ratio * CellCount - i);
             _red[i].fillAmount = fill;
             _red[i].enabled = fill > 0.001f;
+            if (_blue != null && _blue[i] != null)
+                _blue[i].enabled = false;
+        }
+    }
+
+    /// <summary>ratio（0〜1）に合わせて、各マスの青を、左から何割見せるか決める。赤は隠す。</summary>
+    private void ApplyOxygen(float ratio)
+    {
+        for (int i = 0; i < CellCount; i++)
+        {
+            float fill = Mathf.Clamp01(ratio * CellCount - i + 0.001f);
+            _red[i].enabled = false;
+            if (_blue != null && _blue[i] != null)
+            {
+                _blue[i].fillAmount = fill;
+                _blue[i].enabled = fill > 0.001f;
+            }
         }
     }
 

@@ -37,6 +37,12 @@ public class CameraFollow : MonoBehaviour
 	private float zoomElapsed = 0f;
 	private float baseSize;
 
+	// 決めた秒数で、目的地へなめらかに動く（ゆっくり動き出して、ゆっくり止まる）
+	private bool blending = false;
+	private Vector3 blendStart;
+	private float blendElapsed = 0f;
+	private float blendDuration = 1f;
+
 	void Awake()
 	{
 		Cursor.visible = false;
@@ -65,7 +71,24 @@ public class CameraFollow : MonoBehaviour
 		{
 			Vector3 newPosition = Target.position;
 			newPosition.z = -10;
-			basePos = Vector3.Slerp(basePos, newPosition, speed * followDt);
+			if (blending)
+			{
+				// 決めた秒数で、なめらかに動く。動いている間も、ターゲットが動けば追いかける
+				blendElapsed += Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+				float b = Mathf.Clamp01(blendElapsed / blendDuration);
+				b = b * b * (3f - 2f * b); // ゆっくり動き出して、ゆっくり止まる
+				basePos = Vector3.Lerp(blendStart, newPosition, b);
+				if (blendElapsed >= blendDuration)
+					blending = false;
+			}
+			else
+			{
+				basePos = Vector3.Slerp(basePos, newPosition, speed * followDt);
+			}
+		}
+		else
+		{
+			blending = false;
 		}
 
 		// 揺れ（ポーズやスロー中でも、実時間で数える）
@@ -90,6 +113,24 @@ public class CameraFollow : MonoBehaviour
 			if (zoomElapsed >= zoomDuration)
 				zooming = false;
 		}
+	}
+
+	/// <summary>
+	/// ターゲットを変えて、duration 秒かけて、なめらかにカメラを動かす（ゆっくり動き出して、ゆっくり止まる）。
+	/// duration が 0 以下なら、ターゲットを変えるだけ（今までの追いかけ方）。
+	/// </summary>
+	public void MoveTo(Transform target, float duration)
+	{
+		Target = target;
+		if (target == null || duration <= 0.01f || camTransform == null)
+		{
+			blending = false;
+			return;
+		}
+		blendStart = camTransform.position - lastShakeOffset;
+		blendElapsed = 0f;
+		blendDuration = duration;
+		blending = true;
 	}
 
 	/// <summary>従来どおりの揺れ（プレイヤーが敵に当てた時）。</summary>

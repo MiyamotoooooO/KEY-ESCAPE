@@ -8,6 +8,7 @@ public enum DeathCause
     Fall,   // 落下
     Enemy,  // 敵にやられた
     Other,  // その他
+    Drown,  // 溺れた（酸素がなくなった）
 }
 
 /// <summary>

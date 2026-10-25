@@ -114,6 +114,11 @@ public class StageResultPanel : MonoBehaviour
     {
         "なぜ、ここで…", "惜しい！…かな？", "次はいけるよ！たぶん", "ドンマイ！…ホント？", "もう一回見せて！", "ここ、見せ場だよ？",
     };
+    public string[] commentsDrown =
+    {
+        "ぶくぶくぶく…", "息、止めてた？", "魚じゃないんだよ？", "息継ぎ、忘れてた？", "水の中、苦手だった？",
+        "あと1秒、がんばれた？", "泳ぎ、習ってないの？", "酸素は大切に！", "水「ようこそ、おぼれ…」",
+    };
 
     [Header("回収したキー")]
     public RectTransform keysPanel;
@@ -165,7 +170,7 @@ public class StageResultPanel : MonoBehaviour
 
     private readonly List<Transform> _popTargets = new List<Transform>();
     private readonly List<Vector3> _popScales = new List<Vector3>();
-    private readonly List<string>[] _commentBags = { new List<string>(), new List<string>(), new List<string>() };
+    private readonly List<string>[] _commentBags = { new List<string>(), new List<string>(), new List<string>(), new List<string>() };
     private bool _ready;
     private bool _prevCursorVisible;
     private CursorLockMode _prevCursorLock;
@@ -535,6 +540,7 @@ public class StageResultPanel : MonoBehaviour
     {
         string[] list = cause == DeathCause.Fall ? commentsFall
                       : cause == DeathCause.Enemy ? commentsEnemy
+                      : cause == DeathCause.Drown ? commentsDrown
                       : commentsOther;
         if (list == null || list.Length == 0)
             list = commentsOther;

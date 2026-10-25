@@ -92,7 +92,11 @@ public class GimmickIntroZone : MonoBehaviour
     [Header("調整")]
     [Tooltip("カメラが目的地に着いたとみなす距離。")]
     public float cameraArriveDistance = 0.15f;
-    [Tooltip("カメラが目的地に着くのを待つ最長の秒数。")]
+    [Tooltip("カメラが、映す場所へ動く秒数（ゆっくり動き出して、ゆっくり止まる）。0なら、今までの動き（速く動き出して、だんだんゆっくり）。")]
+    public float cameraMoveTime = 1.0f;
+    [Tooltip("説明が終わって、カメラがプレイヤーへ戻る秒数。0なら、今までの動き。")]
+    public float cameraReturnTime = 1.0f;
+    [Tooltip("カメラが目的地に着くのを待つ最長の秒数。動く秒数のほうが長いときは、そちらに合わせる。")]
     public float cameraMoveMaxTime = 2.5f;
     [Tooltip("説明が出てから、Spaceキーを受け付けるまでの秒数（ジャンプのSpaceで、うっかり飛ばさないため）。Spaceキーの案内も、この秒数がたつまで出ない。")]
     public float inputDelay = 0.5f;
@@ -235,18 +239,26 @@ public class GimmickIntroZone : MonoBehaviour
             float minWait = 0f;
             if (_cam != null)
             {
-                _cam.Target = s.cameraPoint != null ? s.cameraPoint : _originalTarget;
+                Transform newTarget = s.cameraPoint != null ? s.cameraPoint : _originalTarget;
+                if (newTarget != _cam.Target && cameraMoveTime > 0f)
+                {
+                    _cam.MoveTo(newTarget, cameraMoveTime);
+                    minWait = cameraMoveTime;
+                }
+                else
+                    _cam.Target = newTarget;
+
                 if (s.zoomRatio > 0f)
                 {
                     _cam.ZoomTo(s.zoomRatio, zoomTime);
                     zoomed = true;
-                    minWait = zoomTime;
+                    minWait = Mathf.Max(minWait, zoomTime);
                 }
                 else if (zoomed)
                 {
                     _cam.ZoomTo(1f, zoomTime);
                     zoomed = false;
-                    minWait = zoomTime;
+                    minWait = Mathf.Max(minWait, zoomTime);
                 }
             }
             yield return WaitCamera(minWait);
@@ -307,11 +319,17 @@ public class GimmickIntroZone : MonoBehaviour
         float returnWait = 0f;
         if (_cam != null)
         {
-            _cam.Target = _originalTarget;
+            if (_originalTarget != _cam.Target && cameraReturnTime > 0f)
+            {
+                _cam.MoveTo(_originalTarget, cameraReturnTime);
+                returnWait = cameraReturnTime;
+            }
+            else
+                _cam.Target = _originalTarget;
             if (zoomed)
             {
                 _cam.ZoomTo(1f, zoomTime);
-                returnWait = zoomTime;
+                returnWait = Mathf.Max(returnWait, zoomTime);
             }
         }
         yield return WaitCamera(returnWait);
@@ -441,7 +459,7 @@ public class GimmickIntroZone : MonoBehaviour
     private IEnumerator WaitCamera(float minWait)
     {
         float t = 0f;
-        while (t < Mathf.Max(cameraMoveMaxTime, minWait))
+        while (t < Mathf.Max(cameraMoveMaxTime, minWait + 0.5f))
         {
             t += Time.unscaledDeltaTime;
             if (t >= minWait && (_cam == null || _cam.Target == null || IsCameraNear(_cam.Target.position)))
