@@ -117,6 +117,14 @@ public class Attack : MonoBehaviour
             }
         }
 
+        // レバー：攻撃が当たると、オン／オフが切り替わる（同じレバーの二重の判定は、Lever 側で防ぐ）
+        for (int i = 0; i < collidersEnemies.Length; i++)
+        {
+            Lever lever = collidersEnemies[i].GetComponentInParent<Lever>();
+            if (lever != null)
+                lever.Hit();
+        }
+
         _pendingStrongAttack = false;
     }
 }

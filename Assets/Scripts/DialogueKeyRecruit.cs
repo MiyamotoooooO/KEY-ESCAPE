@@ -160,8 +160,105 @@ public class DialogueKeyRecruit : MonoBehaviour
         if (!col.isTrigger)
             Debug.LogWarning($"[DialogueKeyRecruit] {name}: Collider2Dが 'Is Trigger' に設定されていません - 会話が始まりません。", this);
 
+        // 「UI参照」が空なら、シーンの Canvas の中の「DialoguePanel」を、名前で探して自動で入れる。
+        AutoWireUi();
+
         if (dialoguePanel != null)
             dialoguePanel.SetActive(false);
+    }
+
+    /// <summary>
+    /// 「UI参照」の欄が空（dialoguePanel が未設定）のとき、シーンにある会話パネル一式を、名前で探して入れる。
+    /// 探す名前（Canvas の中。非表示のものも探す）：
+    ///   DialoguePanel（パネル本体。closeClickTarget も、これ） / QuestionTextImage / QuestionText（質問と返事のテキスト）
+    ///   1・2・3（選択肢のボタン。名前順） / hoverCursor / SpaceKey
+    /// すでに入っている欄は、変えない。dialoguePanel が入っていれば、何もしない（ステージ1のように、手で入れてあるキーは、そのまま）。
+    /// </summary>
+    private void AutoWireUi()
+    {
+        if (dialoguePanel != null)
+            return;
+
+        Transform panel = null;
+        Canvas[] canvases = FindObjectsOfType<Canvas>(true);
+        for (int i = 0; i < canvases.Length && panel == null; i++)
+            panel = FindDeep(canvases[i].transform, "DialoguePanel");
+
+        if (panel == null)
+        {
+            Debug.LogWarning($"[DialogueKeyRecruit] {name}: 「UI参照」が空で、シーンに「DialoguePanel」も見つかりませんでした。会話の画面が出ません。", this);
+            return;
+        }
+
+        dialoguePanel = panel.gameObject;
+        if (closeClickTarget == null)
+            closeClickTarget = panel.gameObject;
+
+        if (dialogueText == null)
+        {
+            Transform q = FindDeep(panel, "QuestionText");
+            if (q != null)
+                dialogueText = q.GetComponent<TMP_Text>();
+        }
+
+        if (dialogueFadeGroup == null)
+        {
+            Transform qi = FindDeep(panel, "QuestionTextImage");
+            if (qi != null)
+                dialogueFadeGroup = qi.GetComponent<CanvasGroup>();
+        }
+
+        if (hoverCursor == null)
+        {
+            Transform hc = FindDeep(panel, "hoverCursor");
+            if (hc != null)
+                hoverCursor = hc as RectTransform;
+        }
+
+        if (spacePrompt == null)
+        {
+            Transform sp = FindDeep(panel, "SpaceKey");
+            if (sp != null)
+                spacePrompt = sp.gameObject;
+        }
+
+        bool needButtons = choiceButtons == null || choiceButtons.Length == 0;
+        if (!needButtons)
+        {
+            for (int i = 0; i < choiceButtons.Length; i++)
+                if (choiceButtons[i] == null)
+                    needButtons = true;
+        }
+        if (needButtons)
+        {
+            // パネルの直下にあるボタンを、名前順（1, 2, 3）に並べる
+            var list = new System.Collections.Generic.List<Button>();
+            for (int i = 0; i < panel.childCount; i++)
+            {
+                Button b = panel.GetChild(i).GetComponent<Button>();
+                if (b != null)
+                    list.Add(b);
+            }
+            list.Sort((x, y) => string.CompareOrdinal(x.name, y.name));
+            choiceButtons = list.ToArray();
+        }
+    }
+
+    /// <summary>子孫の中から、名前が合うものを探す（非表示のものも）。</summary>
+    private static Transform FindDeep(Transform root, string childName)
+    {
+        if (root == null)
+            return null;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform c = root.GetChild(i);
+            if (c.name == childName)
+                return c;
+            Transform r = FindDeep(c, childName);
+            if (r != null)
+                return r;
+        }
+        return null;
     }
 
     private void Start()

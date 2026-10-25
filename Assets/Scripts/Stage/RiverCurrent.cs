@@ -21,11 +21,17 @@
 ///   ・Enter Clip / Exit Clip：プレイヤーが水に入った時、出た時。
 ///   ・Ambient Clip：川のそばにいる間、鳴り続ける流れの音（ループ）。川の範囲から遠ざかるほど、小さくなる。
 ///
+/// レバー（Lever）とつなぐと：
+///   ・レバーの「Targets」に、この川を入れる。レバーがオン（Stopped When Lever On が ON のとき）になると、水がだんだん引いて、川がなくなる。
+///     オフにもどすと、水がまた満ちる。
+///   ・水が引いている間は、押し流されず、酸素も減らない。川底は残るので、そのまま歩ける。
+///   ・水が引く秒数・満ちる秒数は、Inspector の「レバー」で変えられる。
+///
 /// 見た目：仮の絵（波打つ水面・水の中の波線・泡・流れる粒・水しぶき）をコードで出す。
 ///   showTempVisuals をオフにすると、全部消えて、あとで本物の絵（SpriteRenderer）を、自分で置ける。
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
-public class RiverCurrent : MonoBehaviour
+public class RiverCurrent : LeverReceiver
 {
     [Header("流れ")]
     [Tooltip("流れる向き。(1,0) で右、(-1,0) で左。")]
@@ -54,8 +60,26 @@ public class RiverCurrent : MonoBehaviour
     [Tooltip("下流の端から、この距離だけ手前に入ったら、やられる。")]
     public float endMargin = 0.3f;
 
+    [Header("レバー（レバーの Targets に、この川を入れる）")]
+    [Tooltip("ON：レバーがオンのとき、水が引いて川がなくなる（オフで流れる）。OFF：レバーがオフのとき、水が引く（オンで流れる）。")]
+    public bool stoppedWhenLeverOn = true;
+
+    [Tooltip("水が引くまでの秒数。")]
+    public float drainSeconds = 2.5f;
+
+    [Tooltip("水が満ちるまでの秒数。")]
+    public float fillSeconds = 2.0f;
+
+    [Tooltip("水が引き始めた時の音（なくてもよい）。")]
+    public AudioClip drainClip;
+    [Range(0f, 1f)] public float drainVolume = 1f;
+
+    [Tooltip("水が満ち始めた時の音（なくてもよい）。")]
+    public AudioClip fillClip;
+    [Range(0f, 1f)] public float fillVolume = 1f;
+
     [Header("調べる用")]
-    [Tooltip("オンなら、プレイヤーが流されなかった理由を Console に出す。")]
+    [Tooltip("オンなら、プレイヤーが流されなかった理由や、レバーからの知らせを Console に出す。")]
     public bool debugLog = false;
 
     [Header("川底")]
@@ -114,6 +138,12 @@ public class RiverCurrent : MonoBehaviour
     private bool _wasInWater;
     private float _lastSfx = -10f;
 
+    // 水の量（レバーで引く・満ちる）。_t は 1=満水、0=干上がり（直線で動く）。_level は、なめらかにした水位（0〜1）
+    private float _t = 1f;
+    private float _targetT = 1f;
+    private float _level = 1f;
+    private float _appliedLevel = -1f;
+
     // 見た目
     private Transform _visualRoot;
     private Mesh _mesh;
@@ -123,7 +153,9 @@ public class RiverCurrent : MonoBehaviour
     private LineRenderer[] _lines;
     private Vector3[] _linePos;
     private ParticleSystem _bubbles, _dots, _splash;
-    private ParticleSystem.Particle[] _dotBuf;
+    private ParticleSystem.Particle[] _dotBuf, _bubBuf;
+    private MeshRenderer _meshRenderer;
+    private float _bubbleRateBase, _dotRateBase;
 
     // 流れの音
     private AudioSource _ambient;
@@ -161,6 +193,8 @@ public class RiverCurrent : MonoBehaviour
         if (flowDirection.sqrMagnitude < 0.0001f)
             flowDirection = Vector2.right;
         flowDirection.Normalize();
+        _t = _targetT = 1f;
+        _level = 1f;
 
         if (createRiverBed)
             BuildRiverBed();
@@ -194,6 +228,106 @@ public class RiverCurrent : MonoBehaviour
         s_beds.Add(bc);
     }
 
+    // ================= レバー =================
+
+    /// <summary>レバーから呼ばれる。on の意味は、Stopped When Lever On で決まる。</summary>
+    public override void SetLeverState(bool on, bool instant)
+    {
+        bool drained = stoppedWhenLeverOn ? on : !on;
+        float target = drained ? 0f : 1f;
+        if (debugLog)
+            Debug.Log("[RiverCurrent] レバー " + (on ? "オン" : "オフ") + " → " + (drained ? "水が引く" : "水が満ちる") + (instant ? "（すぐ）" : ""), this);
+
+        bool changed = !Mathf.Approximately(_targetT, target);
+        _targetT = target;
+        if (instant)
+        {
+            _t = target;
+            _level = Mathf.SmoothStep(0f, 1f, _t);
+            ApplyLevel(true);
+            return;
+        }
+        if (changed)
+            PlaySfx(drained ? drainClip : fillClip, drained ? drainVolume : fillVolume);
+    }
+
+    /// <summary>レバーを押した時に、カメラが映す場所：川のまん中。</summary>
+    public override Vector3 FocusPosition
+    {
+        get { return _col != null ? _col.bounds.center : transform.position; }
+    }
+
+    /// <summary>水が引く（満ちる）のにかかる秒数。カメラは、この間、川を映したままにする。</summary>
+    public override float GetEffectSeconds(bool on)
+    {
+        bool drained = stoppedWhenLeverOn ? on : !on;
+        return drained ? drainSeconds : fillSeconds;
+    }
+
+    /// <summary>いまの水の範囲（水面から下）。水が引いている間は、低くなる。</summary>
+    private Bounds WaterBounds()
+    {
+        Bounds c = _col.bounds;
+        float hh = c.size.y * _level;
+        return new Bounds(new Vector3(c.center.x, c.min.y + hh * 0.5f, c.center.z), new Vector3(c.size.x, hh, c.size.z));
+    }
+
+    /// <summary>水がほぼ無い（引いた）か。</summary>
+    private bool IsDry { get { return _level <= 0.03f; } }
+
+    private void StepLevel()
+    {
+        if (Mathf.Approximately(_t, _targetT))
+            return;
+        float seconds = _targetT < _t ? drainSeconds : fillSeconds;
+        float step = seconds <= 0.01f ? 1f : Time.deltaTime / seconds;
+        _t = Mathf.MoveTowards(_t, _targetT, step);
+        _level = Mathf.SmoothStep(0f, 1f, _t);
+        ApplyLevel(false);
+    }
+
+    /// <summary>水位に合わせて、水の見た目（泡・流れる粒）を整える。</summary>
+    private void ApplyLevel(bool force)
+    {
+        if (!force && Mathf.Approximately(_appliedLevel, _level))
+            return;
+        _appliedLevel = _level;
+        if (_visualRoot == null)
+            return;
+
+        bool visible = _level > 0.005f;
+        if (_meshRenderer != null && _meshRenderer.enabled != visible)
+            _meshRenderer.enabled = visible;
+        if (_lines != null)
+        {
+            for (int i = 0; i < _lines.Length; i++)
+                if (_lines[i] != null && _lines[i].enabled != visible)
+                    _lines[i].enabled = visible;
+        }
+
+        float hw = _h * _level;
+        if (_bubbles != null)
+        {
+            ParticleSystem.EmissionModule em = _bubbles.emission;
+            em.rateOverTime = _bubbleRateBase * (_level > 0.05f ? _level : 0f);
+        }
+        if (_dots != null)
+        {
+            ParticleSystem.EmissionModule em = _dots.emission;
+            em.rateOverTime = _dotRateBase * (_level > 0.05f ? _level : 0f);
+            ParticleSystem.ShapeModule sh = _dots.shape;
+            sh.scale = new Vector3(_w, Mathf.Max(0.01f, hw * 0.9f), 0.1f);
+            sh.position = new Vector3(0f, -_h * 0.5f + hw * 0.5f, 0f);
+        }
+        if (!visible)
+        {
+            if (_bubbles != null) _bubbles.Clear();
+            if (_dots != null) _dots.Clear();
+        }
+
+        UpdateWaves(Time.time);
+    }
+
     // ================= 流す・酸素・効果音 =================
 
     private readonly Collider2D[] _hits = new Collider2D[16];
@@ -206,16 +340,20 @@ public class RiverCurrent : MonoBehaviour
         if (GamePause.IsPaused || LoadingScreen.IsLoading || HitFeedback.IsDying)
             return;
 
-        Bounds b = _col.bounds;
-        ContactFilter2D filter = new ContactFilter2D();
-        filter.useTriggers = false;
-        int n = Physics2D.OverlapBox(b.center, b.size, 0f, filter, _hits);
-
+        // 水が引いて、ほぼ無い間は、押さず、酸素も減らさない
         bool found = false;
-        for (int i = 0; i < n; i++)
+        if (!IsDry)
         {
-            if (TryPush(_hits[i]))
-                found = true;
+            Bounds b = WaterBounds();
+            ContactFilter2D filter = new ContactFilter2D();
+            filter.useTriggers = false;
+            int n = Physics2D.OverlapBox(b.center, b.size, 0f, filter, _hits);
+
+            for (int i = 0; i < n; i++)
+            {
+                if (TryPush(_hits[i]))
+                    found = true;
+            }
         }
 
         // 水に入った・出た
@@ -389,6 +527,7 @@ public class RiverCurrent : MonoBehaviour
             v = v * v * (3f - 2f * v); // なめらかに
         }
 
+        v *= _level;
         _ambientSettings.BaseVolume = ambientVolume * v;
         if (v > 0.001f)
         {
@@ -527,6 +666,7 @@ public class RiverCurrent : MonoBehaviour
         water.transform.SetParent(_visualRoot, false);
         MeshFilter mf = water.AddComponent<MeshFilter>();
         MeshRenderer mr = water.AddComponent<MeshRenderer>();
+        _meshRenderer = mr;
         mr.sharedMaterial = s_mat;
         mr.sortingOrder = order;
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -593,7 +733,8 @@ public class RiverCurrent : MonoBehaviour
             main.maxParticles = 300;
 
             ParticleSystem.EmissionModule em = _bubbles.emission;
-            em.rateOverTime = Mathf.Max(0.1f, bubbleRate * _w / 10f);
+            _bubbleRateBase = Mathf.Max(0.1f, bubbleRate * _w / 10f);
+            em.rateOverTime = _bubbleRateBase;
 
             ParticleSystem.ShapeModule sh = _bubbles.shape;
             sh.enabled = true;
@@ -609,6 +750,7 @@ public class RiverCurrent : MonoBehaviour
             vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             FadeInOut(_bubbles, 0.85f);
+            _bubBuf = new ParticleSystem.Particle[main.maxParticles];
             _bubbles.Play();
         }
 
@@ -628,7 +770,8 @@ public class RiverCurrent : MonoBehaviour
             main.maxParticles = 250;
 
             ParticleSystem.EmissionModule em = _dots.emission;
-            em.rateOverTime = Mathf.Clamp(_w * _h * flowDotDensity, 1f, 120f);
+            _dotRateBase = Mathf.Clamp(_w * _h * flowDotDensity, 1f, 120f);
+            em.rateOverTime = _dotRateBase;
 
             ParticleSystem.ShapeModule sh = _dots.shape;
             sh.enabled = true;
@@ -678,7 +821,7 @@ public class RiverCurrent : MonoBehaviour
     {
         if (_splash == null || _col == null)
             return;
-        float surfaceY = _col.bounds.max.y;
+        float surfaceY = _col.bounds.min.y + _col.bounds.size.y * _level;
         for (int i = 0; i < splashCount; i++)
         {
             ParticleSystem.EmitParams ep = new ParticleSystem.EmitParams();
@@ -698,21 +841,25 @@ public class RiverCurrent : MonoBehaviour
 
         float dirSign = flowDirection.x >= 0f ? 1f : -1f;
         float ph = t * waveSpeed * dirSign;
-        float top = _h * 0.5f;
+
+        // 水位：水が引くと、水面が下がる。波は、水が少ないほど小さくなる
+        float hw = _h * _level;
+        float top = -_h * 0.5f + hw;
+        float amp = waveHeight * Mathf.Clamp01(_level * 3f);
 
         // 水の本体の、上のふち
         for (int i = 0; i <= _seg; i++)
         {
             float x = _verts[2 * i].x;
-            _verts[2 * i].y = top + Wave(x, ph, waveHeight, waveLength);
+            _verts[2 * i].y = top + Wave(x, ph, amp, waveLength);
         }
         _mesh.vertices = _verts;
         _mesh.RecalculateBounds();
 
-        SetLine(_lines[0], top, 0f, ph, waveHeight, waveLength);
-        SetLine(_lines[1], top - 0.07f, 0f, ph + 0.31f, waveHeight * 0.8f, waveLength * 1.1f);
-        SetLine(_lines[2], top - _h * 0.33f, 0f, ph * 0.6f + 0.2f, waveHeight * 0.55f, waveLength * 1.3f);
-        SetLine(_lines[3], top - _h * 0.66f, 0f, ph * 0.5f + 0.6f, waveHeight * 0.5f, waveLength * 1.5f);
+        SetLine(_lines[0], top, 0f, ph, amp, waveLength);
+        SetLine(_lines[1], top - Mathf.Min(0.07f, hw * 0.5f), 0f, ph + 0.31f, amp * 0.8f, waveLength * 1.1f);
+        SetLine(_lines[2], top - hw * 0.33f, 0f, ph * 0.6f + 0.2f, amp * 0.55f, waveLength * 1.3f);
+        SetLine(_lines[3], top - hw * 0.66f, 0f, ph * 0.5f + 0.6f, amp * 0.5f, waveLength * 1.5f);
     }
 
     private void SetLine(LineRenderer lr, float baseY, float z, float phase, float amp, float len)
@@ -727,30 +874,43 @@ public class RiverCurrent : MonoBehaviour
 
     private void KeepDotsInside()
     {
-        if (_dots == null || _dotBuf == null)
+        float top = -_h * 0.5f + _h * _level;
+        KeepInside(_dots, _dotBuf, top);
+        KeepInside(_bubbles, _bubBuf, top);
+    }
+
+    /// <summary>横のはし・川底・水面（水が引いた分、下がる）から出た粒を、消す。</summary>
+    private void KeepInside(ParticleSystem ps, ParticleSystem.Particle[] buf, float top)
+    {
+        if (ps == null || buf == null)
             return;
-        int n = _dots.GetParticles(_dotBuf);
+        int n = ps.GetParticles(buf);
         bool changed = false;
-        float hx = _w * 0.5f, hy = _h * 0.5f;
+        float hx = _w * 0.5f, bottom = -_h * 0.5f;
         for (int i = 0; i < n; i++)
         {
-            Vector3 p = _dotBuf[i].position;
-            if (Mathf.Abs(p.x) > hx || Mathf.Abs(p.y) > hy)
+            Vector3 p = buf[i].position;
+            if (Mathf.Abs(p.x) > hx || p.y > top || p.y < bottom - 0.3f)
             {
-                _dotBuf[i].remainingLifetime = 0f;
+                buf[i].remainingLifetime = 0f;
                 changed = true;
             }
         }
         if (changed)
-            _dots.SetParticles(_dotBuf, n);
+            ps.SetParticles(buf, n);
     }
 
     private void Update()
     {
+        if (!GamePause.IsPaused)
+            StepLevel();
         if (_visualRoot != null && !GamePause.IsPaused)
         {
-            UpdateWaves(Time.time);
-            KeepDotsInside();
+            if (_level > 0.005f)
+            {
+                UpdateWaves(Time.time);
+                KeepDotsInside();
+            }
         }
         UpdateAmbient();
     }

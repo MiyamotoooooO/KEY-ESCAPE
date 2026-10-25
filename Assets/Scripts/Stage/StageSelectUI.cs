@@ -137,6 +137,14 @@ public class StageSelectUI : MonoBehaviour
     public Sprite dotOffSprite;
     [Tooltip("ページが1つだけの時は、矢印と点を隠す。")]
     public bool hideNavigationIfSinglePage = true;
+    [Tooltip("ONなら、ページの点を、下の位置・大きさ・間隔で、横一列に並べる（点の入れ物に HorizontalLayoutGroup が無ければ、自動で付ける）。OFFなら、シーンで置いたとおり。")]
+    public bool autoLayoutDots = true;
+    [Tooltip("点の入れ物の位置（画面の真ん中から。基準解像度でのピクセル）。マイナスで下。")]
+    public Vector2 dotAreaPosition = new Vector2(0f, -310f);
+    [Tooltip("点1つの大きさ（基準解像度でのピクセル）。")]
+    public Vector2 dotSize = new Vector2(36f, 36f);
+    [Tooltip("点と点の間隔（基準解像度でのピクセル）。")]
+    public float dotSpacing = 24f;
 
     private StageNodeButton[] _nodes = new StageNodeButton[0];
     private readonly List<StageNodeButton> _cardClones = new List<StageNodeButton>();
@@ -652,6 +660,39 @@ public class StageSelectUI : MonoBehaviour
                 if (s != null)
                     _dots[i].sprite = s;
             }
+
+            if (autoLayoutDots)
+                LayoutDots();
+        }
+    }
+
+    /// <summary>ページの点を、横一列に、真ん中ぞろえで並べる（点の入れ物に並べる設定が無ければ、付ける）。</summary>
+    private void LayoutDots()
+    {
+        HorizontalLayoutGroup group = dotContainer.GetComponent<HorizontalLayoutGroup>();
+        if (group == null)
+        {
+            group = dotContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
+            group.childAlignment = TextAnchor.MiddleCenter;
+            group.childControlWidth = false;
+            group.childControlHeight = false;
+            group.childForceExpandWidth = false;
+            group.childForceExpandHeight = false;
+        }
+        group.spacing = dotSpacing;
+
+        dotContainer.anchoredPosition = dotAreaPosition;
+        int n = _dots.Count;
+        dotContainer.sizeDelta = new Vector2(n * dotSize.x + Mathf.Max(0, n - 1) * dotSpacing, dotSize.y);
+
+        for (int i = 0; i < n; i++)
+        {
+            if (_dots[i] == null)
+                continue;
+            RectTransform rt = _dots[i].rectTransform;
+            rt.sizeDelta = dotSize;
+            _dots[i].preserveAspect = true;
+            _dots[i].raycastTarget = false;
         }
     }
 
