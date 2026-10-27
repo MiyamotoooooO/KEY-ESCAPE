@@ -125,6 +125,14 @@ public class Attack : MonoBehaviour
                 lever.Hit();
         }
 
+        // 壊せる石：攻撃が当たると、ひびが入る（同じ石への二重の判定は、BreakableStone 側で防ぐ）
+        for (int i = 0; i < collidersEnemies.Length; i++)
+        {
+            BreakableStone stone = collidersEnemies[i].GetComponentInParent<BreakableStone>();
+            if (stone != null)
+                stone.Hit(attackCheck.position);
+        }
+
         _pendingStrongAttack = false;
     }
 }

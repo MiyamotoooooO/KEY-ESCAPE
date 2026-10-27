@@ -98,14 +98,28 @@ MonoBehaviour:
   leverId: 
   startOn: 0
   hitCooldown: 0.35
+  moveCamera: 1
+  onlyFirstTime: 1
+  cameraPoint: {fileID: 0}
+  cameraMoveSeconds: 1
+  holdSeconds: 0.8
+  cameraReturnSeconds: 1
+  zoomRatio: 0
+  zoomSeconds: 0.8
+  debugLog: 0
   visual: {fileID: 6499767453339713528}
   offSprite: {fileID: 0}
   onSprite: {fileID: 0}
   flipXWhenOn: 1
   popScale: 1.15
   popSeconds: 0.18
-  toggleClip: {fileID: 0}
+  toggleClip: {fileID: 8300000, guid: dabc2bb54685ac546973de21c22a2329, type: 3}
   toggleVolume: 1
+  glowUntilPulled: 1
+  glowColor: {r: 1, g: 0.82, b: 0.25, a: 0.65}
+  glowScale: 1.7
+  glowPulseSpeed: 2.2
+  glowFadeSeconds: 0.4
 --- !u!1 &9050195485101171275
 GameObject:
   m_ObjectHideFlags: 0

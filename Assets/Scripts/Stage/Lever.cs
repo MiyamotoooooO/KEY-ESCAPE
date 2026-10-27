@@ -76,6 +76,18 @@ public class Lever : MonoBehaviour
     public AudioClip toggleClip;
     [Range(0f, 1f)] public float toggleVolume = 1f;
 
+    [Header("目立たせる（まだ引いていない間、まわりがふわっと光る）")]
+    [Tooltip("ONなら、まだ一度も引いていない間、レバーのまわりが、ゆっくり光る。引くと、光は消える（もう一度引いても、出ない）。")]
+    public bool glowUntilPulled = true;
+    [Tooltip("光の色（Aは、いちばん明るい時の濃さ）。")]
+    public Color glowColor = new Color(1f, 0.82f, 0.25f, 0.65f);
+    [Tooltip("光の大きさ。レバーの絵の、何倍の大きさか。")]
+    public float glowScale = 1.7f;
+    [Tooltip("光がふくらんだり、縮んだりする速さ。")]
+    public float glowPulseSpeed = 2.2f;
+    [Tooltip("引いたあと、光が消えるまでの秒数。")]
+    public float glowFadeSeconds = 0.4f;
+
     private bool _on;
     private bool _busy;                 // カメラが動いている間
     private bool _cameraShown;          // このステージで、もうカメラを動かしたか
@@ -83,6 +95,11 @@ public class Lever : MonoBehaviour
     private float _lastHit = -10f;
     private Vector3 _visualScale = Vector3.one;
     private Coroutine _pop;
+
+    private SpriteRenderer _glow;
+    private bool _pulled;               // 一度でも引いたか（引いたら、光は消える）
+    private float _glowK = 1f;          // 光の強さ（1→0 へ消える）
+    private static Sprite s_glowSprite;
 
     /// <summary>いまオンか。</summary>
     public bool IsOn { get { return _on; } }
@@ -112,6 +129,7 @@ public class Lever : MonoBehaviour
             visual = GetComponentInChildren<SpriteRenderer>();
         if (visual != null)
             _visualScale = visual.transform.localScale;
+        BuildGlow();
     }
 
     private void Start()
@@ -119,8 +137,12 @@ public class Lever : MonoBehaviour
         // シーンが始まった時：覚えていた状態があれば、それに。なければ、Start On に。演出なしで、すぐ。
         bool on = startOn;
         bool saved;
-        if (LeverState.TryGet(Id, out saved))
+        bool hasSaved = LeverState.TryGet(Id, out saved);
+        if (hasSaved)
             on = saved;
+        _pulled = on || hasSaved;   // すでに引いた（またはオン）なら、光は出さない
+        if (_pulled)
+            _glowK = 0f;
         Apply(on, true);
 
         CheckTargets();
@@ -192,6 +214,7 @@ public class Lever : MonoBehaviour
         bool useCamera = !instant && WantsCamera();
         Apply(on, instant, !useCamera);
         LeverState.Set(Id, on);
+        _pulled = true;
 
         if (!instant)
         {
@@ -368,6 +391,78 @@ public class Lever : MonoBehaviour
         {
             visual.flipX = flipXWhenOn && _on;
         }
+    }
+
+    // ================= 光 =================
+
+    private static Sprite GetGlowSprite()
+    {
+        if (s_glowSprite != null)
+            return s_glowSprite;
+        int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+        float c = (n - 1) * 0.5f;
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / c;
+                float a = 1f - Mathf.SmoothStep(0.15f, 1f, d);
+                px[y * n + x] = new Color(1f, 1f, 1f, a * a);
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Clamp;
+        s_glowSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), n);
+        return s_glowSprite;
+    }
+
+    /// <summary>レバーの後ろに、光る丸を作る（引いていない間だけ見える）。</summary>
+    private void BuildGlow()
+    {
+        if (!glowUntilPulled || visual == null)
+            return;
+
+        GameObject go = new GameObject("Glow (auto)");
+        go.transform.SetParent(transform, false);
+        _glow = go.AddComponent<SpriteRenderer>();
+        _glow.sprite = GetGlowSprite();
+        _glow.sortingLayerID = visual.sortingLayerID;
+        _glow.sortingOrder = visual.sortingOrder - 1;
+
+        // レバーの絵のまんなかに置き、絵の大きさに合わせる（ワールドの大きさで決める）
+        Bounds b = visual.bounds;
+        go.transform.position = b.center;
+        float world = Mathf.Max(b.size.x, b.size.y) * Mathf.Max(0.5f, glowScale);
+        Vector3 ls = transform.lossyScale;
+        go.transform.localScale = new Vector3(world / Mathf.Max(0.0001f, Mathf.Abs(ls.x)), world / Mathf.Max(0.0001f, Mathf.Abs(ls.y)), 1f);
+        _glowBaseScale = go.transform.localScale;
+        _glow.color = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
+    }
+
+    private Vector3 _glowBaseScale = Vector3.one;
+
+    private void Update()
+    {
+        if (_glow == null)
+            return;
+
+        // 引いたら、光はすっと消える
+        if (_pulled && _glowK > 0f)
+            _glowK = Mathf.MoveTowards(_glowK, 0f, Time.unscaledDeltaTime / Mathf.Max(0.05f, glowFadeSeconds));
+
+        if (_glowK <= 0f)
+        {
+            if (_glow.enabled)
+                _glow.enabled = false;
+            return;
+        }
+
+        float wave = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * glowPulseSpeed);
+        float alpha = glowColor.a * Mathf.Lerp(0.45f, 1f, wave) * _glowK;
+        _glow.color = new Color(glowColor.r, glowColor.g, glowColor.b, alpha);
+        _glow.transform.localScale = _glowBaseScale * Mathf.Lerp(0.94f, 1.06f, wave);
     }
 
     private IEnumerator Pop()
