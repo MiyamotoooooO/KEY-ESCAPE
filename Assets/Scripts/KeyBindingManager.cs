@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -112,6 +112,9 @@ public class KeyBindingManager : MonoBehaviour
             return false;
         if (KeyInventory.Instance != null && !KeyInventory.Instance.Owns(key))
             return false;
+        // ボスの檻に封じられているキーは、解けるまで、設定できない。
+        if (KeySeal.IsSealed(key))
+            return false;
 
         foreach (var kvp in new List<KeyValuePair<GameAction, KeyDefinition>>(_bindings))
         {
@@ -198,6 +201,9 @@ public class KeyBindingManager : MonoBehaviour
             return false;
         // 掲示板の前などで予約されているキーは、ゲームの操作に使わせない。
         if (_reservedKeys.ContainsKey(key.keyCode))
+            return false;
+        // ボスの檻に封じられているキーは、解けるまで、効かない（KeySeal）。
+        if (KeySeal.IsSealed(key))
             return false;
         keyCode = key.keyCode;
         return true;

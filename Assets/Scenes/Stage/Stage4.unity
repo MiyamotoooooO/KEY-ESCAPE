@@ -3273,7 +3273,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 39.000015, y: -145.45624}
+  m_AnchoredPosition: {x: 39.000015, y: -145.45576}
   m_SizeDelta: {x: -64.99997, y: 0}
   m_Pivot: {x: 0.4, y: 0.8}
 --- !u!114 &292901696
@@ -6978,7 +6978,7 @@ MonoBehaviour:
   question: "\u541B\u30B3\u30B3\u3092\u629C\u3051\u3066\u6765\u305F\u306E\u2026\uFF1F\u3059\u3054\u3044\u306D\u2026"
   choices:
   - choiceLabel: "\u5F53\u7136"
-    response: "\u3053\u3093\u306A\u306B\u51C4\u3044\u4EBA\u3063\u3066\u77E5\u3063\u3066\u305F\u3089\u9003\u3052\u51FA\u3055\u306A\u304B\u3063\u305F\u3088"
+    response: "\u3053\u3093\u306A\u306B\u30B9\u30B4\u3044\u4EBA\u3063\u3066\u77E5\u3063\u3066\u305F\u3089\u9003\u3052\u51FA\u3055\u306A\u304B\u3063\u305F\u3088"
   - choiceLabel: "\u541B\u3082\u3060\u308D\uFF1F"
     response: "\u50D5\u306FR\u30AD\u30FC\u3060\u305C\uFF1F\n\u982D\u306E\"\u56DE\u8EE2\"\u304C\u65E9\u3044\u3093\u3060"
   - choiceLabel: "\u541B\u305F\u3061\u304C\u5FC3\u914D\u3060\u3063\u305F\u304B\u3089\u306D"
@@ -18732,7 +18732,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 225764473}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.99999857
+  m_Size: 0.99999595
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

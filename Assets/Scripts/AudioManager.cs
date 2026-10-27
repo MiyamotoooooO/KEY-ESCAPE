@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// KEY ESCAPE - BGMと効果音を、設定画面の音量（GameSettings）に合わせて鳴らす。
@@ -12,6 +13,9 @@ using UnityEngine;
 ///   AudioManager.StopBGM(fadeTime);         // BGMを止める
 ///   AudioManager.PushBGM(clip, fadeTime);   // 今のBGMを覚えてから、別のBGMに切り替える（画面を開く時用）
 ///   AudioManager.PopBGM(fadeTime);          // 覚えておいたBGMを、続きから再開する（画面を閉じる時用）
+///   AudioManager.SetBgmSpeed(1.15f, 1.5f);  // 今のBGMの速さを変える（1が普通。ボス戦の後半で速くする用）
+///                                           // ※再生の速さ（AudioSource.pitch）を変えるので、音の高さも少し上がる。
+///                                           // ※別の曲に切り替わると、普通の速さに戻る。シーンが変わっても戻る。
 ///
 /// 効果音：
 ///   AudioManager.PlaySE(clip);
@@ -33,12 +37,18 @@ public class AudioManager : MonoBehaviour
 
     private AudioSource _seSource;
 
+    // BGMの速さ（1が普通）。今の曲だけにかかる。
+    private float _speedCurrent = 1f;
+    private float _speedTarget = 1f;
+    private float _speedRate;
+
     private struct BgmState
     {
         public AudioClip clip;
         public float time;
         public bool loop;
         public float volume;
+        public float speed;
     }
     private readonly Stack<BgmState> _stack = new Stack<BgmState>();
 
@@ -76,7 +86,33 @@ public class AudioManager : MonoBehaviour
         _seSource.spatialBlend = 0f;
 
         GameSettings.Changed += ApplyVolumes;
+        SceneManager.sceneLoaded += OnSceneLoaded;
         ApplyVolumes();
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // やり直しや別のシーンでは、BGMの速さを普通に戻す
+        // （同じ曲が鳴り続けていると、曲の切り替えが起きず、速いままになるため）。
+        ResetSpeedNow(1f);
+    }
+
+    private void Update()
+    {
+        if (Mathf.Approximately(_speedCurrent, _speedTarget))
+            return;
+        // ゲームを止めている間も進めるため、unscaledを使う。
+        _speedCurrent = Mathf.MoveTowards(_speedCurrent, _speedTarget, _speedRate * Time.unscaledDeltaTime);
+        if (_bgm[_active] != null)
+            _bgm[_active].pitch = _speedCurrent;
+    }
+
+    private void ResetSpeedNow(float speed)
+    {
+        _speedCurrent = speed;
+        _speedTarget = speed;
+        if (_bgm[_active] != null)
+            _bgm[_active].pitch = speed;
     }
 
     private void OnDestroy()
@@ -84,6 +120,7 @@ public class AudioManager : MonoBehaviour
         if (Instance == this)
         {
             GameSettings.Changed -= ApplyVolumes;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             Instance = null;
         }
     }
@@ -108,6 +145,34 @@ public class AudioManager : MonoBehaviour
     {
         if (Instance == null) return;
         Instance.SwitchTo(clip, fadeTime, loop, 0f, volume);
+    }
+
+    /// <summary>いまのBGMの速さ（1が普通）。</summary>
+    public static float BgmSpeed
+    {
+        get { return Instance != null ? Instance._speedTarget : 1f; }
+    }
+
+    /// <summary>
+    /// 今のBGMの速さを変える（1が普通、1.15なら15%速い）。seconds秒かけて、なめらかに変わる。
+    /// 別の曲に切り替わると、普通の速さに戻る。
+    /// </summary>
+    public static void SetBgmSpeed(float speed, float seconds = 1f)
+    {
+        if (Instance == null) return;
+        Instance.SetSpeedInternal(speed, seconds);
+    }
+
+    private void SetSpeedInternal(float speed, float seconds)
+    {
+        speed = Mathf.Clamp(speed, 0.5f, 2f);
+        if (seconds <= 0.01f)
+        {
+            ResetSpeedNow(speed);
+            return;
+        }
+        _speedTarget = speed;
+        _speedRate = Mathf.Abs(_speedTarget - _speedCurrent) / seconds;
     }
 
     /// <summary>BGMを止める。</summary>
@@ -139,7 +204,8 @@ public class AudioManager : MonoBehaviour
             clip = cur.isPlaying ? cur.clip : null,
             time = cur.time,
             loop = cur.loop,
-            volume = _trackVolume[_active]
+            volume = _trackVolume[_active],
+            speed = _speedTarget
         });
 
         if (clip != null)
@@ -152,6 +218,9 @@ public class AudioManager : MonoBehaviour
             return;
         BgmState s = _stack.Pop();
         SwitchTo(s.clip, fadeTime, s.loop, s.time, s.volume);
+        // 覚えておいた速さに戻す（ボス戦の後半で速くしていたBGMが、画面を開いて閉じても、速いまま続くように）。
+        if (s.clip != null)
+            ResetSpeedNow(s.speed);
     }
 
     private void SwitchTo(AudioClip clip, float fadeTime, bool loop, float startTime, float volume)
@@ -181,6 +250,9 @@ public class AudioManager : MonoBehaviour
         _bgm[next].Stop();
         _bgm[next].clip = clip;
         _bgm[next].loop = loop;
+        _bgm[next].pitch = 1f;
+        _speedCurrent = 1f;   // 新しい曲は、普通の速さから
+        _speedTarget = 1f;
         _trackVolume[next] = volume;
         _fade[next] = 0f;
 

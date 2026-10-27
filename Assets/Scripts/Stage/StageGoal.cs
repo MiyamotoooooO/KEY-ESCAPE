@@ -135,6 +135,11 @@ public class StageGoal : MonoBehaviour
         StageClearDirector dir = director != null ? director : FindObjectOfType<StageClearDirector>();
         if (dir != null)
         {
+            // ボス（BossA）が、演出で走ってきて踊るキーを足したいとき（このステージで入手したキーが少ないとき）
+            BossA bossA = boss != null ? boss.GetComponent<BossA>() : null;
+            if (bossA != null)
+                dir.SetExtraCheerKeys(bossA.PickClearKeys(gainedKeys));
+
             // 演出と結果画面が終わったら（「拠点に戻る」を押したら）、拠点に戻る。
             // そのあと、新しく解放されたアクションがあれば、キーコンフィグ画面でロックを壊す演出を見せる。
             dir.Play(gainedKeys, newRecord, newRewards, () => StartCoroutine(FinishRoutine(0f, dir)));

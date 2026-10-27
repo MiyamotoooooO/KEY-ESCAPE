@@ -1,30 +1,32 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
 
 /// <summary>
-/// KEY ESCAPE - Key Config‰æ–Ê¶‘¤‚ÌƒL[ˆê——‚É•À‚Ô1ƒ}ƒX•ª‚Ìƒ{ƒ^ƒ“B
-/// KeyConfigUI.RefreshKeyList()‚ªAƒQ[ƒ€“à‚Ì‘SƒL[iKeyInventory.AllKeyDefinitionsj
-/// ‚ğ‘ÎÛ‚Éƒ^ƒu‚Åi‚è‚ñ‚¾•ª‚¾‚¯A‚±‚ê‚ğInstantiate‚µ‚Ä•À‚×‚éB
+/// KEY ESCAPE - Key Configç”»é¢å·¦å´ã®ã‚­ãƒ¼ä¸€è¦§ã«ä¸¦ã¶1ãƒã‚¹åˆ†ã®ãƒœã‚¿ãƒ³ã€‚
+/// KeyConfigUI.RefreshKeyList()ãŒã€ã‚²ãƒ¼ãƒ å†…ã®å…¨ã‚­ãƒ¼ï¼ˆKeyInventory.AllKeyDefinitionsï¼‰
+/// ã‚’å¯¾è±¡ã«ã‚¿ãƒ–ã§çµã‚Šè¾¼ã‚“ã åˆ†ã ã‘ã€ã“ã‚Œã‚’Instantiateã—ã¦ä¸¦ã¹ã‚‹ã€‚
 ///
-/// ŠÏ‚İƒL[F•¶š‚ğ•\¦‚µAƒNƒŠƒbƒN‚Å‰E‚ÌƒL[î•ñƒpƒlƒ‹‚ğXVA
-///   ƒhƒ‰ƒbƒO‚µ‚Ä’†‰›‚ÌActionBindingRow‚ÌƒL[ƒXƒƒbƒgiKeyDropSlotj‚Éƒhƒƒbƒv
-///   ‚·‚é‚ÆŠ„‚è“–‚Ä‚ç‚ê‚éBƒhƒ‰ƒbƒO’†‚ÍAKeyDragState‚ğ’Ê‚¶‚ÄAŠes‚Ìƒhƒƒbƒvæ‚É
-///   •‚¢”¼“§–¾‚Ì”wŒi‚ğo‚·B
-/// –¢“üèƒL[iOwned=falsejF•¶š‚ğuHv‚É‰B‚µAlockedOverlayiŒ®ƒAƒCƒRƒ“‚È‚Çj
-///   ‚ğ•\¦‚·‚éBƒNƒŠƒbƒN‚àƒhƒ‰ƒbƒO‚àˆêØó‚¯•t‚¯‚È‚¢ - ‰½‚ÌƒL[‚©‚Í
-///   ÀÛ‚É“üè‚·‚é‚Ü‚Å‚Ì‚¨Šy‚µ‚İB
+/// æ‰€æŒæ¸ˆã¿ã‚­ãƒ¼ï¼šæ–‡å­—ã‚’è¡¨ç¤ºã—ã€ã‚¯ãƒªãƒƒã‚¯ã§å³ã®ã‚­ãƒ¼æƒ…å ±ãƒ‘ãƒãƒ«ã‚’æ›´æ–°ã€
+///   ãƒ‰ãƒ©ãƒƒã‚°ã—ã¦ä¸­å¤®ã®ActionBindingRowã®ã‚­ãƒ¼ã‚¹ãƒ­ãƒƒãƒˆï¼ˆKeyDropSlotï¼‰ã«ãƒ‰ãƒ­ãƒƒãƒ—
+///   ã™ã‚‹ã¨å‰²ã‚Šå½“ã¦ã‚‰ã‚Œã‚‹ã€‚ãƒ‰ãƒ©ãƒƒã‚°ä¸­ã¯ã€KeyDragStateã‚’é€šã˜ã¦ã€å„è¡Œã®ãƒ‰ãƒ­ãƒƒãƒ—å…ˆã«
+///   é»’ã„åŠé€æ˜ã®èƒŒæ™¯ã‚’å‡ºã™ã€‚
+/// å°ã˜ã‚‰ã‚ŒãŸã‚­ãƒ¼ï¼ˆãƒœã‚¹ã®æª»ã€‚KeySealï¼‰ï¼šæª»ã®çµµãŒã‹ã¶ã•ã‚Šã€ã®ã“ã‚Šç§’æ•°ãŒå‡ºã‚‹ã€‚ã‚¯ãƒªãƒƒã‚¯ã‚‚ãƒ‰ãƒ©ãƒƒã‚°ã‚‚ã§ããªã„
+///   ï¼ˆè§£ã‘ã‚‹ã¨ã€ã‚‚ã¨ã«ã‚‚ã©ã‚‹ï¼‰ã€‚
+/// æœªå…¥æ‰‹ã‚­ãƒ¼ï¼ˆOwned=falseï¼‰ï¼šæ–‡å­—ã‚’ã€Œï¼Ÿã€ã«éš ã—ã€lockedOverlayï¼ˆéµã‚¢ã‚¤ã‚³ãƒ³ãªã©ï¼‰
+///   ã‚’è¡¨ç¤ºã™ã‚‹ã€‚ã‚¯ãƒªãƒƒã‚¯ã‚‚ãƒ‰ãƒ©ãƒƒã‚°ã‚‚ä¸€åˆ‡å—ã‘ä»˜ã‘ãªã„ - ä½•ã®ã‚­ãƒ¼ã‹ã¯
+///   å®Ÿéš›ã«å…¥æ‰‹ã™ã‚‹ã¾ã§ã®ãŠæ¥½ã—ã¿ã€‚
 /// </summary>
 public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
-    [Header("UIQÆ")]
+    [Header("UIå‚ç…§")]
     public Image background;
     public TMP_Text nameLabel;
-    [Tooltip("–¢“üèƒL[‚Ì‚¾‚¯•\¦‚·‚éBŒ®ƒAƒCƒRƒ“‚âˆÃ‚¢ƒI[ƒo[ƒŒƒC‚È‚ÇB")]
+    [Tooltip("æœªå…¥æ‰‹ã‚­ãƒ¼ã®æ™‚ã ã‘è¡¨ç¤ºã™ã‚‹ã€‚éµã‚¢ã‚¤ã‚³ãƒ³ã‚„æš—ã„ã‚ªãƒ¼ãƒãƒ¼ãƒ¬ã‚¤ãªã©ã€‚")]
     public GameObject lockedOverlay;
 
-    [Header("Šó‘Ô‚É‚æ‚éF•ª‚¯i”wŒiImage‚ª‚ ‚éê‡‚Ì‚İg—pj")]
+    [Header("æ‰€æŒçŠ¶æ…‹ã«ã‚ˆã‚‹è‰²åˆ†ã‘ï¼ˆèƒŒæ™¯ImageãŒã‚ã‚‹å ´åˆã®ã¿ä½¿ç”¨ï¼‰")]
     public Color ownedColor = Color.white;
     public Color lockedColor = new Color(0.35f, 0.35f, 0.35f, 1f);
 
@@ -34,8 +36,17 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
     private KeyConfigUI _owner;
     private Canvas _rootCanvas;
     private RectTransform _dragIcon;
+    private KeyCageGraphic _cage;
+    private Color _nameColor = Color.white;
+    private bool _nameColorKnown;
 
-    /// <summary>KeyConfigUI.RefreshKeyList()‚ªInstantiate’¼Œã‚ÉŒÄ‚ÔB</summary>
+    /// <summary>ãƒœã‚¹ã®æª»ã«å°ã˜ã‚‰ã‚Œã¦ã„ã‚‹ã‹ã€‚</summary>
+    public bool Sealed
+    {
+        get { return Owned && Key != null && KeySeal.IsSealed(Key); }
+    }
+
+    /// <summary>KeyConfigUI.RefreshKeyList()ãŒInstantiateç›´å¾Œã«å‘¼ã¶ã€‚</summary>
     public void Setup(KeyDefinition key, bool owned, KeyConfigUI owner)
     {
         Key = key;
@@ -53,34 +64,75 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
 
         if (background != null)
             background.color = owned ? ownedColor : lockedColor;
+
+        ApplySealVisual();
     }
 
-    // ---- ƒNƒŠƒbƒNF‰E‚ÌƒL[î•ñƒpƒlƒ‹‚ğXV ---------------------------------
+    private void OnEnable()
+    {
+        KeySeal.Changed += ApplySealVisual;
+        ApplySealVisual();
+    }
+
+    /// <summary>å°ã˜ã‚‰ã‚Œã¦ã„ã‚‹ãªã‚‰ã€æª»ã‚’ã‹ã¶ã›ã‚‹ã€‚è§£ã‘ãŸã‚‰ã€ã¯ãšã™ã€‚</summary>
+    private void ApplySealVisual()
+    {
+        bool s = Sealed;
+
+        if (nameLabel != null)
+        {
+            if (!_nameColorKnown)
+            {
+                _nameColor = nameLabel.color;
+                _nameColorKnown = true;
+            }
+            nameLabel.color = s ? new Color(_nameColor.r * 0.6f, _nameColor.g * 0.6f, _nameColor.b * 0.6f, _nameColor.a) : _nameColor;
+        }
+
+        if (s)
+        {
+            if (_cage == null)
+                _cage = KeyCageGraphic.Attach((RectTransform)transform);
+            _cage.Bind(Key);
+            _cage.gameObject.SetActive(true);
+            _cage.transform.SetAsLastSibling();
+        }
+        else if (_cage != null)
+        {
+            _cage.gameObject.SetActive(false);
+        }
+    }
+
+    // ---- ã‚¯ãƒªãƒƒã‚¯ï¼šå³ã®ã‚­ãƒ¼æƒ…å ±ãƒ‘ãƒãƒ«ã‚’æ›´æ–° ---------------------------------
 
     public void OnPointerClick(PointerEventData eventData)
     {
         if (!Owned || Key == null || _owner == null)
-            return; // –¢“üèƒL[‚ÍƒNƒŠƒbƒN‚µ‚Ä‚à‰½‚à‹N‚«‚È‚¢i³‘Ì‚Í•š‚¹‚½‚Ü‚Üj
+            return; // æœªå…¥æ‰‹ã‚­ãƒ¼ã¯ã‚¯ãƒªãƒƒã‚¯ã—ã¦ã‚‚ä½•ã‚‚èµ·ããªã„ï¼ˆæ­£ä½“ã¯ä¼ã›ãŸã¾ã¾ï¼‰
+        if (Sealed)
+            return; // å°ã˜ã‚‰ã‚Œã¦ã„ã‚‹ã‚­ãƒ¼ã¯ã€è§£ã‘ã‚‹ã¾ã§ã€é¸ã¹ãªã„
 
         _owner.SelectKey(Key);
     }
 
-    // ---- ƒhƒ‰ƒbƒOF’†‰›‚ÌActionBindingRow‚Öƒhƒƒbƒv‚µ‚ÄŠ„‚è“–‚Ä ----------------
+    // ---- ãƒ‰ãƒ©ãƒƒã‚°ï¼šä¸­å¤®ã®ActionBindingRowã¸ãƒ‰ãƒ­ãƒƒãƒ—ã—ã¦å‰²ã‚Šå½“ã¦ ----------------
 
     public void OnBeginDrag(PointerEventData eventData)
     {
         if (!Owned || Key == null || _rootCanvas == null)
             return;
+        if (Sealed)
+            return; // å°ã˜ã‚‰ã‚Œã¦ã„ã‚‹ã‚­ãƒ¼ã¯ã€è§£ã‘ã‚‹ã¾ã§ã€ã¤ã‹ã‚ãªã„
 
-        // ƒL[‚ğ‚Â‚©‚ñ‚¾‚±‚Æ‚ğ‘S‘Ì‚É’m‚ç‚¹‚éBŠeActionBindingRow‚ªA‚±‚ê‚ğó‚¯‚ÄA
-        // ƒhƒƒbƒvæiƒL[ƒXƒƒbƒgj‚ÌŒã‚ë‚É•‚¢”¼“§–¾‚Ì”wŒi‚ğo‚·B
+        // ã‚­ãƒ¼ã‚’ã¤ã‹ã‚“ã ã“ã¨ã‚’å…¨ä½“ã«çŸ¥ã‚‰ã›ã‚‹ã€‚å„ActionBindingRowãŒã€ã“ã‚Œã‚’å—ã‘ã¦ã€
+        // ãƒ‰ãƒ­ãƒƒãƒ—å…ˆï¼ˆã‚­ãƒ¼ã‚¹ãƒ­ãƒƒãƒˆï¼‰ã®å¾Œã‚ã«é»’ã„åŠé€æ˜ã®èƒŒæ™¯ã‚’å‡ºã™ã€‚
         KeyDragState.Set(true);
 
-        // ƒhƒ‰ƒbƒO’†Aw/ƒ}ƒEƒX‚É’Ç]‚·‚éŠÈˆÕƒAƒCƒRƒ“‚ğ‚»‚Ìê‚Å¶¬‚·‚é
-        // iê—pƒvƒŒƒnƒu‚ğ—pˆÓ‚µ‚È‚­‚Ä‚à“®‚­‚æ‚¤‚ÉAƒR[ƒh‚ÅImage+TMP_Text‚ğ
-        // ‘g‚İ—§‚Ä‚Ä‚¢‚éjBeventData.pointerDrag‚Í©“®“I‚É‚±‚Ìƒ{ƒ^ƒ“©g‚Ì
-        // GameObject‚Ì‚Ü‚Ü‚È‚Ì‚ÅAActionBindingRow.HandleDrop()‘¤‚ÅKeyGridButtonUI‚ğ
-        // ³‚µ‚­æ“¾‚Å‚«‚éB
+        // ãƒ‰ãƒ©ãƒƒã‚°ä¸­ã€æŒ‡/ãƒã‚¦ã‚¹ã«è¿½å¾“ã™ã‚‹ç°¡æ˜“ã‚¢ã‚¤ã‚³ãƒ³ã‚’ãã®å ´ã§ç”Ÿæˆã™ã‚‹
+        // ï¼ˆå°‚ç”¨ãƒ—ãƒ¬ãƒãƒ–ã‚’ç”¨æ„ã—ãªãã¦ã‚‚å‹•ãã‚ˆã†ã«ã€ã‚³ãƒ¼ãƒ‰ã§Image+TMP_Textã‚’
+        // çµ„ã¿ç«‹ã¦ã¦ã„ã‚‹ï¼‰ã€‚eventData.pointerDragã¯è‡ªå‹•çš„ã«ã“ã®ãƒœã‚¿ãƒ³è‡ªèº«ã®
+        // GameObjectã®ã¾ã¾ãªã®ã§ã€ActionBindingRow.HandleDrop()å´ã§KeyGridButtonUIã‚’
+        // æ­£ã—ãå–å¾—ã§ãã‚‹ã€‚
         var go = new GameObject("DragKeyIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(_rootCanvas.transform, false);
         go.transform.SetAsLastSibling();
@@ -125,8 +177,8 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        // ƒhƒƒbƒv‚É¬Œ÷‚µ‚½‚àAƒhƒƒbƒv‚¹‚¸‚É—£‚µ‚½‚àA‚±‚±‚ª•K‚¸ŒÄ‚Î‚ê‚é‚Ì‚ÅA
-        // ƒhƒƒbƒvæ‚Ì•‚¢”¼“§–¾‚Ì”wŒi‚ÍA‚±‚±‚ÅŠmÀ‚ÉÁ‚¦‚éB
+        // ãƒ‰ãƒ­ãƒƒãƒ—ã«æˆåŠŸã—ãŸæ™‚ã‚‚ã€ãƒ‰ãƒ­ãƒƒãƒ—ã›ãšã«é›¢ã—ãŸæ™‚ã‚‚ã€ã“ã“ãŒå¿…ãšå‘¼ã°ã‚Œã‚‹ã®ã§ã€
+        // ãƒ‰ãƒ­ãƒƒãƒ—å…ˆã®é»’ã„åŠé€æ˜ã®èƒŒæ™¯ã¯ã€ã“ã“ã§ç¢ºå®Ÿã«æ¶ˆãˆã‚‹ã€‚
         KeyDragState.Set(false);
 
         if (_dragIcon != null)
@@ -136,8 +188,10 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
 
     private void OnDisable()
     {
-        // ƒhƒ‰ƒbƒO’†‚É‰æ–Ê‚ª•Â‚¶‚ç‚ê‚Äi”ñ•\¦‚É‚È‚Á‚Äj‚àAOnEndDrag‚ÍŒÄ‚Î‚ê‚È‚¢B
-        // ƒhƒ‰ƒbƒOƒAƒCƒRƒ“‚ªc‚ç‚È‚¢‚æ‚¤Á‚µAƒhƒƒbƒvæ‚Ì”wŒi‚ào‚½‚Ü‚Ü‚É‚È‚ç‚È‚¢‚æ‚¤‚É‚·‚éB
+        KeySeal.Changed -= ApplySealVisual;
+
+        // ãƒ‰ãƒ©ãƒƒã‚°ä¸­ã«ç”»é¢ãŒé–‰ã˜ã‚‰ã‚Œã¦ï¼ˆéè¡¨ç¤ºã«ãªã£ã¦ï¼‰ã‚‚ã€OnEndDragã¯å‘¼ã°ã‚Œãªã„ã€‚
+        // ãƒ‰ãƒ©ãƒƒã‚°ã‚¢ã‚¤ã‚³ãƒ³ãŒæ®‹ã‚‰ãªã„ã‚ˆã†æ¶ˆã—ã€ãƒ‰ãƒ­ãƒƒãƒ—å…ˆã®èƒŒæ™¯ã‚‚å‡ºãŸã¾ã¾ã«ãªã‚‰ãªã„ã‚ˆã†ã«ã™ã‚‹ã€‚
         if (_dragIcon != null)
         {
             Destroy(_dragIcon.gameObject);
@@ -148,9 +202,9 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
 
     private void OnDestroy()
     {
-        // ƒhƒ‰ƒbƒO’†‚É‚±‚Ìƒ^ƒCƒ‹‚ª”jŠü‚³‚ê‚½iƒL[ˆê——‚ªì‚è’¼‚³‚ê‚½A‰æ–Ê‚ª•Â‚¶‚ç‚ê‚½“™j
-        // ê‡‚ÍAOnEndDrag‚ªŒÄ‚Î‚ê‚È‚¢‚±‚Æ‚ª‚ ‚éBƒhƒ‰ƒbƒOƒAƒCƒRƒ“‚ªc‚ç‚È‚¢‚æ‚¤‚É
-        // Á‚µAƒhƒƒbƒvæ‚Ì”wŒi‚ào‚½‚Ü‚Ü‚É‚È‚ç‚È‚¢‚æ‚¤‚É‚·‚éB
+        // ãƒ‰ãƒ©ãƒƒã‚°ä¸­ã«ã“ã®ã‚¿ã‚¤ãƒ«ãŒç ´æ£„ã•ã‚ŒãŸï¼ˆã‚­ãƒ¼ä¸€è¦§ãŒä½œã‚Šç›´ã•ã‚ŒãŸã€ç”»é¢ãŒé–‰ã˜ã‚‰ã‚ŒãŸç­‰ï¼‰
+        // å ´åˆã¯ã€OnEndDragãŒå‘¼ã°ã‚Œãªã„ã“ã¨ãŒã‚ã‚‹ã€‚ãƒ‰ãƒ©ãƒƒã‚°ã‚¢ã‚¤ã‚³ãƒ³ãŒæ®‹ã‚‰ãªã„ã‚ˆã†ã«
+        // æ¶ˆã—ã€ãƒ‰ãƒ­ãƒƒãƒ—å…ˆã®èƒŒæ™¯ã‚‚å‡ºãŸã¾ã¾ã«ãªã‚‰ãªã„ã‚ˆã†ã«ã™ã‚‹ã€‚
         if (_dragIcon != null)
         {
             Destroy(_dragIcon.gameObject);

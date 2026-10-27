@@ -1,64 +1,64 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// KEY ESCAPE - İ’è‰æ–ÊiBGM^SE^ƒXƒNƒŠ[ƒ“ƒ‚[ƒh^‘€ìƒKƒCƒh‚Ì•\¦jB
-/// EscƒL[‚ÅŠJ•Â‚·‚éBŠJ‚¢‚Ä‚¢‚éŠÔ‚ÍƒQ[ƒ€‚ğ~‚ß‚éiTime.timeScale = 0jB
-/// ŠJ‚¢‚½‚ÉAŠÅ”Â‚ªã‚©‚ç—‚¿‚Ä‚­‚é‰‰oiKeyConfigIntroAnimatorj‚ğÄ¶‚·‚éB
+/// KEY ESCAPE - è¨­å®šç”»é¢ï¼ˆBGMï¼SEï¼ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ãƒ¢ãƒ¼ãƒ‰ï¼æ“ä½œã‚¬ã‚¤ãƒ‰ã®è¡¨ç¤ºï¼‰ã€‚
+/// Escã‚­ãƒ¼ã§é–‹é–‰ã™ã‚‹ã€‚é–‹ã„ã¦ã„ã‚‹é–“ã¯ã‚²ãƒ¼ãƒ ã‚’æ­¢ã‚ã‚‹ï¼ˆTime.timeScale = 0ï¼‰ã€‚
+/// é–‹ã„ãŸæ™‚ã«ã€çœ‹æ¿ãŒä¸Šã‹ã‚‰è½ã¡ã¦ãã‚‹æ¼”å‡ºï¼ˆKeyConfigIntroAnimatorï¼‰ã‚’å†ç”Ÿã™ã‚‹ã€‚
 ///
-/// ’l‚Ì•Û‘¶EˆÛ‚ÍGameSettingsistaticj‚ªs‚¤‚Ì‚ÅA‚±‚ÌUI‚Í‚»‚Ì’l‚ğ•\¦‚µ‚ÄA
-/// •ÏX‚ğ‘‚«‚Ş‚¾‚¯B
+/// å€¤ã®ä¿å­˜ãƒ»ç¶­æŒã¯GameSettingsï¼ˆstaticï¼‰ãŒè¡Œã†ã®ã§ã€ã“ã®UIã¯ãã®å€¤ã‚’è¡¨ç¤ºã—ã¦ã€
+/// å¤‰æ›´ã‚’æ›¸ãè¾¼ã‚€ã ã‘ã€‚
 ///
-/// ’ˆÓF‚±‚ÌƒXƒNƒŠƒvƒg‚ÍApanelRoot‚ÌŠOií‚É—LŒø‚ÈƒIƒuƒWƒFƒNƒgj‚É•t‚¯‚é‚±‚ÆB
-/// panelRoot‚É•t‚¯‚é‚ÆAƒpƒlƒ‹‚ª–³Œø‚ÌŠÔ‚ÍUpdate‚ª“®‚©‚¸AEscƒL[‚ÅŠJ‚¯‚È‚¢B
+/// æ³¨æ„ï¼šã“ã®ã‚¹ã‚¯ãƒªãƒ—ãƒˆã¯ã€panelRootã®å¤–ï¼ˆå¸¸ã«æœ‰åŠ¹ãªã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆï¼‰ã«ä»˜ã‘ã‚‹ã“ã¨ã€‚
+/// panelRootã«ä»˜ã‘ã‚‹ã¨ã€ãƒ‘ãƒãƒ«ãŒç„¡åŠ¹ã®é–“ã¯UpdateãŒå‹•ã‹ãšã€Escã‚­ãƒ¼ã§é–‹ã‘ãªã„ã€‚
 /// </summary>
 public class SettingsUI : MonoBehaviour
 {
-    /// <summary>İ’è‰æ–Ê‚ªŠJ‚¢‚Ä‚¢‚é‚©BKeyConfigUI‚ªATabƒL[‚ğ–³‹‚·‚é‚½‚ß‚ÉQÆ‚·‚éB</summary>
+    /// <summary>è¨­å®šç”»é¢ãŒé–‹ã„ã¦ã„ã‚‹ã‹ã€‚KeyConfigUIãŒã€Tabã‚­ãƒ¼ã‚’ç„¡è¦–ã™ã‚‹ãŸã‚ã«å‚ç…§ã™ã‚‹ã€‚</summary>
     public static bool IsOpen { get; private set; }
 
-    [Header("‰æ–Ê")]
-    [Tooltip("İ’è‰æ–Ê‘S‘Ìi•‚¢”¼“§–¾‚Ì”wŒiA˜gAŠÅ”ÂAŠe€–Ú‚ğŠÜ‚ŞejBÅ‰‚Í–³Œø‚Å‚à—LŒø‚Å‚à‚æ‚¢iStart()‚Å”ñ•\¦‚É‚·‚éjB")]
+    [Header("ç”»é¢")]
+    [Tooltip("è¨­å®šç”»é¢å…¨ä½“ï¼ˆé»’ã„åŠé€æ˜ã®èƒŒæ™¯ã€æ ã€çœ‹æ¿ã€å„é …ç›®ã‚’å«ã‚€è¦ªï¼‰ã€‚æœ€åˆã¯ç„¡åŠ¹ã§ã‚‚æœ‰åŠ¹ã§ã‚‚ã‚ˆã„ï¼ˆStart()ã§éè¡¨ç¤ºã«ã™ã‚‹ï¼‰ã€‚")]
     public GameObject panelRoot;
     public KeyCode toggleKey = KeyCode.Escape;
-    [Tooltip("‚±‚Ì‰æ–Ê‚ªŠJ‚¢‚Ä‚¢‚éŠÔAƒQ[ƒ€‚ğ~‚ß‚éiTime.timeScale = 0jB")]
+    [Tooltip("ã“ã®ç”»é¢ãŒé–‹ã„ã¦ã„ã‚‹é–“ã€ã‚²ãƒ¼ãƒ ã‚’æ­¢ã‚ã‚‹ï¼ˆTime.timeScale = 0ï¼‰ã€‚")]
     public bool pauseGameWhileOpen = true;
-    [Tooltip("”CˆÓBŠJ‚¢‚½‚Ì‰‰oiŠÅ”Â‚ª—‚¿‚Ä‚­‚éjBpanelRoot‚É•t‚¯‚½KeyConfigIntroAnimator‚ğŠ„‚è“–‚Ä‚éB")]
+    [Tooltip("ä»»æ„ã€‚é–‹ã„ãŸæ™‚ã®æ¼”å‡ºï¼ˆçœ‹æ¿ãŒè½ã¡ã¦ãã‚‹ï¼‰ã€‚panelRootã«ä»˜ã‘ãŸKeyConfigIntroAnimatorã‚’å‰²ã‚Šå½“ã¦ã‚‹ã€‚")]
     public KeyConfigIntroAnimator introAnimator;
-    [Tooltip("”CˆÓBƒL[ƒRƒ“ƒtƒBƒO‰æ–Ê‚ªŠJ‚¢‚Ä‚¢‚éŠÔ‚ÍEsc‚ğ–³‹‚·‚é‚½‚ß‚Ég‚¤B‹ó‚È‚çAƒV[ƒ““à‚©‚ç©“®‚Å’T‚·B")]
+    [Tooltip("ä»»æ„ã€‚ã‚­ãƒ¼ã‚³ãƒ³ãƒ•ã‚£ã‚°ç”»é¢ãŒé–‹ã„ã¦ã„ã‚‹é–“ã¯Escã‚’ç„¡è¦–ã™ã‚‹ãŸã‚ã«ä½¿ã†ã€‚ç©ºãªã‚‰ã€ã‚·ãƒ¼ãƒ³å†…ã‹ã‚‰è‡ªå‹•ã§æ¢ã™ã€‚")]
     public KeyConfigUI keyConfigUI;
 
     [Header("BGM")]
     public Slider bgmSlider;
     public TMP_Text bgmValueText;
 
-    [Header("SEiŒø‰Ê‰¹j")]
+    [Header("SEï¼ˆåŠ¹æœéŸ³ï¼‰")]
     public Slider seSlider;
     public TMP_Text seValueText;
-    [Tooltip("”CˆÓBSE‚ÌƒXƒ‰ƒCƒ_[‚ğ“®‚©‚µ‚½‚ÉA‰¹—Ê‚ÌŠm”F—p‚É–Â‚ç‚·Œø‰Ê‰¹B")]
+    [Tooltip("ä»»æ„ã€‚SEã®ã‚¹ãƒ©ã‚¤ãƒ€ãƒ¼ã‚’å‹•ã‹ã—ãŸæ™‚ã«ã€éŸ³é‡ã®ç¢ºèªç”¨ã«é³´ã‚‰ã™åŠ¹æœéŸ³ã€‚")]
     public AudioClip seTestClip;
 
-    [Header("ƒXƒNƒŠ[ƒ“ƒ‚[ƒh")]
+    [Header("ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ãƒ¢ãƒ¼ãƒ‰")]
     public Button fullscreenButton;
     public Button windowedButton;
 
-    [Header("‘€ìƒKƒCƒh‚Ì•\¦")]
+    [Header("æ“ä½œã‚¬ã‚¤ãƒ‰ã®è¡¨ç¤º")]
     public Button guideOnButton;
     public Button guideOffButton;
 
-    [Header("ƒ{ƒ^ƒ“")]
+    [Header("ãƒœã‚¿ãƒ³")]
     public Button backButton;
     public Button resetButton;
 
-    [Header("‘I‘ğ’†‚Ì€–Ú‚ÌFi2‘ğ‚Ìƒ{ƒ^ƒ“j")]
+    [Header("é¸æŠä¸­ã®é …ç›®ã®è‰²ï¼ˆ2æŠã®ãƒœã‚¿ãƒ³ï¼‰")]
     public Color selectedColor = new Color(0.72f, 0.72f, 0.72f, 1f);
     public Color unselectedColor = Color.white;
 
     private float _prevTimeScale = 1f;
     private bool _prevCursorVisible;
     private CursorLockMode _prevCursorLockState;
-    private bool _refreshing;      // ‰æ–Ê‚Ì’l‚ğXV‚µ‚Ä‚¢‚éŠÔA•ÏXƒCƒxƒ“ƒg‚ğ–³‹‚·‚é
+    private bool _refreshing;      // ç”»é¢ã®å€¤ã‚’æ›´æ–°ã—ã¦ã„ã‚‹é–“ã€å¤‰æ›´ã‚¤ãƒ™ãƒ³ãƒˆã‚’ç„¡è¦–ã™ã‚‹
     private float _lastTestSeTime = -10f;
 
     private void Start()
@@ -69,7 +69,7 @@ public class SettingsUI : MonoBehaviour
         if (panelRoot != null)
             panelRoot.SetActive(false);
 
-        // Inspector‚Å‚Í‰½‚àŒq‚ª‚È‚­‚Ä‚æ‚¢‚æ‚¤‚ÉA‚±‚±‚ÅƒR[ƒh‚©‚çŒq‚®B
+        // Inspectorã§ã¯ä½•ã‚‚ç¹‹ãŒãªãã¦ã‚ˆã„ã‚ˆã†ã«ã€ã“ã“ã§ã‚³ãƒ¼ãƒ‰ã‹ã‚‰ç¹‹ãã€‚
         if (bgmSlider != null) bgmSlider.onValueChanged.AddListener(OnBgmSliderChanged);
         if (seSlider != null) seSlider.onValueChanged.AddListener(OnSeSliderChanged);
         if (fullscreenButton != null) fullscreenButton.onClick.AddListener(() => GameSettings.SetFullscreen(true));
@@ -96,10 +96,11 @@ public class SettingsUI : MonoBehaviour
     private void Update()
     {
         if (!Input.GetKeyDown(toggleKey)) return;
-        if (GamePause.IsPaused) return; // ‰ï˜bEƒL[“üèƒ|ƒbƒvƒAƒbƒv’†‚Íİ’è‚ğŠJ‚©‚È‚¢iŠJ•Â‚ÅtimeScale‚ª–ß‚Á‚Ä‚µ‚Ü‚¤‚½‚ßj
-        if (OpeningMovie.IsPlaying) return; // ƒI[ƒvƒjƒ“ƒOƒ€[ƒr[’†‚ÍAİ’è‰æ–Ê‚ğŠJ‚©‚È‚¢
-        if (NewGameIntro.IsPlaying) return; // u‚Í‚¶‚ß‚©‚çv‚Ì‚ ‚Æ‚Ì‰ï˜b’†‚ÍAİ’è‰æ–Ê‚ğŠJ‚©‚È‚¢iEsc‚ÍA‰ï˜b‚ğ”ò‚Î‚·j
-        if (StageClearDirector.IsPlaying) return; // ƒXƒe[ƒWƒNƒŠƒA‚Ì‰‰o’†‚ÍAİ’è‚ğŠJ‚©‚È‚¢
+        if (GamePause.IsPaused) return; // ä¼šè©±ãƒ»ã‚­ãƒ¼å…¥æ‰‹ãƒãƒƒãƒ—ã‚¢ãƒƒãƒ—ä¸­ã¯è¨­å®šã‚’é–‹ã‹ãªã„ï¼ˆé–‹é–‰ã§timeScaleãŒæˆ»ã£ã¦ã—ã¾ã†ãŸã‚ï¼‰
+        if (OpeningMovie.IsPlaying) return; // ã‚ªãƒ¼ãƒ—ãƒ‹ãƒ³ã‚°ãƒ ãƒ¼ãƒ“ãƒ¼ä¸­ã¯ã€è¨­å®šç”»é¢ã‚’é–‹ã‹ãªã„
+        if (NewGameIntro.IsPlaying) return; // ã€Œã¯ã˜ã‚ã‹ã‚‰ã€ã®ã‚ã¨ã®ä¼šè©±ä¸­ã¯ã€è¨­å®šç”»é¢ã‚’é–‹ã‹ãªã„ï¼ˆEscã¯ã€ä¼šè©±ã‚’é£›ã°ã™ï¼‰
+        if (StageClearDirector.IsPlaying) return; // ã‚¹ãƒ†ãƒ¼ã‚¸ã‚¯ãƒªã‚¢ã®æ¼”å‡ºä¸­ã¯ã€è¨­å®šã‚’é–‹ã‹ãªã„
+        if (BossIntroMovie.IsPlaying) return; // ãƒœã‚¹æˆ¦å‰ã®ãƒ ãƒ¼ãƒ“ãƒ¼ä¸­ã¯ã€è¨­å®šã‚’é–‹ã‹ãªã„
         if (TitleMenu.CloseConfirmIfOpen()) return;
         if (ReturnToTitleButton.CloseConfirmIfOpen()) return;
         if (StageSelectUI.IsOpen) { StageSelectUI.CloseIfOpen(); return; }
@@ -107,7 +108,7 @@ public class SettingsUI : MonoBehaviour
         Toggle();
     }
 
-    // ---- ŠJ‚­^•Â‚¶‚é ---------------------------------------------------
+    // ---- é–‹ãï¼é–‰ã˜ã‚‹ ---------------------------------------------------
 
     public void Toggle()
     {
@@ -131,7 +132,7 @@ public class SettingsUI : MonoBehaviour
             Time.timeScale = 0f;
         }
 
-        // ƒQ[ƒ€ƒvƒŒƒC’†‚É‰B‚µ‚Ä‚¢‚é/ƒƒbƒN‚µ‚Ä‚¢‚éƒ}ƒEƒXƒJ[ƒ\ƒ‹‚ğA‰æ–Ê‚ğŠJ‚¢‚Ä‚¢‚éŠÔ‚¾‚¯•\¦‚·‚éB
+        // ã‚²ãƒ¼ãƒ ãƒ—ãƒ¬ã‚¤ä¸­ã«éš ã—ã¦ã„ã‚‹/ãƒ­ãƒƒã‚¯ã—ã¦ã„ã‚‹ãƒã‚¦ã‚¹ã‚«ãƒ¼ã‚½ãƒ«ã‚’ã€ç”»é¢ã‚’é–‹ã„ã¦ã„ã‚‹é–“ã ã‘è¡¨ç¤ºã™ã‚‹ã€‚
         _prevCursorVisible = Cursor.visible;
         _prevCursorLockState = Cursor.lockState;
         Cursor.visible = true;
@@ -139,8 +140,8 @@ public class SettingsUI : MonoBehaviour
 
         RefreshFromSettings();
 
-        // –³Œø‚¾‚Á‚½ƒpƒlƒ‹‚ğÅ‰‚ÉŠJ‚¢‚½‚¾‚¯ALayout Group‚È‚Ç‚ª–¢ŒvZ‚É‚È‚é‚±‚Æ‚ª‚ ‚é‚Ì‚ÅA
-        // ‹­§“I‚ÉÄŒvZ‚µ‚Ä‚©‚çA‰‰o‚ğÄ¶‚·‚éB
+        // ç„¡åŠ¹ã ã£ãŸãƒ‘ãƒãƒ«ã‚’æœ€åˆã«é–‹ã„ãŸæ™‚ã ã‘ã€Layout Groupãªã©ãŒæœªè¨ˆç®—ã«ãªã‚‹ã“ã¨ãŒã‚ã‚‹ã®ã§ã€
+        // å¼·åˆ¶çš„ã«å†è¨ˆç®—ã—ã¦ã‹ã‚‰ã€æ¼”å‡ºã‚’å†ç”Ÿã™ã‚‹ã€‚
         if (panelRoot != null)
         {
             var rt = panelRoot.GetComponent<RectTransform>();
@@ -170,7 +171,7 @@ public class SettingsUI : MonoBehaviour
         Cursor.lockState = _prevCursorLockState;
     }
 
-    // ---- ƒXƒ‰ƒCƒ_[Eƒ{ƒ^ƒ“‚Ì‘€ì -----------------------------------------
+    // ---- ã‚¹ãƒ©ã‚¤ãƒ€ãƒ¼ãƒ»ãƒœã‚¿ãƒ³ã®æ“ä½œ -----------------------------------------
 
     private void OnBgmSliderChanged(float value)
     {
@@ -185,7 +186,7 @@ public class SettingsUI : MonoBehaviour
             return;
         GameSettings.SetSeVolume(value / 100f);
 
-        // ‰¹—Ê‚ÌŠm”F—p‚ÉAŒø‰Ê‰¹‚ğ–Â‚ç‚·i–Â‚ç‚µ‚·‚¬‚È‚¢‚æ‚¤AŠÔŠu‚ğ‹ó‚¯‚éjB
+        // éŸ³é‡ã®ç¢ºèªç”¨ã«ã€åŠ¹æœéŸ³ã‚’é³´ã‚‰ã™ï¼ˆé³´ã‚‰ã—ã™ããªã„ã‚ˆã†ã€é–“éš”ã‚’ç©ºã‘ã‚‹ï¼‰ã€‚
         if (seTestClip != null && Time.unscaledTime - _lastTestSeTime > 0.15f)
         {
             _lastTestSeTime = Time.unscaledTime;
@@ -193,7 +194,7 @@ public class SettingsUI : MonoBehaviour
         }
     }
 
-    // ---- ‰æ–Ê‚Ì•\¦‚ğAŒ»İ‚Ìİ’è‚É‡‚í‚¹‚é -----------------------------------
+    // ---- ç”»é¢ã®è¡¨ç¤ºã‚’ã€ç¾åœ¨ã®è¨­å®šã«åˆã‚ã›ã‚‹ -----------------------------------
 
     private void RefreshFromSettings()
     {
@@ -215,7 +216,7 @@ public class SettingsUI : MonoBehaviour
         _refreshing = false;
     }
 
-    /// <summary>2‘ğ‚Ìƒ{ƒ^ƒ“‚Ì‚¤‚¿A‘I‚Î‚ê‚Ä‚¢‚é‚Ù‚¤‚ÌF‚ğ•Ï‚¦‚éB</summary>
+    /// <summary>2æŠã®ãƒœã‚¿ãƒ³ã®ã†ã¡ã€é¸ã°ã‚Œã¦ã„ã‚‹ã»ã†ã®è‰²ã‚’å¤‰ãˆã‚‹ã€‚</summary>
     private void SetSelected(Button button, bool selected)
     {
         if (button == null || button.image == null)

@@ -155,6 +155,15 @@ public class StageClearDirector : MonoBehaviour
     /// <summary>演出の最中か。</summary>
     public static bool IsPlaying { get; private set; }
 
+    // 結果画面には出さず、走ってきて踊るだけのキー（ボス戦のあとなどに、StageGoal が足す）
+    private List<KeyDefinition> _extraCheerKeys;
+
+    /// <summary>走ってきて踊るキーを、足す（結果画面の「入手したキー」には、出ない）。Play を呼ぶ前に呼ぶ。</summary>
+    public void SetExtraCheerKeys(List<KeyDefinition> extra)
+    {
+        _extraCheerKeys = extra;
+    }
+
     private class Piece
     {
         public RectTransform rt;
@@ -310,14 +319,27 @@ public class StageClearDirector : MonoBehaviour
         RestoreTime();
 
         // --- キーが走ってきて、喜ぶ ---
-        bool hasKeys = keys != null && keys.Count > 0;
+        List<KeyDefinition> cheerKeys = new List<KeyDefinition>();
+        if (keys != null)
+            cheerKeys.AddRange(keys);
+        if (_extraCheerKeys != null)
+        {
+            for (int i = 0; i < _extraCheerKeys.Count; i++)
+            {
+                if (_extraCheerKeys[i] != null && !cheerKeys.Contains(_extraCheerKeys[i]))
+                    cheerKeys.Add(_extraCheerKeys[i]);
+            }
+        }
+        _extraCheerKeys = null;
+
+        bool hasKeys = cheerKeys.Count > 0;
         if (hasKeys && keyPrefab == null)
         {
             Debug.LogWarning("[StageClearDirector] Key Prefabが空のため、回収したキーを走らせられません。Assets/Prefab/Mob/Enemy/KeyNPC_Visual を入れてください。");
             hasKeys = false;
         }
         if (hasKeys && _player != null)
-            yield return StartCoroutine(RunKeys(keys));
+            yield return StartCoroutine(RunKeys(cheerKeys));
         else
             hasKeys = false;
 

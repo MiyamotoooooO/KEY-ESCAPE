@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
@@ -59,6 +59,7 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
     private Color _backdropNormalColor;
     private TMP_Text _unsetText;
     private Color _unsetTextNormalColor;
+    private KeyCageGraphic _cage;
 
     /// <summary>
     /// キーキャップ（現在のキーの背景）のRectTransform。キーを設定した時の
@@ -90,6 +91,7 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
     private void OnEnable()
     {
         KeyDragState.Changed += OnDragStateChanged;
+        KeySeal.Changed += OnSealChanged;
         _dragging = KeyDragState.IsDragging;
         _hover = false;
         UpdateDragHighlight();
@@ -98,8 +100,14 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
     private void OnDisable()
     {
         KeyDragState.Changed -= OnDragStateChanged;
+        KeySeal.Changed -= OnSealChanged;
         _dragging = false;
         _hover = false;
+    }
+
+    private void OnSealChanged()
+    {
+        Refresh();
     }
 
     private void OnDragStateChanged(bool dragging)
@@ -167,6 +175,38 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
             owner.PlayActionPreview(action);
     }
 
+    /// <summary>キーキャップの位置に、檻をかぶせる／はずす。</summary>
+    private void UpdateSealCage(bool sealedNow, KeyDefinition key)
+    {
+        if (!sealedNow)
+        {
+            if (_cage != null)
+                _cage.gameObject.SetActive(false);
+            return;
+        }
+
+        RectTransform bg = currentKeyBackground != null ? currentKeyBackground.rectTransform : null;
+        RectTransform host = (bg != null && bg.parent is RectTransform) ? (RectTransform)bg.parent : (RectTransform)transform;
+
+        if (_cage == null)
+            _cage = KeyCageGraphic.Attach(host);
+
+        RectTransform cr = (RectTransform)_cage.transform;
+        if (bg != null && cr.parent == bg.parent)
+        {
+            // キーキャップと同じ位置・大きさに合わせる
+            cr.anchorMin = bg.anchorMin;
+            cr.anchorMax = bg.anchorMax;
+            cr.pivot = bg.pivot;
+            cr.anchoredPosition = bg.anchoredPosition;
+            cr.sizeDelta = bg.sizeDelta;
+        }
+
+        _cage.Bind(key);
+        _cage.gameObject.SetActive(true);
+        cr.SetAsLastSibling();
+    }
+
     /// <summary>ロックを壊す演出のために、この行を「ロック中」の見た目にしている最中か。</summary>
     private bool IsForcedLocked()
     {
@@ -200,6 +240,9 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
 
         if (unsetIndicator != null)
             unsetIndicator.SetActive(unlocked && key == null);
+
+        // ボスの檻に封じられているキーには、檻をかぶせる（別のキーを設定すれば、使えるようになる）。
+        UpdateSealCage(hasKey && KeySeal.IsSealed(key), key);
 
         // ロックが解けた直後などにも、ドラッグ中の強調表示が正しくなるように更新する。
         UpdateDragHighlight();

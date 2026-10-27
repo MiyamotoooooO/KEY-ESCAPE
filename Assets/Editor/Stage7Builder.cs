@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
 using TMPro;
 using UnityEditor;
+using UnityEditor.Events;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// KEY ESCAPE - ステージ7（ボス戦）を作る。メニューは3つ。
+/// KEY ESCAPE - ステージ7（ボス戦）を作る。メニューは5つ。
 ///
 /// 1) Tools > KEY ESCAPE > ステージ部品 > Stage7のシーンを作る（Stage6をコピー）
 ///      ・Stage6.unity を Stage7.unity に複製して、開く（Stage6 が無ければ Stage5 を使う）。
@@ -22,6 +23,13 @@ using UnityEngine.SceneManagement;
 ///
 /// 3) Tools > KEY ESCAPE > ステージ部品 > Stage7の配置（StageLayout）を消す
 ///
+/// 4) Tools > KEY ESCAPE > ステージ部品 > Stage7にボスを置く
+///      ・ボスの部屋（BossSpawnPoint）に、ボス「BossA」を置く。「組み立てる」を押すと、これも一緒に置かれる。
+///      ・ボスだけを置き直したいとき用。BossIntroMovie の設定（音など）は、消えない。
+///      ・ムービーの終わり（On Movie End）に、BossA の BeginBattle をつなぐ。
+///      ・（ゴールの見た目だけ消したいときは「Stage7のゴールの見た目を消す」。BossA の設定は消えない。）
+///      ・ゴール（StageGoal）を「ボスを倒すとクリア」にして、ボスを割り当てる（G O A L の演出と、ゴールの矢印は消す）。
+///
 /// 床の上面は y = -4.72（今ある地面と同じ高さ）。置いたあとは、位置を自由に動かしてよい。
 /// </summary>
 public static class Stage7Builder
@@ -36,6 +44,14 @@ public static class Stage7Builder
     private const string ObjectFolder = "Assets/Prefab/Object/";
     private const string KeyNpcPath = "Assets/Prefab/Mob/Enemy/KeyNPC_Visual.prefab";
     private const string EmoteFolder = "Assets/Prefab/Emotes";
+    private const string FallingStonePath = "Assets/Prefab/Object/FallingStone.prefab";
+    private const string ChaserPath = "Assets/Prefab/Mob/Enemy/KeyEnemyRig_Chaser.prefab";
+    private const string BossName = "BossA";
+    private const string KeyAPath = "Assets/KeyDefinition/Key_A.asset";
+    private const string HintUiPath = "Assets/Prefab/GimmickIntroUI.prefab";
+
+    // ボス
+    private const float BossScale = 3.2f;
 
     private const float Floor = -4.72f;
     private const float GroundY = -4.79f;
@@ -324,6 +340,10 @@ public static class Stage7Builder
 
         EditorUtility.SetDirty(movie);
 
+        // ---------- ボス ----------
+        string bossReport;
+        BossA boss = CreateBoss(gArena, bossSpawn, movie, keyNpc, out bossReport);
+
         // ---------- ゴールをボスの部屋の右端へ ----------
         var goal = Object.FindObjectOfType<StageGoal>();
         if (goal != null)
@@ -336,6 +356,7 @@ public static class Stage7Builder
         {
             Debug.LogWarning("[Stage7Builder] StageGoal が見つかりません。ゴールは、手でボスの部屋（x=133付近）へ動かしてください。");
         }
+        ConnectGoal(goal, boss);
 
         // ---------- 下の床（落ちたらやられる）を、ステージの真ん中へ ----------
         var kill = GameObject.Find("KillCollider");
@@ -360,9 +381,287 @@ public static class Stage7Builder
             "置き終わりました。\nCtrl+S でシーンを保存してください。\n\n"
             + "・ムービーは、Hierarchy の StageLayout > 00_ムービー > BossIntroMovie です。\n"
             + "・ステージに入ると、自動で始まります。作業中に飛ばしたいときは、Skip Movie をONに。\n"
-            + "・ボスの部屋は、x=96〜136 にあります。ゴールは、仮に部屋の右端（x=133）です。\n"
-            + "・びっくりのエモート：" + (movie.surpriseEmote != null ? movie.surpriseEmote.name : "見つかりませんでした（Surprise Emote に入れてください）") + "\n",
+            + "・ボスの部屋は、x=96〜136 にあります。ボスを倒すとクリアです（ゴールは部屋の右端、見えません）。\n"
+            + "・びっくりのエモート：" + (movie.surpriseEmote != null ? movie.surpriseEmote.name : "見つかりませんでした（Surprise Emote に入れてください）") + "\n"
+            + bossReport,
             "OK");
+    }
+
+    // ====================================================================
+    // 4) ボスを置く
+    // ====================================================================
+
+    [MenuItem("Tools/KEY ESCAPE/ステージ部品/Stage7にボスを置く")]
+    public static void PlaceBoss()
+    {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.name != SceneName)
+        {
+            EditorUtility.DisplayDialog("Stage7にボスを置く",
+                "いま開いているシーンは「" + scene.name + "」です。Stage7 のシーンを開いてから押してください。", "OK");
+            return;
+        }
+
+        var spawnGo = GameObject.Find("BossSpawnPoint");
+        if (spawnGo == null)
+        {
+            EditorUtility.DisplayDialog("Stage7にボスを置く",
+                "BossSpawnPoint が見つかりません。先に、メニュー「Stage7を自動で組み立てる」を押してください。", "OK");
+            return;
+        }
+        var keyNpc = AssetDatabase.LoadAssetAtPath<GameObject>(KeyNpcPath);
+        if (keyNpc == null)
+        {
+            EditorUtility.DisplayDialog("Stage7にボスを置く", "KeyNPC_Visual（" + KeyNpcPath + "）が見つかりません。", "OK");
+            return;
+        }
+
+        var existing = GameObject.Find(BossName);
+        if (existing != null)
+        {
+            if (!EditorUtility.DisplayDialog("Stage7にボスを置く",
+                "すでに「" + BossName + "」があります。消して、置き直しますか？\n（Inspector で直した数字は、消えます）", "置き直す", "やめる"))
+                return;
+        }
+
+        Undo.IncrementCurrentGroup();
+        int undoGroup = Undo.GetCurrentGroup();
+        Undo.SetCurrentGroupName("ボスを置く");
+
+        if (existing != null)
+            Undo.DestroyObjectImmediate(existing);
+
+        Transform arena = spawnGo.transform.parent != null ? spawnGo.transform.parent : spawnGo.transform;
+        var movie = Object.FindObjectOfType<BossIntroMovie>();
+
+        string report;
+        BossA boss = CreateBoss(arena, spawnGo.transform, movie, keyNpc, out report);
+        ConnectGoal(Object.FindObjectOfType<StageGoal>(), boss);
+
+        Undo.CollapseUndoOperations(undoGroup);
+        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        if (boss != null)
+            Selection.activeGameObject = boss.gameObject;
+
+        EditorUtility.DisplayDialog("Stage7にボスを置く", "ボスを置きました。Ctrl+S でシーンを保存してください。\n\n" + report, "OK");
+    }
+
+    [MenuItem("Tools/KEY ESCAPE/ステージ部品/Stage7のゴールの見た目を消す")]
+    public static void HideGoalVisuals()
+    {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.name != SceneName)
+        {
+            EditorUtility.DisplayDialog("Stage7のゴールの見た目を消す",
+                "いま開いているシーンは「" + scene.name + "」です。Stage7 のシーンを開いてから押してください。", "OK");
+            return;
+        }
+        var boss = Object.FindObjectOfType<BossA>();
+        var goal = Object.FindObjectOfType<StageGoal>();
+        if (boss == null || goal == null)
+        {
+            EditorUtility.DisplayDialog("Stage7のゴールの見た目を消す",
+                "BossA か StageGoal が見つかりません。先に「Stage7にボスを置く」を押してください。", "OK");
+            return;
+        }
+        Undo.IncrementCurrentGroup();
+        int undoGroup = Undo.GetCurrentGroup();
+        Undo.SetCurrentGroupName("ゴールの見た目を消す");
+        ConnectGoal(goal, boss);
+        Undo.CollapseUndoOperations(undoGroup);
+        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        EditorUtility.DisplayDialog("Stage7のゴールの見た目を消す",
+            "ゴールの見た目（G O A L のキャラ・吹き出し・花火）と、ゴールの矢印を消しました。\nCtrl+S でシーンを保存してください。\n（BossA の Inspector の設定は、そのままです）", "OK");
+    }
+
+    /// <summary>ボス（BossA）を作って、置く。</summary>
+    private static BossA CreateBoss(Transform parent, Transform spawn, BossIntroMovie movie, GameObject keyNpc, out string report)
+    {
+        report = "";
+        float rootX = spawn.position.x;
+
+        GameObject bossGo = new GameObject(BossName);
+        Undo.RegisterCreatedObjectUndo(bossGo, BossName);
+        bossGo.transform.SetParent(parent, false);
+        bossGo.transform.position = new Vector3(rootX, Floor, 0f);
+
+        // 主人公の攻撃は「Enemy」タグのコライダーに当たる。層は、追ってくる敵と同じにする
+        bossGo.tag = "Enemy";
+        var chaser = AssetDatabase.LoadAssetAtPath<GameObject>(ChaserPath);
+        if (chaser != null)
+            bossGo.layer = chaser.layer;
+
+        // 体の絵
+        var vis = (GameObject)PrefabUtility.InstantiatePrefab(keyNpc, bossGo.transform);
+        Undo.RegisterCreatedObjectUndo(vis, "BossVisual");
+        vis.name = "BossVisual";
+        vis.transform.localPosition = Vector3.zero;
+        vis.transform.localRotation = Quaternion.identity;
+        Vector3 ns = keyNpc.transform.localScale;
+        vis.transform.localScale = new Vector3(Mathf.Abs(ns.x) * BossScale, ns.y * BossScale, ns.z);
+
+        // 当たり判定（トリガー）：体の絵の大きさから決める
+        var col = Undo.AddComponent<BoxCollider2D>(bossGo);
+        col.isTrigger = true;
+        Vector2 size = new Vector2(2.8f, 4.6f);
+        Vector2 offset = new Vector2(0f, 2.3f);
+        Transform body = FindDeep(vis.transform, "Body");
+        SpriteRenderer bodySr = body != null ? body.GetComponent<SpriteRenderer>() : null;
+        if (bodySr != null && bodySr.sprite != null)
+        {
+            Bounds b = bodySr.bounds;
+            float h = Mathf.Max(2f, b.max.y - Floor);
+            size = new Vector2(Mathf.Max(1.5f, b.size.x), h);
+            offset = new Vector2(b.center.x - rootX, h * 0.5f);
+        }
+        col.size = size;
+        col.offset = offset;
+
+        // ボス本体
+        var boss = Undo.AddComponent<BossA>(bossGo);
+        boss.visual = vis.transform;
+        boss.visualFacesRight = false;
+        boss.leftLimit = ArenaLeftWallX + 1.3f;
+        boss.rightLimit = ArenaRightWallX - 1.3f;
+        boss.groundY = Floor;
+        boss.ceilingY = 5.3f;
+
+        TMP_Text tmp = keyNpc.GetComponentInChildren<TMP_Text>(true);
+        if (tmp != null && tmp.font != null)
+            boss.font = tmp.font;
+        else
+            report += "・フォントが見つかりませんでした。BossA の Font に、日本語のフォントを入れてください。\n";
+
+        // 倒したときのごほうび（Aキー）
+        var keyA = AssetDatabase.LoadAssetAtPath<KeyDefinition>(KeyAPath);
+        if (keyA != null)
+            boss.keyDrop = keyA;
+        else
+            report += "・Key_A（" + KeyAPath + "）が見つかりません。BossA の Key Drop に入れてください（空でも、持っているキー一覧から「A」を探します）。\n";
+
+        // Kキーのヒント（画面の下の説明パネル）
+        var hintUi = AssetDatabase.LoadAssetAtPath<GimmickIntroUI>(HintUiPath);
+        if (hintUi != null)
+            boss.hintUiPrefab = hintUi;
+        else
+            report += "・ヒントの説明パネル（" + HintUiPath + "）が見つかりません。BossA の Hint Ui Prefab に入れてください（空でも、シーンの GimmickIntroZone のものを使います）。\n";
+
+        var stone = AssetDatabase.LoadAssetAtPath<GameObject>(FallingStonePath);
+        if (stone != null)
+        {
+            var ssr = stone.GetComponentInChildren<SpriteRenderer>(true);
+            if (ssr != null)
+                boss.rockSprite = ssr.sprite;
+        }
+        if (boss.rockSprite == null)
+            report += "・落石の絵が見つかりませんでした（灰色の丸い石になります）。BossA の Rock Sprite に入れると、きれいになります。\n";
+
+        EditorUtility.SetDirty(boss);
+
+        // ムービーが終わったら、戦いが始まる
+        if (movie != null)
+        {
+            Undo.RecordObject(movie, "ムービーの終わりにボスをつなぐ");
+            for (int i = movie.onMovieEnd.GetPersistentEventCount() - 1; i >= 0; i--)
+            {
+                Object t = movie.onMovieEnd.GetPersistentTarget(i);
+                if (t == null || t is BossA)
+                    UnityEventTools.RemovePersistentListener(movie.onMovieEnd, i);
+            }
+            UnityEventTools.AddPersistentListener(movie.onMovieEnd, boss.BeginBattle);
+            EditorUtility.SetDirty(movie);
+            report += "・ムービーの終わり（On Movie End）に、BossA の BeginBattle をつなぎました。\n";
+        }
+        else
+        {
+            report += "・BossIntroMovie が見つかりません。ムービーの On Movie End に、BossA > BeginBattle を手でつないでください。\n";
+        }
+
+        report += "・ボス：" + BossName + "（体力 " + boss.maxHp.ToString("0") + "、位置 x=" + rootX.ToString("0.0") + "）。数字は Inspector で直せます。\n"
+            + "・効果音は、BossA の Inspector の「効果音」に入れると鳴ります（空なら鳴りません）。\n"
+            + "・倒すと Key_A がもらえて、いつものステージクリアの演出（キーが横から走ってくる）に進みます。檻（キー封じ）は、BossA の「キー封じの檻」で調整できます。\n"
+            + "・ムービーなしで試したいときは、BossA の Auto Start Distance に 30 などを入れると、近づくだけで戦いが始まります。\n";
+        return boss;
+    }
+
+    /// <summary>
+    /// ゴールを「ボスを倒すとクリア」にして、ボスを割り当てる。
+    /// ボスの部屋では、ゴールの見た目（G O A L のキャラ、吹き出し、花火）と、ゴールの方向を示す矢印は、いらないので消す。
+    /// </summary>
+    private static void ConnectGoal(StageGoal goal, BossA boss)
+    {
+        if (goal == null)
+        {
+            Debug.LogWarning("[Stage7Builder] StageGoal が見つかりません。ゴールの Mode を BossDefeated にして、Boss に BossA を入れてください。");
+            return;
+        }
+        if (boss == null)
+            return;
+
+        Undo.RecordObject(goal, "ゴールをボス撃破にする");
+        goal.mode = StageGoal.GoalMode.BossDefeated;
+        goal.boss = boss.gameObject;
+        EditorUtility.SetDirty(goal);
+
+        // G O A L の演出（近づくと喜ぶ・吹き出し・花火）を止める
+        StageGoalLetters[] letters = goal.GetComponentsInChildren<StageGoalLetters>(true);
+        for (int i = 0; i < letters.Length; i++)
+        {
+            Undo.RecordObject(letters[i], "ゴールの演出を止める");
+            letters[i].enabled = false;
+            EditorUtility.SetDirty(letters[i]);
+        }
+
+        // ゴールの子（キャラ・吹き出し・花火など）を、まとめて隠す
+        Transform gt = goal.transform;
+        for (int i = 0; i < gt.childCount; i++)
+        {
+            GameObject child = gt.GetChild(i).gameObject;
+            if (!child.activeSelf)
+                continue;
+            Undo.RecordObject(child, "ゴールの見た目を隠す");
+            child.SetActive(false);
+            EditorUtility.SetDirty(child);
+        }
+
+        // 前の版で、絵だけを消していた場合は、元にもどす（子ごと隠したので、見えない）
+        SpriteRenderer[] rs = goal.GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < rs.Length; i++)
+        {
+            if (rs[i].enabled)
+                continue;
+            Undo.RecordObject(rs[i], "ゴールの絵をもどす");
+            rs[i].enabled = true;
+            EditorUtility.SetDirty(rs[i]);
+        }
+
+        // ゴールの方向を示す矢印は、出さない
+        GoalArrowIndicator arrow = Object.FindObjectOfType<GoalArrowIndicator>();
+        if (arrow == null)
+        {
+            GameObject ag = new GameObject("GoalArrowOff");
+            Undo.RegisterCreatedObjectUndo(ag, "GoalArrowOff");
+            GameObject layoutRoot = GameObject.Find(RootName);
+            if (layoutRoot != null)
+                ag.transform.SetParent(layoutRoot.transform, false);
+            arrow = Undo.AddComponent<GoalArrowIndicator>(ag);
+        }
+        Undo.RecordObject(arrow, "ゴールの矢印を消す");
+        arrow.showArrow = false;
+        EditorUtility.SetDirty(arrow);
+    }
+
+    private static Transform FindDeep(Transform root, string name)
+    {
+        if (root.name == name)
+            return root;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform r = FindDeep(root.GetChild(i), name);
+            if (r != null)
+                return r;
+        }
+        return null;
     }
 
     [MenuItem("Tools/KEY ESCAPE/ステージ部品/Stage7の配置（StageLayout）を消す")]

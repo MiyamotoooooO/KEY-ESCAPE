@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.Events;
 using System.Collections;
 using UnityEngine.SceneManagement;
@@ -13,7 +13,7 @@ using UnityEngine.SceneManagement;
 /// advanced moves so they're dormant until the story unlocks them, instead
 /// of being available from the very first frame.
 ///
-///   - hasDashAbility / hasDoubleJumpAbility: spec Ver.0.2 ˜12 - unlocked via
+///   - hasDashAbility / hasDoubleJumpAbility: spec Ver.0.2 Â§12 - unlocked via
 ///     stage-clear rewards during Chapter 1. Default false.
 ///   - hasWallJumpAbility: spec Ver.0.2 confirmed decision - wall jump is
 ///     deferred past Chapter 1 entirely. Default false; leave it false for
@@ -41,7 +41,7 @@ public class CharacterController2D : MonoBehaviour
     private Vector3 velocity = Vector3.zero;
     private float limitFallSpeed = 25f; // Limit fall speed
 
-    [Header("Key Escape ability unlocks (spec Ver.0.2 ˜12)")]
+    [Header("Key Escape ability unlocks (spec Ver.0.2 Â§12)")]
     [Tooltip("Unlocked via a Chapter 1 stage-clear reward. Default locked.")]
     public bool hasDoubleJumpAbility = false;
     [Tooltip("Deferred past Chapter 1 entirely per the confirmed Ver.0.2 decision. Leave false.")]
@@ -95,7 +95,7 @@ public class CharacterController2D : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // Rigidbody2D‚ª–³‚¢ƒRƒs[iƒL[ƒRƒ“ƒtƒBƒO‚ÌƒvƒŒƒrƒ…[—pƒLƒƒƒ‰‚È‚Çj‚Å‚ÍA‰½‚à‚µ‚È‚¢B
+        // Rigidbody2DãŒç„¡ã„ã‚³ãƒ”ãƒ¼ï¼ˆã‚­ãƒ¼ã‚³ãƒ³ãƒ•ã‚£ã‚°ã®ãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼ç”¨ã‚­ãƒ£ãƒ©ãªã©ï¼‰ã§ã¯ã€ä½•ã‚‚ã—ãªã„ã€‚
         if (m_Rigidbody2D == null)
             return;
 
@@ -107,6 +107,10 @@ public class CharacterController2D : MonoBehaviour
         Collider2D[] colliders = Physics2D.OverlapCircleAll(m_GroundCheck.position, k_GroundedRadius, m_WhatIsGround);
         for (int i = 0; i < colliders.Length; i++)
         {
+            // ä¸­é–“ãƒã‚¤ãƒ³ãƒˆã‚„ãƒ¬ãƒãƒ¼ãªã©ã®ã€Œè§¦ã‚Œã‚‹ã¨åå¿œã™ã‚‹æ ã€ï¼ˆãƒˆãƒªã‚¬ãƒ¼ï¼‰ã¯ã€åœ°é¢ã¨ã—ã¦æ•°ãˆãªã„ã€‚
+            // ï¼ˆæ•°ãˆã‚‹ã¨ã€ãã®ä¸Šã‚„ä¸­ã§ã‚¸ãƒ£ãƒ³ãƒ—ã™ã‚‹ãŸã³ã«ã€Œç€åœ°ã—ãŸã€ã“ã¨ã«ãªã‚Šã€ä½•åº¦ã§ã‚‚è·³ã¹ã¦ã—ã¾ã†ï¼‰
+            if (!CountsAsGround(colliders[i]))
+                continue;
             if (colliders[i].gameObject != gameObject)
                 m_Grounded = true;
             if (!wasGrounded)
@@ -128,7 +132,7 @@ public class CharacterController2D : MonoBehaviour
             Collider2D[] collidersWall = Physics2D.OverlapCircleAll(m_WallCheck.position, k_GroundedRadius, m_WhatIsGround);
             for (int i = 0; i < collidersWall.Length; i++)
             {
-                if (collidersWall[i].gameObject != null)
+                if (collidersWall[i].gameObject != null && CountsAsGround(collidersWall[i]))
                 {
                     isDashing = false;
                     m_IsWall = true;
@@ -166,9 +170,22 @@ public class CharacterController2D : MonoBehaviour
 
 
     /// <summary>
-    /// PlayerMovement.SetInputLocked(true)‚©‚çŒÄ‚Î‚ê‚éB‰ï˜b’†‚È‚Ç‚ÉAŠµ«‚Å
-    /// “®‚«‘±‚¯‚½‚èŠŠ‚Á‚½‚è‚µ‚È‚¢‚æ‚¤A…•½•ûŒü‚Ì‘¬“x‚¾‚¯‚ğ‘¦À‚É0‚É‚·‚éB
-    /// —‰º©‘Ì‚Í©‘R‚É‘±‚¯‚½‚¢‚Ì‚ÅAc•ûŒü(y)‚Ì‘¬“x‚Í‚»‚Ì‚Ü‚Üc‚·B
+    /// åœ°é¢ï¼ˆã‚„å£ï¼‰ã¨ã—ã¦æ•°ãˆã‚‹ç›¸æ‰‹ã‹ã€‚ãƒˆãƒªã‚¬ãƒ¼ï¼ˆè§¦ã‚Œã‚‹ã¨åå¿œã™ã‚‹æ ï¼‰ã¯æ•°ãˆãªã„ã€‚
+    /// ãŸã ã—ã€å·ã®æ°´ã ã‘ã¯ã€ã“ã‚Œã¾ã§ã©ãŠã‚Šã€ä¸­ã§ã‚¸ãƒ£ãƒ³ãƒ—ã§ãã‚‹ã‚ˆã†ã«æ•°ãˆã‚‹ã€‚
+    /// </summary>
+    private static bool CountsAsGround(Collider2D c)
+    {
+        if (c == null)
+            return false;
+        if (!c.isTrigger)
+            return true;
+        return c.GetComponentInParent<RiverCurrent>() != null;
+    }
+
+    /// <summary>
+    /// PlayerMovement.SetInputLocked(true)ã‹ã‚‰å‘¼ã°ã‚Œã‚‹ã€‚ä¼šè©±ä¸­ãªã©ã«ã€æ…£æ€§ã§
+    /// å‹•ãç¶šã‘ãŸã‚Šæ»‘ã£ãŸã‚Šã—ãªã„ã‚ˆã†ã€æ°´å¹³æ–¹å‘ã®é€Ÿåº¦ã ã‘ã‚’å³åº§ã«0ã«ã™ã‚‹ã€‚
+    /// è½ä¸‹è‡ªä½“ã¯è‡ªç„¶ã«ç¶šã‘ãŸã„ã®ã§ã€ç¸¦æ–¹å‘(y)ã®é€Ÿåº¦ã¯ãã®ã¾ã¾æ®‹ã™ã€‚
     /// </summary>
     public void StopHorizontalMovement()
     {
@@ -307,7 +324,7 @@ public class CharacterController2D : MonoBehaviour
         transform.localScale = theScale;
     }
 
-    // ’¼‹ß‚Éó‚¯‚½ƒ_ƒ[ƒW‚Ì€ˆöiHP‚ª0‚É‚È‚Á‚½‚ÉAŒ‹‰Ê‰æ–Ê‚ÌˆêŒ¾ƒRƒƒ“ƒg‚ğ‘I‚Ô‚Ì‚Ég‚¤j
+    // ç›´è¿‘ã«å—ã‘ãŸãƒ€ãƒ¡ãƒ¼ã‚¸ã®æ­»å› ï¼ˆHPãŒ0ã«ãªã£ãŸæ™‚ã«ã€çµæœç”»é¢ã®ä¸€è¨€ã‚³ãƒ¡ãƒ³ãƒˆã‚’é¸ã¶ã®ã«ä½¿ã†ï¼‰
     private DeathCause _lastDamageCause = DeathCause.Enemy;
 
     public void ApplyDamage(float damage, Vector3 position)
@@ -316,8 +333,8 @@ public class CharacterController2D : MonoBehaviour
     }
 
     /// <summary>
-    /// €ˆö‚ÆA”í’eŒã‚Ì–³“G‚Ì•b”‚ğw’è‚Å‚«‚éBƒgƒQ‚È‚ÇiHazardj‚ªg‚¤B
-    /// invincibleTime‚ª0ˆÈ‰º‚È‚çA‚¢‚Â‚à‚Ì1•bB
+    /// æ­»å› ã¨ã€è¢«å¼¾å¾Œã®ç„¡æ•µã®ç§’æ•°ã‚’æŒ‡å®šã§ãã‚‹ã€‚ãƒˆã‚²ãªã©ï¼ˆHazardï¼‰ãŒä½¿ã†ã€‚
+    /// invincibleTimeãŒ0ä»¥ä¸‹ãªã‚‰ã€ã„ã¤ã‚‚ã®1ç§’ã€‚
     /// </summary>
     public void ApplyDamage(float damage, Vector3 position, DeathCause cause, float invincibleTime)
     {
@@ -395,8 +412,8 @@ public class CharacterController2D : MonoBehaviour
         canMove = false;
         invincible = true;
         GetComponent<Attack>().enabled = false;
-        // €–S‰‰oiƒXƒ[Eƒtƒ‰ƒbƒVƒ…EƒJƒƒ‰‚ÌƒY[ƒ€EŒø‰Ê‰¹jB
-        // ƒXƒ[’†‚Å‚à‘Ò‚¿ŠÔ‚ªL‚Ñ‚È‚¢‚æ‚¤A‘Ò‚ÂŠÔ‚ÍÀŠÔ‚Å”‚¦‚éB
+        // æ­»äº¡æ¼”å‡ºï¼ˆã‚¹ãƒ­ãƒ¼ãƒ»ãƒ•ãƒ©ãƒƒã‚·ãƒ¥ãƒ»ã‚«ãƒ¡ãƒ©ã®ã‚ºãƒ¼ãƒ ãƒ»åŠ¹æœéŸ³ï¼‰ã€‚
+        // ã‚¹ãƒ­ãƒ¼ä¸­ã§ã‚‚å¾…ã¡æ™‚é–“ãŒä¼¸ã³ãªã„ã‚ˆã†ã€å¾…ã¤æ™‚é–“ã¯å®Ÿæ™‚é–“ã§æ•°ãˆã‚‹ã€‚
         HitFeedback.PlayDeath(_lastDamageCause);
         yield return new WaitForSecondsRealtime(0.8f);
         m_Rigidbody2D.velocity = new Vector2(0, m_Rigidbody2D.velocity.y);

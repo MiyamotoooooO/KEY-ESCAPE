@@ -1,15 +1,18 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
-/// KEY ESCAPE - �L�[�̉����Ԃ��A�v���C���[�̔\�̓t���O�iCharacterController2D�j�ɂ��낦��B
+/// KEY ESCAPE - キーの解放状態を、プレイヤーの能力フラグ（CharacterController2D）にそろえる。
 ///
-/// �u�_�b�V�����������Ă���v��KeyBindingManager��Dash������ς݁A�̎������A
-/// CharacterController2D.hasDashAbility��true�ɂ���B
-/// �Z�[�u���畜�������ꍇ���A�X�e�[�W�N���A�̕�V�ŉ�������ꍇ���A�����悤�ɓ����B
+/// 「ダッシュが解放されている」＝KeyBindingManagerのDashが解放済み、の時だけ、
+/// CharacterController2D.hasDashAbilityをtrueにする。
+/// セーブから復元した場合も、ステージクリアの報酬で解放した場合も、同じように動く。
 ///
-/// �t�����FCharacterController2D���t���Ă���I�u�W�F�N�g�i�v���C���[�̃v���n�u�j�ɕt����B
-/// CharacterController2D�������I�u�W�F�N�g�i�L�[�R���t�B�O�̃v���r���[�p�L�����Ȃǁj�ɕt���Ă��A�������Ȃ��B
-/// �iRequireComponent�ɂ���ƁA�v���r���[�p�L�����ɁA�O���Ă���CharacterController2D�������Ŗ߂���Ă��܂����߁A�t���Ă��Ȃ��B�j
+/// 付け方：CharacterController2Dが付いているオブジェクト（プレイヤーのプレハブ）に付ける。
+/// CharacterController2Dが無いオブジェクト（キーコンフィグのプレビュー用キャラなど）に付いても、何もしない。
+/// （RequireComponentにすると、プレビュー用キャラに、外してあるCharacterController2Dが自動で戻されてしまうため、付けていない。）
+///
+/// 注意：プレハブやシーンで、この部品のチェックが外れて（無効になって）いても、
+/// Awakeで自分を有効にする。無効のままだと Update が動かず、ダッシュも二段ジャンプも使えなくなるため。
 /// </summary>
 public class PlayerAbilitySync : MonoBehaviour
 {
@@ -18,6 +21,10 @@ public class PlayerAbilitySync : MonoBehaviour
     private void Awake()
     {
         _controller = GetComponent<CharacterController2D>();
+
+        // Awakeは、部品が無効でも呼ばれる。ここで有効にすれば、Updateが動き出す。
+        if (!enabled)
+            enabled = true;
     }
 
     private void Update()
@@ -28,8 +35,8 @@ public class PlayerAbilitySync : MonoBehaviour
 
         _controller.hasDashAbility = keys.IsActionUnlocked(GameAction.Dash);
 
-        // ��i�W�����v�F�X�e�[�W�N���A�̕�V�ŉ���ς݂Ȃ�A�g����悤�ɂ���B
-        // �iInspector�Ŏ蓮�ŃI���ɂ��Ă���ꍇ�́A���̂܂܃I���̂܂܂ɂ���B�j
+        // 二段ジャンプ：ステージクリアの報酬で解放済みなら、使えるようにする。
+        // （Inspectorで手動でオンにしてある場合は、そのままオンのままにする。）
         if (SaveManager.Data.doubleJumpUnlocked)
             _controller.hasDoubleJumpAbility = true;
     }

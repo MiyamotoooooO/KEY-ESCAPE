@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -153,7 +153,7 @@ public class KeyConfigUI : MonoBehaviour
             return;
         }
 
-        if (!SettingsUI.IsOpen && !StageSelectUI.IsOpen && !GamePause.IsPaused && !StageClearDirector.IsPlaying && Input.GetKeyDown(toggleKey))
+        if (!SettingsUI.IsOpen && !StageSelectUI.IsOpen && !GamePause.IsPaused && !StageClearDirector.IsPlaying && !BossIntroMovie.IsPlaying && Input.GetKeyDown(toggleKey))
             Toggle();
     }
 
@@ -320,6 +320,9 @@ public class KeyConfigUI : MonoBehaviour
     {
         if (key == null)
             return;
+        // ボスの檻に封じられているキーは、解けるまで、選べない
+        if (KeySeal.IsSealed(key))
+            return;
 
         ShowKeyInfo(key);
     }
@@ -345,6 +348,10 @@ public class KeyConfigUI : MonoBehaviour
 
         // ロックを壊す演出の最中は、まだロック中の見た目の行には、割り当てられない。
         if (_forcedLocked.Contains(action))
+            return;
+
+        // ボスの檻に封じられているキーは、解けるまで、割り当てられない。
+        if (KeySeal.IsSealed(key))
             return;
 
         bool ok = KeyBindingManager.Instance.TryBindKey(action, key);
