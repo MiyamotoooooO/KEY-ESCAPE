@@ -17,56 +17,56 @@ MonoBehaviour:
   - id: Tutorial
     displayName: "\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB"
     stageNumber: 1-1
-    thumbnail: {fileID: 21300000, guid: bb6dc628606ad66458fe41beaf98eb34, type: 3}
+    thumbnail: {fileID: 21300000, guid: 53c7461600e5a7b459a8ce905a6f8a7a, type: 3}
     description: 
     sceneName: Tutorial
     rewards: 06000000
   - id: Stage1
     displayName: "\u65B0\u305F\u306A\u51FA\u4F1A\u3044"
     stageNumber: 1-2
-    thumbnail: {fileID: 21300000, guid: 65eeaaeba3ad3774a80bf0362f665fda, type: 3}
+    thumbnail: {fileID: 21300000, guid: 8559e680ec095f641a48cd68a5665bb7, type: 3}
     description: 
     sceneName: Stage1
     rewards: 04000000
   - id: Stage2
     displayName: "\u98DB\u3073\u8D8A\u3048\u3066!!"
     stageNumber: 1-3
-    thumbnail: {fileID: 21300000, guid: 65eeaaeba3ad3774a80bf0362f665fda, type: 3}
+    thumbnail: {fileID: 21300000, guid: f720fcc53a39f6e4db36fd4f5156ed10, type: 3}
     description: 
     sceneName: Stage2
     rewards: 
   - id: Stage3
     displayName: "\u6CF3\u3050\u306E\u306F\u597D\u304D\uFF1F"
     stageNumber: 1-4
-    thumbnail: {fileID: 21300000, guid: 65eeaaeba3ad3774a80bf0362f665fda, type: 3}
+    thumbnail: {fileID: 21300000, guid: d0bf25b1c03d59c47a2bfb5f058a474d, type: 3}
     description: 
     sceneName: Stage3
     rewards: 05000000
   - id: Stage4
     displayName: "\u30B9\u30A4\u30C3\u30C1\u3092\u8D77\u52D5\u3057\u3088\u3046"
     stageNumber: 1-5
-    thumbnail: {fileID: 21300000, guid: 65eeaaeba3ad3774a80bf0362f665fda, type: 3}
+    thumbnail: {fileID: 21300000, guid: b99c7d451b024324b9a598b585bd353b, type: 3}
     description: 
     sceneName: Stage4
     rewards: 
   - id: Stage5
     displayName: "\u843D\u77F3\u6CE8\u610F\uFF1F"
     stageNumber: 1-6
-    thumbnail: {fileID: 21300000, guid: 65eeaaeba3ad3774a80bf0362f665fda, type: 3}
+    thumbnail: {fileID: 21300000, guid: 19bd3d9033d0800479ffdc9a71312a9e, type: 3}
     description: 
     sceneName: Stage5
     rewards: 00000000
   - id: Stage6
     displayName: "\u305F\u3081\u3055\u308C\u308B\u9053"
     stageNumber: 1-7
-    thumbnail: {fileID: 0}
+    thumbnail: {fileID: 21300000, guid: cf5f6d453493f5c42af0d965b3e371c3, type: 3}
     description: 
     sceneName: Stage6
     rewards: 
   - id: Stage7
     displayName: "\u30DC\u30B9\u306E\u90E8\u5C4B"
     stageNumber: 1-8
-    thumbnail: {fileID: 0}
+    thumbnail: {fileID: 21300000, guid: 6287dc4cd871e8d4d8b463436d36b346, type: 3}
     description: 
     sceneName: Stage7
     rewards: 

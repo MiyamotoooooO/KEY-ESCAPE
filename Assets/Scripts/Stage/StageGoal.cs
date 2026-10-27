@@ -41,6 +41,21 @@ public class StageGoal : MonoBehaviour
     [Tooltip("任意。ゴールの演出（スロー・フラッシュ・紙吹雪・STAGE CLEAR!）を再生する部品（StageClearDirector）。空なら、シーンから自動で探す。無ければ、演出なしで拠点に戻る。")]
     public StageClearDirector director;
 
+    [Header("試作品の最後の演出（最後のステージだけ）")]
+    [Tooltip("オンのとき、StageCatalogの最後のステージをクリアして結果画面が終わったあとに、モニターの文章を出して、タイトル画面へ戻る。拠点へは戻らない。")]
+    public bool showPrototypeEnding = true;
+    [TextArea(2, 4)]
+    [Tooltip("モニターに出す文章。改行は、そのまま改行で入れる。")]
+    public string endingMessage = "試作品はここまでです。\n遊んでいただきありがとうございました。";
+    [Tooltip("文章を出しておく秒数（1.5秒たったあと、Space・Enter・クリックで先へ進める）。")]
+    public float endingHoldSeconds = 6f;
+    [Tooltip("文章のフォント。空なら、StageClearDirectorのフォント、それも空なら、シーン内の文字から借りる。")]
+    public TMPro.TMP_FontAsset endingFont;
+    [Tooltip("モニターの絵。空なら、Assets/Resources/Ending/MonitorFront.png を使う。")]
+    public Sprite endingMonitorSprite;
+    [Tooltip("戻るタイトルのシーン名。")]
+    public string titleSceneName = "TitleScene";
+
     private bool _done;
 
     /// <summary>クリアになったあと（ゴールしたあと）true。ゴールの紙吹雪などが、止まるのに使う。</summary>
@@ -248,7 +263,34 @@ public class StageGoal : MonoBehaviour
             }
         }
 
+        if (showPrototypeEnding && IsLastStage())
+        {
+            PlayPrototypeEnding(dir);
+            yield break;
+        }
+
         yield return ReturnToHub(0f);
+    }
+
+    /// <summary>StageCatalogの最後のステージか。</summary>
+    private bool IsLastStage()
+    {
+        StageCatalog catalog = StageCatalog.Instance;
+        if (catalog == null || catalog.stages == null || catalog.stages.Count == 0)
+            return false;
+        StageCatalog.Entry last = catalog.stages[catalog.stages.Count - 1];
+        return last != null && string.Equals(last.id, stageId, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>モニターの文章を出してから、タイトルへ戻る演出（PrototypeEnding）を始める。</summary>
+    private void PlayPrototypeEnding(StageClearDirector dir)
+    {
+        // 手前にある結果画面などは、隠す
+        if (dir != null)
+            dir.HideOverlay();
+
+        TMPro.TMP_FontAsset f = endingFont != null ? endingFont : (dir != null ? dir.font : null);
+        PrototypeEnding.Create(f, endingMonitorSprite, endingMessage, endingHoldSeconds, titleSceneName).Begin();
     }
 
     private IEnumerator ReturnToHub(float delay)

@@ -153,7 +153,7 @@ public class KeyConfigUI : MonoBehaviour
             return;
         }
 
-        if (!SettingsUI.IsOpen && !StageSelectUI.IsOpen && !GamePause.IsPaused && !StageClearDirector.IsPlaying && !BossIntroMovie.IsPlaying && Input.GetKeyDown(toggleKey))
+        if (!SettingsUI.IsOpen && !StageSelectUI.IsOpen && !GamePause.IsPaused && !StageClearDirector.IsPlaying && !BossIntroMovie.IsPlaying && !PrototypeEnding.IsPlaying && Input.GetKeyDown(toggleKey))
             Toggle();
     }
 

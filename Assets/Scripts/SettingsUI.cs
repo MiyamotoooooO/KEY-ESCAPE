@@ -101,6 +101,7 @@ public class SettingsUI : MonoBehaviour
         if (NewGameIntro.IsPlaying) return; // 「はじめから」のあとの会話中は、設定画面を開かない（Escは、会話を飛ばす）
         if (StageClearDirector.IsPlaying) return; // ステージクリアの演出中は、設定を開かない
         if (BossIntroMovie.IsPlaying) return; // ボス戦前のムービー中は、設定を開かない
+        if (PrototypeEnding.IsPlaying) return; // 試作品の最後の演出中は、設定を開かない
         if (TitleMenu.CloseConfirmIfOpen()) return;
         if (ReturnToTitleButton.CloseConfirmIfOpen()) return;
         if (StageSelectUI.IsOpen) { StageSelectUI.CloseIfOpen(); return; }
