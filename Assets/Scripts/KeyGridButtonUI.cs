@@ -39,6 +39,7 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
     private KeyCageGraphic _cage;
     private Color _nameColor = Color.white;
     private bool _nameColorKnown;
+    private GameObject _usedBadge;
 
     /// <summary>ボスの檻に封じられているか。</summary>
     public bool Sealed
@@ -66,6 +67,7 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
             background.color = owned ? ownedColor : lockedColor;
 
         ApplySealVisual();
+        RefreshUsed();
     }
 
     private void OnEnable()
@@ -101,6 +103,77 @@ public class KeyGridButtonUI : MonoBehaviour, IPointerClickHandler, IBeginDragHa
         {
             _cage.gameObject.SetActive(false);
         }
+
+        RefreshUsed();
+    }
+
+    // ---- 「使用中」の札：いま「現在の設定」に使っているキーに、つける --------------------
+
+    /// <summary>このキーが、いまアクションに割り当てられているか（檻に封じられているときは、札を出さない）。</summary>
+    public bool InUse
+    {
+        get
+        {
+            KeyBindingManager mgr = KeyBindingManager.Instance;
+            return Owned && Key != null && !Sealed && mgr != null && mgr.TryGetActionForKey(Key, out GameAction _);
+        }
+    }
+
+    /// <summary>「使用中」の札を、出す／消す。割り当てが変わるたびに、KeyConfigUIから呼ばれる（タイルは作り直さない）。</summary>
+    public void RefreshUsed()
+    {
+        if (!InUse)
+        {
+            if (_usedBadge != null)
+                _usedBadge.SetActive(false);
+            return;
+        }
+
+        if (_usedBadge == null)
+            _usedBadge = CreateUsedBadge();
+        if (_usedBadge != null)
+        {
+            _usedBadge.SetActive(true);
+            _usedBadge.transform.SetAsLastSibling();
+            // 檻がかぶさっているなら、札はその下に残す（封じられているときは、そもそも出さない）
+        }
+    }
+
+    // 札を、コードで作る（プレハブを直さなくてよいように）。キーの下の部分に、小さな黒い札と「使用中」の文字を重ねる。
+    private GameObject CreateUsedBadge()
+    {
+        var go = new GameObject("UsedBadge", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(transform, false);
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = new Vector2(0.08f, 0.05f);
+        rt.anchorMax = new Vector2(0.92f, 0.30f);
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0.08f, 0.08f, 0.12f, 0.92f);
+        img.raycastTarget = false;
+
+        var textGo = new GameObject("Label", typeof(RectTransform));
+        textGo.transform.SetParent(go.transform, false);
+        var tr = (RectTransform)textGo.transform;
+        tr.anchorMin = Vector2.zero;
+        tr.anchorMax = Vector2.one;
+        tr.offsetMin = new Vector2(2f, 0f);
+        tr.offsetMax = new Vector2(-2f, 0f);
+
+        var tmp = textGo.AddComponent<TextMeshProUGUI>();
+        tmp.text = "使用中";
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color(1f, 0.86f, 0.3f, 1f);
+        tmp.raycastTarget = false;
+        tmp.enableWordWrapping = false;
+        tmp.enableAutoSizing = true;
+        tmp.fontSizeMin = 6f;
+        tmp.fontSizeMax = 40f;
+        if (nameLabel != null)
+            tmp.font = nameLabel.font;
+        return go;
     }
 
     // ---- クリック：右のキー情報パネルを更新 ---------------------------------

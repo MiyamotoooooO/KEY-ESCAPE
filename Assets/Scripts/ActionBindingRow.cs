@@ -26,7 +26,7 @@ using TMPro;
 /// 動作（ジャンプ・攻撃など）をアニメーションで再生する
 /// （owner.PlayActionPreview(action)経由。実体はKeyConfigPreviewPlayer）。
 /// </summary>
-public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
+public class ActionBindingRow : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     [Tooltip("Which action this row represents.")]
     public GameAction action;
@@ -60,6 +60,12 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
     private TMP_Text _unsetText;
     private Color _unsetTextNormalColor;
     private KeyCageGraphic _cage;
+
+    // 「現在の設定」のキーを、つかんで動かしている間の状態
+    private bool _isDragSource;
+    private RectTransform _dragIcon;
+    private Color _capNormalColor = Color.white;
+    private Color _labelNormalColor = Color.white;
 
     /// <summary>
     /// キーキャップ（現在のキーの背景）のRectTransform。キーを設定した時の
@@ -103,6 +109,9 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
         KeySeal.Changed -= OnSealChanged;
         _dragging = false;
         _hover = false;
+        // キーをつかんだまま画面が閉じられても、アイコンや薄い表示が残らないようにする
+        if (_isDragSource)
+            EndRowDrag();
     }
 
     private void OnSealChanged()
@@ -158,11 +167,129 @@ public class ActionBindingRow : MonoBehaviour, IPointerClickHandler
         if (owner == null || eventData.pointerDrag == null)
             return;
 
+        // 「現在の設定」の別の行から、ドラッグしてきたとき：キーを、この行へ動かす（キーがあれば、入れ替える）
+        var fromRow = eventData.pointerDrag.GetComponent<ActionBindingRow>();
+        if (fromRow != null)
+        {
+            if (fromRow != this)
+                owner.TryMoveBinding(fromRow.action, action);
+            return;
+        }
+
         var dragged = eventData.pointerDrag.GetComponent<KeyGridButtonUI>();
         if (dragged == null || dragged.Key == null)
             return;
 
         owner.TryBindByDrag(action, dragged.Key);
+    }
+
+    // ---- 「現在の設定」のキーを、つかんで、別の行へ動かす --------------------------------
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        _isDragSource = false;
+
+        var mgr = KeyBindingManager.Instance;
+        if (owner == null || mgr == null || owner.IsInteractionLocked)
+            return;
+        if (!mgr.IsActionUnlocked(action) || IsForcedLocked())
+            return;
+
+        KeyDefinition key = mgr.GetBinding(action);
+        if (key == null || KeySeal.IsSealed(key))
+            return;   // キーが無い行・檻に封じられたキーは、つかめない
+
+        // キーキャップの上を押したときだけ、つかめる（行のほかの場所では、つかまない）
+        RectTransform cap = EffectAnchor;
+        if (!RectTransformUtility.RectangleContainsScreenPoint(cap, eventData.pressPosition, eventData.pressEventCamera))
+            return;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+            return;
+        canvas = canvas.rootCanvas;
+
+        _isDragSource = true;
+        KeyDragState.Set(true);   // ほかの行に、ドロップ先の黒い背景を出す
+
+        // 指・マウスについてくるアイコン（左の一覧からつかんだときと、同じ作り）
+        var go = new GameObject("DragKeyIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(canvas.transform, false);
+        go.transform.SetAsLastSibling();
+        var rt = (RectTransform)go.transform;
+        Vector2 size = cap.rect.size;
+        if (size.x < 8f || size.y < 8f)
+            size = new Vector2(90f, 90f);
+        rt.sizeDelta = size;
+
+        var img = go.GetComponent<Image>();
+        img.sprite = currentKeyBackground != null ? currentKeyBackground.sprite : null;
+        img.color = new Color(1f, 1f, 1f, 0.85f);
+        img.raycastTarget = false;
+
+        var textGo = new GameObject("Label", typeof(RectTransform));
+        textGo.transform.SetParent(go.transform, false);
+        var textRt = (RectTransform)textGo.transform;
+        textRt.anchorMin = Vector2.zero;
+        textRt.anchorMax = Vector2.one;
+        textRt.offsetMin = Vector2.zero;
+        textRt.offsetMax = Vector2.zero;
+        var tmp = textGo.AddComponent<TextMeshProUGUI>();
+        tmp.text = key.displayName;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.raycastTarget = false;
+        if (currentKeyLabel != null)
+        {
+            tmp.font = currentKeyLabel.font;
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMin = 8f;
+            tmp.fontSizeMax = Mathf.Max(12f, currentKeyLabel.fontSize);
+            tmp.color = currentKeyLabel.color;
+        }
+
+        _dragIcon = rt;
+        _dragIcon.position = eventData.position;
+
+        // 元の場所のキーは、薄くして、「いま動かしている」ことを見せる
+        if (currentKeyBackground != null)
+        {
+            _capNormalColor = currentKeyBackground.color;
+            currentKeyBackground.color = new Color(_capNormalColor.r, _capNormalColor.g, _capNormalColor.b, 0.35f);
+        }
+        if (currentKeyLabel != null)
+        {
+            _labelNormalColor = currentKeyLabel.color;
+            currentKeyLabel.color = new Color(_labelNormalColor.r, _labelNormalColor.g, _labelNormalColor.b, 0.35f);
+        }
+    }
+
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (_isDragSource && _dragIcon != null)
+            _dragIcon.position = eventData.position;
+    }
+
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        // ドロップしたときも、しないで離したときも、必ず呼ばれる
+        if (_isDragSource)
+            EndRowDrag();
+    }
+
+    private void EndRowDrag()
+    {
+        _isDragSource = false;
+        KeyDragState.Set(false);
+
+        if (_dragIcon != null)
+            Destroy(_dragIcon.gameObject);
+        _dragIcon = null;
+
+        // 薄くした元のキーを、もとの色に戻す
+        if (currentKeyBackground != null)
+            currentKeyBackground.color = _capNormalColor;
+        if (currentKeyLabel != null)
+            currentKeyLabel.color = _labelNormalColor;
     }
 
     /// <summary>

@@ -70,3 +70,17 @@ MonoBehaviour:
     description: 
     sceneName: Stage7
     rewards: 
+  - id: Stage8
+    displayName: "\u304F\u305A\u308C\u3086\u304F\u9053"
+    stageNumber: 1-9
+    thumbnail: {fileID: 0}
+    description: 
+    sceneName: Stage8
+    rewards: 
+  - id: Stage9
+    displayName: "\u304D\u3057\u3080\u56DE\u5ECA"
+    stageNumber: 1-10
+    thumbnail: {fileID: 0}
+    description: 
+    sceneName: Stage9
+    rewards: 

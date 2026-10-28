@@ -209,6 +209,7 @@ public class KeyConfigUI : MonoBehaviour
 
         // キー一覧は、いつも一番上から見せる（前に下までスクロールしていても、キーが見えなくならないように）
         ScrollKeyListToTop();
+
     }
 
     /// <summary>キー一覧を、一番上（左上）に戻す。レイアウトが確定してから戻すため、すぐと次のフレームの2回やる。</summary>
@@ -381,6 +382,34 @@ public class KeyConfigUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 「現在の設定」の行から行へ、キーをドラッグして動かした時に、ActionBindingRow（ドロップされた行）から呼ばれる。
+    /// 動かした先にキーがあれば、入れ替える。
+    /// </summary>
+    public void TryMoveBinding(GameAction from, GameAction to)
+    {
+        var mgr = KeyBindingManager.Instance;
+        if (mgr == null || from == to)
+            return;
+
+        // ロックを壊す演出の最中は、まだロック中の見た目の行には、動かせない。
+        if (_forcedLocked.Contains(from) || _forcedLocked.Contains(to))
+            return;
+
+        KeyDefinition moving = mgr.GetBinding(from);
+        if (moving == null)
+            return;
+
+        if (mgr.TrySwapOrMove(from, to))
+        {
+            ShowKeyInfo(moving);
+            PlayActionPreview(to);
+            SoundEffects.Play(SEId.KeyBind);
+            KeyBindEffect.Play(FindRow(to), moving, to, bindEffect);
+            // 行の表示更新は、KeyBindingManager.OnBindingsChanged→RefreshBindingsOnly()で行われる。
+        }
+    }
+
     // ---- 配置をリセット ----------------------------------------------------
 
     /// <summary>「配置をリセット」ボタンから呼ぶ。即座には実行せず、確認ダイアログを開く。</summary>
@@ -429,6 +458,16 @@ public class KeyConfigUI : MonoBehaviour
                 row.Refresh();
         }
         RefreshModifierStatus();
+
+        // 左の一覧のキーに、「使用中」の札を出す／消す（タイルは、作り直さない）
+        foreach (var go in _spawnedKeyButtons)
+        {
+            if (go == null)
+                continue;
+            var tile = go.GetComponent<KeyGridButtonUI>();
+            if (tile != null)
+                tile.RefreshUsed();
+        }
     }
 
     private void RefreshModifierStatus()

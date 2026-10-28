@@ -134,6 +134,35 @@ public class KeyBindingManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 現在の設定の行から行へ、キーをドラッグして動かした時に使う。
+    /// from のキーを to へ移す。to にすでにキーがあれば、from と to でキーを入れ替える（キーは失われない）。
+    /// どちらかの行がロック中、または、動かすキー・入れ替わるキーが檻に封じられているなら、何もせず false。
+    /// </summary>
+    public bool TrySwapOrMove(GameAction from, GameAction to)
+    {
+        if (from == to)
+            return false;
+        if (!IsActionUnlocked(from) || !IsActionUnlocked(to))
+            return false;
+
+        KeyDefinition keyFrom = GetBinding(from);
+        if (keyFrom == null || KeySeal.IsSealed(keyFrom))
+            return false;
+        KeyDefinition keyTo = GetBinding(to);
+        if (keyTo != null && KeySeal.IsSealed(keyTo))
+            return false;
+
+        _bindings[to] = keyFrom;
+        if (keyTo != null)
+            _bindings[from] = keyTo;
+        else
+            _bindings.Remove(from);
+
+        OnBindingsChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>
     /// Key Config画面の「配置をリセット」用：全アクションの割り当てを外し、
     /// 何も設定されていない初期状態に戻す。解放状態（IsActionUnlocked）と
     /// 特殊キー（Ctrl）の状態は変えない - リセットされるのはキー配置だけで、

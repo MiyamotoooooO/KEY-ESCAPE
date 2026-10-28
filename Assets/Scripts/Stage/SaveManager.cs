@@ -1,9 +1,9 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-/// <summary>ƒL[‚ÌŠ„‚è“–‚Ä1Œ•ªiƒAƒNƒVƒ‡ƒ“–¼‚ÆƒL[–¼jB</summary>
+/// <summary>ã‚­ãƒ¼ã®å‰²ã‚Šå½“ã¦1ä»¶åˆ†ï¼ˆã‚¢ã‚¯ã‚·ãƒ§ãƒ³åã¨ã‚­ãƒ¼åï¼‰ã€‚</summary>
 [Serializable]
 public class BindingSave
 {
@@ -11,7 +11,7 @@ public class BindingSave
     public string key;
 }
 
-/// <summary>ƒXƒe[ƒW‚²‚Æ‚ÌƒxƒXƒgƒ^ƒCƒ€1Œ•ªiƒXƒe[ƒWID‚Æ•b”jB</summary>
+/// <summary>ã‚¹ãƒ†ãƒ¼ã‚¸ã”ã¨ã®ãƒ™ã‚¹ãƒˆã‚¿ã‚¤ãƒ 1ä»¶åˆ†ï¼ˆã‚¹ãƒ†ãƒ¼ã‚¸IDã¨ç§’æ•°ï¼‰ã€‚</summary>
 [Serializable]
 public class StageTimeSave
 {
@@ -19,51 +19,51 @@ public class StageTimeSave
     public float seconds;
 }
 
-/// <summary>ƒZ[ƒuƒf[ƒ^‚Ì’†gBJSON‚Å•Û‘¶‚³‚ê‚éB</summary>
+/// <summary>ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã®ä¸­èº«ã€‚JSONã§ä¿å­˜ã•ã‚Œã‚‹ã€‚</summary>
 [Serializable]
 public class SaveData
 {
     public int version = 2;
 
-    /// <summary>ƒNƒŠƒAÏ‚İ‚ÌƒXƒe[ƒW‚ÌIDiStageCatalog‚ÌidjB</summary>
+    /// <summary>ã‚¯ãƒªã‚¢æ¸ˆã¿ã®ã‚¹ãƒ†ãƒ¼ã‚¸ã®IDï¼ˆStageCatalogã®idï¼‰ã€‚</summary>
     public List<string> clearedStages = new List<string>();
 
-    // ---- ƒL[ŠÖ˜AiKeyStateSaver‚ª‘‚«‚İE•œŒ³‚·‚éj ----
+    // ---- ã‚­ãƒ¼é–¢é€£ï¼ˆKeyStateSaverãŒæ›¸ãè¾¼ã¿ãƒ»å¾©å…ƒã™ã‚‹ï¼‰ ----
 
-    /// <summary>ƒL[‚Ìƒf[ƒ^‚ğˆê“x‚Å‚à•Û‘¶‚µ‚½‚©Bfalse‚È‚çABootstrap‚Éİ’è‚µ‚½‰Šúó‘Ô‚Ì‚Ü‚Ü‚É‚·‚éB</summary>
+    /// <summary>ã‚­ãƒ¼ã®ãƒ‡ãƒ¼ã‚¿ã‚’ä¸€åº¦ã§ã‚‚ä¿å­˜ã—ãŸã‹ã€‚falseãªã‚‰ã€Bootstrapã«è¨­å®šã—ãŸåˆæœŸçŠ¶æ…‹ã®ã¾ã¾ã«ã™ã‚‹ã€‚</summary>
     public bool hasKeyData;
-    /// <summary>Š‚µ‚Ä‚¢‚éƒL[iKeyDefinition‚ÌƒAƒZƒbƒg–¼jB</summary>
+    /// <summary>æ‰€æŒã—ã¦ã„ã‚‹ã‚­ãƒ¼ï¼ˆKeyDefinitionã®ã‚¢ã‚»ãƒƒãƒˆåï¼‰ã€‚</summary>
     public List<string> ownedKeys = new List<string>();
-    /// <summary>‰ğ•úÏ‚İ‚ÌƒAƒNƒVƒ‡ƒ“iGameAction‚Ì–¼‘OjB</summary>
+    /// <summary>è§£æ”¾æ¸ˆã¿ã®ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ï¼ˆGameActionã®åå‰ï¼‰ã€‚</summary>
     public List<string> unlockedActions = new List<string>();
-    /// <summary>ƒAƒNƒVƒ‡ƒ“‚²‚Æ‚ÌAŠ„‚è“–‚Ä‚Ä‚¢‚éƒL[B</summary>
+    /// <summary>ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã”ã¨ã®ã€å‰²ã‚Šå½“ã¦ã¦ã„ã‚‹ã‚­ãƒ¼ã€‚</summary>
     public List<BindingSave> bindings = new List<BindingSave>();
-    /// <summary>“ÁêƒL[iCtrlj‚ğ‰ğ•úÏ‚İ‚©B</summary>
+    /// <summary>ç‰¹æ®Šã‚­ãƒ¼ï¼ˆCtrlï¼‰ã‚’è§£æ”¾æ¸ˆã¿ã‹ã€‚</summary>
     public bool modifierUnlocked;
-    /// <summary>“ñ’iƒWƒƒƒ“ƒv‚ğ‰ğ•úÏ‚İ‚©iƒXƒe[ƒWƒNƒŠƒA‚Ì•ñVjB</summary>
+    /// <summary>äºŒæ®µã‚¸ãƒ£ãƒ³ãƒ—ã‚’è§£æ”¾æ¸ˆã¿ã‹ï¼ˆã‚¹ãƒ†ãƒ¼ã‚¸ã‚¯ãƒªã‚¢ã®å ±é…¬ï¼‰ã€‚</summary>
     public bool doubleJumpUnlocked;
 
-    /// <summary>ƒXƒe[ƒW‘I‘ğ‰æ–Ê‚ÅAˆê“xƒJ[ƒ\ƒ‹‚ğ“–‚Ä‚½ƒXƒe[ƒW‚ÌIDiuV‚µ‚¢v‚Ì‚«o‚µ‚ğÁ‚·‚½‚ß‚Ég‚¤jB</summary>
+    /// <summary>ã‚¹ãƒ†ãƒ¼ã‚¸é¸æŠç”»é¢ã§ã€ä¸€åº¦ã‚«ãƒ¼ã‚½ãƒ«ã‚’å½“ã¦ãŸã‚¹ãƒ†ãƒ¼ã‚¸ã®IDï¼ˆã€Œæ–°ã—ã„ã€ã®å¹ãå‡ºã—ã‚’æ¶ˆã™ãŸã‚ã«ä½¿ã†ï¼‰ã€‚</summary>
     public List<string> seenStages = new List<string>();
 
-    // ---- ƒXƒe[ƒW‚Ì’§í’†‚Ì‹L˜^iStageRun‚ª‘‚«‚Şj ----
+    // ---- ã‚¹ãƒ†ãƒ¼ã‚¸ã®æŒ‘æˆ¦ä¸­ã®è¨˜éŒ²ï¼ˆStageRunãŒæ›¸ãè¾¼ã‚€ï¼‰ ----
 
-    /// <summary>‚¢‚Ü’§í’†iƒNƒŠƒA‚à‹AŠÒ‚à‚µ‚Ä‚¢‚È‚¢j‚ÌƒXƒe[ƒW‚ÌIDB‹ó‚È‚çA’§í’†‚Å‚Í‚È‚¢B</summary>
+    /// <summary>ã„ã¾æŒ‘æˆ¦ä¸­ï¼ˆã‚¯ãƒªã‚¢ã‚‚å¸°é‚„ã‚‚ã—ã¦ã„ãªã„ï¼‰ã®ã‚¹ãƒ†ãƒ¼ã‚¸ã®IDã€‚ç©ºãªã‚‰ã€æŒ‘æˆ¦ä¸­ã§ã¯ãªã„ã€‚</summary>
     public string runStageId = "";
-    /// <summary>’§í’†‚É“üè‚µ‚½ƒL[iKeyDefinition‚ÌƒAƒZƒbƒg–¼jB‹’“_‚É‹A‚é‚ÆAè‚¿‚©‚çŠO‚³‚ê‚éB</summary>
+    /// <summary>æŒ‘æˆ¦ä¸­ã«å…¥æ‰‹ã—ãŸã‚­ãƒ¼ï¼ˆKeyDefinitionã®ã‚¢ã‚»ãƒƒãƒˆåï¼‰ã€‚æ‹ ç‚¹ã«å¸°ã‚‹ã¨ã€æ‰‹æŒã¡ã‹ã‚‰å¤–ã•ã‚Œã‚‹ã€‚</summary>
     public List<string> runKeys = new List<string>();
 
-    /// <summary>ƒXƒe[ƒW‚²‚Æ‚ÌƒxƒXƒgƒ^ƒCƒ€iƒNƒŠƒA‚É‚©‚©‚Á‚½•b”jB</summary>
+    /// <summary>ã‚¹ãƒ†ãƒ¼ã‚¸ã”ã¨ã®ãƒ™ã‚¹ãƒˆã‚¿ã‚¤ãƒ ï¼ˆã‚¯ãƒªã‚¢ã«ã‹ã‹ã£ãŸç§’æ•°ï¼‰ã€‚</summary>
     public List<StageTimeSave> bestTimes = new List<StageTimeSave>();
 
-    /// <summary>ˆê“xŒ©‚½ƒMƒ~ƒbƒNĞ‰î‚ÌIDiGimmickIntroZonejB“ñ“x‚Æo‚³‚È‚¢‚½‚ß‚Ég‚¤B</summary>
+    /// <summary>ä¸€åº¦è¦‹ãŸã‚®ãƒŸãƒƒã‚¯ç´¹ä»‹ã®IDï¼ˆGimmickIntroZoneï¼‰ã€‚äºŒåº¦ã¨å‡ºã•ãªã„ãŸã‚ã«ä½¿ã†ã€‚</summary>
     public List<string> seenIntros = new List<string>();
 }
 
 /// <summary>
-/// KEY ESCAPE - ƒZ[ƒuƒf[ƒ^‚ğAƒtƒ@ƒCƒ‹isave.jsonj‚É•Û‘¶E“Ç‚İ‚İ‚·‚éB
-/// ƒQ[ƒ€‚ğI—¹‚µ‚Ä‚àAƒV[ƒ“‚ª•Ï‚í‚Á‚Ä‚àA“à—e‚Íc‚éB
-/// •Û‘¶æFApplication.persistentDataPath/save.json
+/// KEY ESCAPE - ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã‚’ã€ãƒ•ã‚¡ã‚¤ãƒ«ï¼ˆsave.jsonï¼‰ã«ä¿å­˜ãƒ»èª­ã¿è¾¼ã¿ã™ã‚‹ã€‚
+/// ã‚²ãƒ¼ãƒ ã‚’çµ‚äº†ã—ã¦ã‚‚ã€ã‚·ãƒ¼ãƒ³ãŒå¤‰ã‚ã£ã¦ã‚‚ã€å†…å®¹ã¯æ®‹ã‚‹ã€‚
+/// ä¿å­˜å…ˆï¼šApplication.persistentDataPath/save.json
 /// </summary>
 public static class SaveManager
 {
@@ -71,7 +71,7 @@ public static class SaveManager
 
     public static SaveData Data { get; private set; } = new SaveData();
 
-    /// <summary>•Û‘¶‚·‚é’¼‘O‚ÉŒÄ‚Î‚ê‚éB‚Ù‚©‚ÌƒXƒNƒŠƒvƒg‚ªAŒ»İ‚Ìó‘Ô‚ğData‚É‘‚«‚Ş‚Ì‚Ég‚¤B</summary>
+    /// <summary>ä¿å­˜ã™ã‚‹ç›´å‰ã«å‘¼ã°ã‚Œã‚‹ã€‚ã»ã‹ã®ã‚¹ã‚¯ãƒªãƒ—ãƒˆãŒã€ç¾åœ¨ã®çŠ¶æ…‹ã‚’Dataã«æ›¸ãè¾¼ã‚€ã®ã«ä½¿ã†ã€‚</summary>
     public static event Action BeforeSave;
 
     private static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
@@ -82,7 +82,7 @@ public static class SaveManager
         BeforeSave = null;
     }
 
-    // Å‰‚ÌƒV[ƒ“‚ª“Ç‚İ‚Ü‚ê‚é‘O‚ÉAƒZ[ƒuƒf[ƒ^‚ğ“Ç‚İ‚ñ‚Å‚¨‚­B
+    // æœ€åˆã®ã‚·ãƒ¼ãƒ³ãŒèª­ã¿è¾¼ã¾ã‚Œã‚‹å‰ã«ã€ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã‚’èª­ã¿è¾¼ã‚“ã§ãŠãã€‚
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize()
     {
@@ -104,7 +104,7 @@ public static class SaveManager
         }
         catch (Exception e)
         {
-            Debug.LogWarning("[SaveManager] ƒZ[ƒuƒf[ƒ^‚ğ“Ç‚İ‚ß‚Ü‚¹‚ñ‚Å‚µ‚½BÅ‰‚©‚ç‚É‚µ‚Ü‚·B " + e.Message);
+            Debug.LogWarning("[SaveManager] ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã‚’èª­ã¿è¾¼ã‚ã¾ã›ã‚“ã§ã—ãŸã€‚æœ€åˆã‹ã‚‰ã«ã—ã¾ã™ã€‚ " + e.Message);
             Data = new SaveData();
         }
 
@@ -125,8 +125,8 @@ public static class SaveManager
         {
             BeforeSave?.Invoke();
 
-            // ‘‚«‚İ“r’†‚ÅƒQ[ƒ€‚ªI—¹‚µ‚Ä‚àAƒZ[ƒuƒf[ƒ^‚ª‰ó‚ê‚È‚¢‚æ‚¤A
-            // ‚¢‚Á‚½‚ñ•Ê‚Ìƒtƒ@ƒCƒ‹‚É‘‚¢‚Ä‚©‚çA’u‚«Š·‚¦‚éB
+            // æ›¸ãè¾¼ã¿é€”ä¸­ã§ã‚²ãƒ¼ãƒ ãŒçµ‚äº†ã—ã¦ã‚‚ã€ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ãŒå£Šã‚Œãªã„ã‚ˆã†ã€
+            // ã„ã£ãŸã‚“åˆ¥ã®ãƒ•ã‚¡ã‚¤ãƒ«ã«æ›¸ã„ã¦ã‹ã‚‰ã€ç½®ãæ›ãˆã‚‹ã€‚
             string tmp = FilePath + ".tmp";
             File.WriteAllText(tmp, JsonUtility.ToJson(Data, true));
             File.Copy(tmp, FilePath, true);
@@ -134,21 +134,24 @@ public static class SaveManager
         }
         catch (Exception e)
         {
-            Debug.LogWarning("[SaveManager] ƒZ[ƒu‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B " + e.Message);
+            Debug.LogWarning("[SaveManager] ã‚»ãƒ¼ãƒ–ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚ " + e.Message);
         }
     }
 
-    /// <summary>ƒZ[ƒuƒf[ƒ^‚ğíœ‚µ‚ÄAÅ‰‚Ìó‘Ô‚É–ß‚·iƒeƒXƒg—pjB</summary>
+    /// <summary>ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã‚’å‰Šé™¤ã—ã¦ã€æœ€åˆã®çŠ¶æ…‹ã«æˆ»ã™ï¼ˆãƒ†ã‚¹ãƒˆç”¨ï¼‰ã€‚</summary>
     public static void DeleteSave()
     {
         try
         {
             if (File.Exists(FilePath))
                 File.Delete(FilePath);
+            if (File.Exists(FilePath + ".tmp"))
+                File.Delete(FilePath + ".tmp");
+            Debug.Log("[SaveManager] ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã‚’å‰Šé™¤ã—ã¾ã—ãŸï¼ˆã‚¯ãƒªã‚¢çŠ¶æ³ãƒ»ãƒ™ã‚¹ãƒˆã‚¿ã‚¤ãƒ ãªã©ã‚‚ã€ã™ã¹ã¦æ¶ˆãˆã¾ã™ï¼‰: " + FilePath);
         }
         catch (Exception e)
         {
-            Debug.LogWarning("[SaveManager] ƒZ[ƒuƒf[ƒ^‚ğíœ‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B " + e.Message);
+            Debug.LogWarning("[SaveManager] ã‚»ãƒ¼ãƒ–ãƒ‡ãƒ¼ã‚¿ã‚’å‰Šé™¤ã§ãã¾ã›ã‚“ã§ã—ãŸã€‚ " + e.Message);
         }
         Data = new SaveData();
     }
